@@ -1,0 +1,424 @@
+#nages
+20
+#nyrs
+200
+#nstocks
+3
+#nregions
+1
+1
+1
+#nfleets
+4
+4
+4
+#use_TAC
+  #==0 do not use TAC to set F
+  #==1 use TAC to set F
+  #==2 use uMSY to set F
+0
+#larval_move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+0
+#move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+1
+#overlap switch
+  #==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock)
+  #==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
+  #==2 do overlap with natal migration (a fraction of fish return to natal stock to spawn (instantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal stock)
+  #overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+2
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+0
+#F_switch
+  #==1 input F
+  #==2 input single overall F (FMSY)
+  #==3 Estimate F that minimizes difference in input and estimated total harvest rate
+  #==4 overall F is split evenly among stocks (each fleet uses stock F)
+  #==5 overall F is is split evenly among all regions (each fleet uses region F)
+  #==6 overall F is split evenly among fleets
+  #==7 random walk in F (NOT YET IMPLEMENTED)
+1
+#recruit_devs_switch
+  #==0 use stock-recruit relationship directly
+  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+0
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+-1
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+2
+#return_age
+  #age of return migration for move_switch==6
+4
+#return_probability
+  #probability of returning for move_switch==6
+1
+1
+1
+#spawn_return_prob
+  #probability of returning for spawning if overlap+switch==2
+1
+1
+1
+#phase_F
+  #must be turned on (==1) if F_type==3
+-1
+#phase_dummy
+  #must be turned on (==1) if F_type!=3
+1
+#tspawn
+0
+0
+0
+#steep
+0.85
+0.85
+0.85
+#R_ave
+4291.260
+1127.960
+4442.700
+#input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.95
+0.04
+0.01
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.06
+0.91
+0.03
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+0.07
+0.21
+0.72
+#input_residency_larval
+1
+1
+1
+#input_residency
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#sel_beta1
+4 4 4 4
+4 4 4 4
+4 4 4 4
+#sel_beta1
+2 2 2 2
+2 2 2 2
+2 2 2 2
+#input_selectivity (1,ns,1,nreg,1,na,1,nf)
+0.00027 0.00001 0.00045 0
+0.00272 0.00071 0.00723 0
+0.01864 0.02335 0.0625 0
+0.0874 0.2454 0.29163 0
+0.281 0.8296 0.73487 0
+0.61932 0.9994 1 0.00609
+0.93575 0.99326 0.99923 0.70283
+0.99996 0.9806 0.99692 0.99527
+0.99957 0.96169 0.99309 0.96954
+0.99874 0.93689 0.98775 0.92308
+0.99747 0.90667 0.98093 0.85894
+0.99577 0.8716 0.97265 0.78116
+0.99363 0.83233 0.96297 0.69433
+0.99107 0.78956 0.9519 0.60317
+0.98808 0.74402 0.93952 0.51211
+0.98468 0.69646 0.92587 0.42495
+0.98085 0.64761 0.91102 0.34464
+0.97661 0.59819 0.89503 0.27318
+0.97197 0.54888 0.87796 0.21163
+0.781903659 0.095831707 0.439112927 0.013288049
+0.00027 0.00001 0 0
+0.00272 0.00071 0.00014 0
+0.01864 0.02335 0.00421 0
+0.0874 0.2454 0.0554 0
+0.281 0.8296 0.32315 0
+0.61932 0.9994 0.83491 0.00609
+0.93575 0.99326 0.99958 0.70283
+0.99996 0.9806 0.99334 0.99527
+0.99957 0.96169 0.97976 0.96954
+0.99874 0.93689 0.95914 0.92308
+0.99747 0.90667 0.93194 0.85894
+0.99577 0.8716 0.89874 0.78116
+0.99363 0.83233 0.86024 0.69433
+0.99107 0.78956 0.81723 0.60317
+0.98808 0.74402 0.77057 0.51211
+0.98468 0.69646 0.72114 0.42495
+0.98085 0.64761 0.66984 0.34464
+0.97661 0.59819 0.61753 0.27318
+0.97197 0.54888 0.56506 0.21163
+0.781903659 0.095831707 0.093890244 0.013288049
+0.00027 0.00001 0 0
+0.00272 0.00071 0.00014 0
+0.01864 0.02335 0.00421 0
+0.0874 0.2454 0.0554 0
+0.281 0.8296 0.32315 0
+0.61932 0.9994 0.83491 0.00609
+0.93575 0.99326 0.99958 0.70283
+0.99996 0.9806 0.99334 0.99527
+0.99957 0.96169 0.97976 0.96954
+0.99874 0.93689 0.95914 0.92308
+0.99747 0.90667 0.93194 0.85894
+0.99577 0.8716 0.89874 0.78116
+0.99363 0.83233 0.86024 0.69433
+0.99107 0.78956 0.81723 0.60317
+0.98808 0.74402 0.77057 0.51211
+0.98468 0.69646 0.72114 0.42495
+0.98085 0.64761 0.66984 0.34464
+0.97661 0.59819 0.61753 0.27318
+0.97197 0.54888 0.56506 0.21163
+0.781903659 0.095831707 0.093890244 0.013288049
+#input_F
+0 0 0 0
+0 0 0 0
+0 0 0 0
+#F_MSY
+0.5
+#input_M
+0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 
+0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 
+0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 0.075 
+#sigma_recruit
+0.5
+0.5
+0.5
+#input_weight
+0.04900 0.10995 0.19193 0.28997 0.39858 0.51260 0.62943 0.74491 0.85741 0.96378 1.06506 1.16050 1.24814 1.32909 1.40169 1.46913 1.53002 1.58629 1.63475 2.48701
+0.04191 0.09327 0.16390 0.25006 0.34766 0.45419 0.56568 0.68112 0.79627 0.91009 1.02229 1.13044 1.23496 1.33525 1.43085 1.52313 1.60855 1.69040 1.76505 2.39294
+0.07519 0.13912 0.22125 0.31942 0.43007 0.54993 0.67780 0.81032 0.94512 1.08009 1.21485 1.34813 1.47720 1.60266 1.72563 1.84197 1.95499 2.06248 2.16422 2.52445
+#input_catch_weight
+0.04900 0.10995 0.19193 0.28997 0.39858 0.51260 0.62943 0.74491 0.85741 0.96378 1.06506 1.16050 1.24814 1.32909 1.40169 1.46913 1.53002 1.58629 1.63475 2.48701
+0.04191 0.09327 0.16390 0.25006 0.34766 0.45419 0.56568 0.68112 0.79627 0.91009 1.02229 1.13044 1.23496 1.33525 1.43085 1.52313 1.60855 1.69040 1.76505 2.39294
+0.07519 0.13912 0.22125 0.31942 0.43007 0.54993 0.67780 0.81032 0.94512 1.08009 1.21485 1.34813 1.47720 1.60266 1.72563 1.84197 1.95499 2.06248 2.16422 2.52445
+#fecundity
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+#maturity
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000
+#input_Rec_prop
+0.5
+0.5
+0.5
+#init_abund
+3796.751 3517.51 3224.55 3016.37 2767.26 2731.121 2403.52 1664.04 1009.55 929.689 1011.531 1028.2 701.685 1137.12 328.58 174.462 328.026 197.572 85.72 760.766
+9641.48 8989.029 8408.09 7773.53 7101.21 5023.13 4185.78 3127.06 3293.869 2940.64 2927.02 2464.83 2247.14 3109.879 2164.131 557.81 1575.49 1124.92 704.033 3580.36
+2726.02 2625.819 2489.689 2293.18 2050 1375.78 1203.631 905.271 446.254 445.114 242.991 180.707 113.199 137.075 44.415 12.363 20.899 16.924 10.985 37.493
+#input_TAC
+ #TAC that are matching if use_TAC==1
+1 1 1 1
+1 1 1 1
+1 1 1 1
+#input_u
+.0491
+0.15
+0.15
+#max_Fnew
+5
+#Fnew_start
+ #starting value for NR to match TAC
+0.1
+#NR_iterations
+ #NR iterations used to match TAC
+10
+#NR_dev
+ #NR deviations when calculating derivative
+0.001
+#debug
+1541
+#myseed
+1
