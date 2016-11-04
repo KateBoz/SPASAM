@@ -1,3 +1,7 @@
+/////////////////////////////////////////////////////////
+// Spatial Operating Model built by Daniel Goethel (NMFS SEFSC)  
+// Edited by Katelyn Bosley
+////////////////////////////////////////////////////////
 
 GLOBALS_SECTION
   #include "admodel.h"
@@ -5,31 +9,36 @@ GLOBALS_SECTION
  // enum MovementType{
   //     NO_MOVEMENT = 0,
   //     }
-  
+
 TOP_OF_MAIN_SECTION
   arrmblsize=500000000;
   gradient_structure::set_MAX_NVAR_OFFSET(5000000);
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(5000000);
-DATA_SECTION
-  init_int nages
-  init_int nyrs
-  init_int nstocks
 
-////testing to see if this change will show up in GitHub push 
+//input data contains values for switches in the model
+DATA_SECTION
+  init_int nages //number of ages
+  init_int nyrs //number of years for simulation
+  init_int nstocks //number of stocks in the population...likey to swtich to populations
+
+
 
 ///////////// DESCRIBE ALL OF THESE RAGGED ARRAYS and population setups (regions per area fleets per region)
   !! int ns=nstocks;
   !! int ny=nyrs;
   !! int na=nages;
+  /////////////////////////////
   
-  init_ivector nregions(1,ns)
+  init_ivector nregions(1,ns)//number of regions within a population?
 
   !! ivector nreg=nregions;
 
-  init_imatrix nfleets(1,ns,1,nreg)
+  init_imatrix nfleets(1,ns,1,nreg) //number of fleets in each region by each stock (population)
 
   !! imatrix nf=nfleets;
 //////////////////////////////////////////////////////////////
+
+
 
 //// CHANGE TO MODEL_TYPE_SWITCH////////////////////////
   init_number use_TAC
