@@ -15,7 +15,7 @@ TOP_OF_MAIN_SECTION
   gradient_structure::set_MAX_NVAR_OFFSET(5000000);
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(5000000);
 
-//input data contains values for switches in the model
+l
 DATA_SECTION
   init_int nages //number of ages
   init_int nyrs //number of years for simulation
@@ -30,17 +30,18 @@ DATA_SECTION
   /////////////////////////////
   
   init_ivector nregions(1,ns)//number of regions within a population?
-
   !! ivector nreg=nregions;
 
   init_imatrix nfleets(1,ns,1,nreg) //number of fleets in each region by each stock (population)
-
   !! imatrix nf=nfleets;
-//////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////
+/////////MODELS SWITCHES
+/////////////////////////////////////////////////////////////
 
 
-
-//// CHANGE TO MODEL_TYPE_SWITCH////////////////////////
+////// CHANGE TO MODEL_TYPE_SWITCH////////////////////////
   init_number use_TAC
   //==0 use to simulate catch based on input F
   //==1 use input TAC to set F
@@ -74,9 +75,10 @@ DATA_SECTION
   //==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
   //==2 do overlap with natal migration (a fraction of fish return to natal stock to spawn (instantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal stock)
   //overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
-////////////////////////////////////////////////
+//////////////////////////////////////////////////
 
-////// DOUBLE SELECTIVITY ///////////////////////////////
+
+////// ADD DOUBLE SELECTIVITY (DOUBLE NORMAL/DOUBLE LOGISTIC-ASK AMY ///////////////////
   init_number select_switch
   //==0 input selectivity
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
@@ -105,13 +107,13 @@ DATA_SECTION
   //==1 input apportionment
   //==2 recruits are apportioned equally to each region within a stock
   
-  init_number Rec_type
+  init_number Rec_type ///MAYBE LOWERCASE FOR CLEANING UP CODE
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
 
-  init_number return_age
-  init_vector return_probability(1,ns)
-  init_vector spawn_return_prob(1,ns)
+  init_number return_age //age at which fish return to natal area/region
+  init_vector return_probability(1,ns)//proabability of natal homing fish returning - maybe reduce to "prob" for cleaning
+  init_vector spawn_return_prob(1,ns) 
   init_number phase_F //must be turned on (==1) if F_type==3
   init_number phase_dummy //must be turned on (==1) if F_type!=3
 
