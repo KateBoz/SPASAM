@@ -6,25 +6,25 @@ pandoc_args: --natbib
 biblio-style: apalike
 cls: CJFAS.cls
 ---
-Manuscript 1: Biologial reference Points with spatial processes paper 
-=============
+
+
+Manuscript 1: Biologial reference Points with spatial processes paper
+=========
 
 ##Authors
-__Katelyn M. Bosley__ *([katelyn.bosley@noaa.gov](mailto:katelyn.bosley@noaa.gov)), NOAA-Fisheries NWFSC Newport, Fisheries Resource and Monitoring Division, Northwest Fisheries Science Center, NMFS-NOAA, 2032 S.E. OSU Drive, Newport, OR 97365, USA*
+__Katelyn M. Bosley__ *([katelyn.bosley@noaa.gov](mailto:katelyn.bosley@noaa.gov)), Fisheries Resource and Monitoring Division, Northwest Fisheries Science Center, NMFS-NOAA, 2032 S.E. OSU Drive, Newport, OR 97365, USA*
 
-__Daniel Goethel__ *([daniel.goethel@noaa.gov](emailto:daniel.goethel@noaa.gov)), NOAA-Fisheries SEFSC Miami, Sustainable Fisheries Division, Southeast Fisheries Science Center, NMFS-NOAA, 75 Virginia Beach Drive, Miami, FL 33133, USA*
+__Daniel Goethel__ *([daniel.goethel@noaa.gov](emailto:daniel.goethel@noaa.gov)),Sustainable Fisheries Division, Southeast Fisheries Science Center, NMFS-NOAA, 75 Virginia Beach Drive, Miami, FL 33133, USA*
 
-__Aaron Berger__ *([aaron.berger@noaa.gov](emailto:aarong.berger@noaa.gov)), NOAA-Fisheries NWFSC Newport, Fisheries Resource and Monitoring Division, Northwest Fisheries Science Center, NMFS-NOAA, 2032 S.E. OSU Drive, Newport, OR 97365, USA*
+__Aaron Berger__ *([aaron.berger@noaa.gov](emailto:aaron.berger@noaa.gov)), Fisheries Resource and Monitoring Division, Northwest Fisheries Science Center, NMFS-NOAA, 2032 S.E. OSU Drive, Newport, OR 97365, USA*
 
-__Aaron Berger__ *([aaron.berger@noaa.gov](emailto:aaron.berger@noaa.gov)), NOAA-Fisheries NWFSC Newport, Fisheries Resource and Monitoring Division, Northwest Fisheries Science Center, NMFS-NOAA, 2032 S.E. OSU Drive, Newport, OR 97365, USA*
+__Amy Schueller__ *([amy.schueller@noaa.gov](emailto:amy.schueller@noaa.gov)), National Marine Fisheries Service, Southeast Fisheries Science Center, Beaufort Laboratory, 101 Pivers Island Road, Beaufort, NC 28516, USA* 
 
-__Amy Schueller__ *([Amy.Schueller@noaa.gov](emailto:Amy.Schueller@noaa.gov)), National Marine Fisheries Service, Southeast Fisheries Science Center, Beaufort Laboratory, 101 Pivers Island Road, Beaufort, NC 28516, USA* 
+__Dana Hanselman__ *([dana.hanselman@noaa.gov](emailto:dana.hanselman@noaa.gov)), Auke Bay Laboratories, Alaska Fisheries Science Center, National Marine Fisheries Service, NOAA, 17109 Point Lena Loop Road, Juneau, AK 99801, USA*  
 
-__Dana Hanselman__ *([Dana.Hanselman@noaa.gov](emailto:Dana.Hanselman@noaa.gov)), Auke Bay Laboratories, Alaska Fisheries Science Center, National Marine Fisheries Service, NOAA, 17109 Point Lena Loop Road, Juneau, AK 99801, USA*  
+__Brian Langseth__ *([brian.langseth@noaa.gov](emailto:brian.langseth@noaa.gov)), Pacific Islands Fisheries Science Center, NMFS-NOAA, 1845 Wasp Blvd., Bldg. 176, Honolulu HI, 96818, USA*
 
-__Brian Langseth__ *([Brian.Langseth@noaa.gov](emailto:Brian.Langseth@noaa.gov)), Pacific Islands Fisheries Science Center, NMFS-NOAA, 1845 Wasp Blvd., Bldg. 176, Honolulu HI, 96818, USA*
-
-__Jonathan Deroba__ *([Jonathan.Deroba@noaa.gov](emailto:Jonathan.Deroba@noaa.gov)),North East Fisheries Science Center, NMFS-NOAA, 166 Water St., Woods Hole MA, 02543, USA* 
+__Jonathan Deroba__ *([jonathan.deroba@noaa.gov](emailto:Jonathan.deroba@noaa.gov)),North East Fisheries Science Center, NMFS-NOAA, 166 Water St., Woods Hole MA, 02543, USA* 
 
 
 ```{r global_options, include=FALSE} 
