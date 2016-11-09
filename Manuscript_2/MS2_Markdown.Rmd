@@ -49,7 +49,7 @@ keep_tex: true
 bibliography: library.bib
 citation_package: natbib
 csl: CJFAS.csl
-output: pdf_document
+output: rticles::elsevier_article
 ---
 
 # INTRODUCTION
