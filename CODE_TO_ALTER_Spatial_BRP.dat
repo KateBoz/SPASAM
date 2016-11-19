@@ -1,0 +1,252 @@
+#nages
+15
+#nyrs
+200
+#nstocks
+2
+#nregions
+1
+1
+#nfleets
+1
+1
+#use_TAC
+  #==0 do not use TAC to set F
+  #==1 use TAC to set F
+  #==2 use uMSY to set F
+2
+#larval_move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+5
+#move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+5
+#overlap switch
+  #==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock)
+  #==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
+  #==2 do overlap with natal migration (a fraction of fish return to natal stock to spawn (instantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal stock)
+  #overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+0
+#F_switch
+  #==1 input F
+  #==2 input single overall F (FMSY)
+  #==3 Estimate F that minimizes difference in input and estimated total harvest rate
+  #==4 overall F is split evenly among stocks (each fleet uses stock F)
+  #==5 overall F is is split evenly among all regions (each fleet uses region F)
+  #==6 overall F is split evenly among fleets
+  #==7 random walk in F (NOT YET IMPLEMENTED)
+1
+#recruit_devs_switch
+  #==0 use stock-recruit relationship directly
+  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+0
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+-1
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+2
+#return_age
+  #age of return migration for move_switch==6
+4
+#return_probability
+  #probability of returning for move_switch==6
+0.75
+0.75
+#spawn_return_prob
+  #probability of returning for spawning if overlap+switch==2
+0.75
+0.75
+#phase_F
+  #must be turned on (==1) if F_type==3
+-1
+#phase_dummy
+  #must be turned on (==1) if F_type!=3
+1
+#tspawn
+.25
+.25
+#steep
+0.814
+0.814
+#R_ave
+937500
+2187500
+#input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg
+0.25 
+.25 
+.25 
+.25 
+.25 
+0.25 
+.25 
+.25
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25 
+0.25 
+.25 
+.25
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25 
+0.25 
+.25 
+.25
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25 
+0.25 
+.25 
+.25
+.25 
+.25
+0.25 
+.25 
+.25 
+.25 
+.25
+#input_residency_larval
+.8
+.85
+#input_residency
+0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 0.8 
+0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 0.85 
+#sel_beta1
+4
+4
+#sel_beta1
+2
+2
+#input_selectivity
+0
+0.12
+0.54
+0.71
+0.87
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+0
+0.12
+0.54
+0.71
+0.87
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+#input_F
+0
+0
+#F_MSY
+0.5
+#input_M
+0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226
+0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226 0.226
+#sigma_recruit
+0.5
+0.5
+#input_weight
+0.10089 0.27344 0.3772 0.47267 0.54513 0.62176 0.6738 0.75382 0.80497 0.83257 0.90944 0.95247 0.93824 0.91753 0.98189
+0.10089 0.27344 0.3772 0.47267 0.54513 0.62176 0.6738 0.75382 0.80497 0.83257 0.90944 0.95247 0.93824 0.91753 0.98189
+#input_catch_weight
+0.10089 0.27344 0.3772 0.47267 0.54513 0.62176 0.6738 0.75382 0.80497 0.83257 0.90944 0.95247 0.93824 0.91753 0.98189
+0.10089 0.27344 0.3772 0.47267 0.54513 0.62176 0.6738 0.75382 0.80497 0.83257 0.90944 0.95247 0.93824 0.91753 0.98189
+#fecundity
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1
+#maturity
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1
+#input_Rec_prop
+0.5
+0.5
+#init_abund
+937500.000 765309.3724 624744.9978 509998.0823 416326.7331 339860.0008 277437.9135 226480.8912 184883.1452 150925.6574 123205.1415 100576.0528 82103.24892 67023.34496 54713.167
+2187500.000 1785722.276 1457738.993 1189996.34 971429.9302 793007.5731 647356.0176 528456.2566 431394.7928 352160.5904 287479.3193 234678.0455 191574.7719 156388.2687 127664.464
+#input_TAC
+ #TAC that are matching if use_TAC==1
+177422
+337565
+#input_u
+0.186211
+0.186211
+#max_Fnew
+5
+#Fnew_start
+ #starting value for NR to match TAC
+0.1
+#NR_iterations
+ #NR iterations used to match TAC
+10
+#NR_dev
+ #NR deviations when calculating derivative
+0.001
+#debug
+1541
+#myseed
+1
