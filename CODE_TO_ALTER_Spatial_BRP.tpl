@@ -1,9 +1,11 @@
 /////////////////////////////////////////////////////////
 // Spatial Operating Model built by Daniel Goethel (NMFS SEFSC)  
-// Edited by Katelyn Bosley
+// edited by Katelyn Bosley
 //////////////////////////////////////////////////////////
 
-//need to add all_natal calcs for all values that might want to compare across an area, because regular non-natal homing calcs do not account for different weights across natal populations so if if any part of calc involves weight it needs to use the biomass_all_natal value not just biomass_AM
+//need to add all_natal calcs for all values that might want to compare across an area, because regular non-natal
+//homing calcs do not account for different weights across natal populations so if if any part of calc involves weight
+//it needs to use the biomass_all_natal value not just biomass_AM
 
 
 GLOBALS_SECTION
@@ -18,45 +20,52 @@ TOP_OF_MAIN_SECTION
   gradient_structure::set_MAX_NVAR_OFFSET(5000000);
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(5000000);
 
-//input data contains values for switches in the model
+
+//input data file contains values for switches in the model
+
 DATA_SECTION
+////////////////////////////////////////////////////////////////////////////////////
+/////MODEL STRUCTURE INPUTS/////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
   init_int nages //number of ages
   init_int nyrs //number of years for simulation
-  init_int nstocks //number of stocks in the population...likey to swtich to populations
-
-
+  init_int nstocks //number of stocks...likely to swtich to populations
 
 ///////////// DESCRIBE ALL OF THESE RAGGED ARRAYS and population setups (regions per area fleets per region)
   !! int ns=nstocks;
   !! int ny=nyrs;
   !! int na=nages;
-  /////////////////////////////
+  //////////////////////////////////////////////////////
   
-  init_ivector nregions(1,ns)//number of regions within a population?
+  init_ivector nregions(1,ns) //number of regions within a population - for metamictic regions = areas, stocks = 1
 
   !! ivector nreg=nregions;
 
   init_imatrix nfleets(1,ns,1,nreg) //number of fleets in each region by each stock (population)
 
   !! imatrix nf=nfleets;
-//////////////////////////////////////////////////////////////
 
 
+////////////////////////////////////////////////////////////////////////////////////
+//////////////SWITCHES//////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
 
-//// CHANGE TO MODEL_TYPE_SWITCH////////////////////////
-  init_number use_TAC
+///// Changes the type of harvest model 
+  init_number model_type_switch
   //==0 use to simulate catch based on input F
   //==1 use input TAC to set F
   //==2 use input harvest rate
-//////////////////////////////////////////////////////////
 
+
+///// Changes the type of larval movement pattern (sets age class 1 movements)
   init_number larval_move_switch
   //==0 no movement
   //==1 input movement
   //==2 movement within stock only based on residency (symmetric)
   //==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   //==4 symmetric movement across all stocks and regions
-  //==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  //==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off-diag)
 
 
 ////// ADD MOVEMENT SWITCHES DENSITY-DEPENDENT, possibly for metamictic with ontogenetic movement
@@ -68,22 +77,24 @@ DATA_SECTION
   //==4 symmetric movement across all stocks and regions
   //==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
   //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
-  //==7 larvae stay in the stock that they move to (i.e., for overlap, do not return to natal stock if adult movement==0...otherwise with natal homing would return to natal stock because natal residency is 100% and use natal movement rates (not current stock movement rates like with metapopulation/random movement))
-//////////////////////////////////////////////////
+  //==7 larvae stay in the stock that they move to (i.e., for overlap, do not return to natal stock if adult movement==0...otherwise with natal
+  //    homing would return to natal stock because natal residency is 100% and use natal movement rates (not current stock movement rates like with metapopulation/random movement))
+//////////////////////////////////////////////////////
 
-////// SEPERATE INTO POP STRUCTURE AND SPAWN RETURN SWITCHES
+////// SEPARATE INTO POP STRUCTURE AND SPAWN RETURN SWITCHES
   init_number overlap_switch
-  //==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock)
-  //==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
+  //==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock) - Metapopulation/metamictic
+  //==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock) - Natal homing
   //==2 do overlap with natal migration (a fraction of fish return to natal stock to spawn (instantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal stock)
   //overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
-////////////////////////////////////////////////
+//////////////////////////////////////////////////////
 
-////// DOUBLE SELECTIVITY ///////////////////////////////
+////// ADD DOUBLE SELECTIVITY ////////////////////////
   init_number select_switch
   //==0 input selectivity
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
-//////////////////////////////////////
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
+/////////////////////////////////////////////////////
 
   init_number F_switch
   //==1 input F
@@ -112,23 +123,31 @@ DATA_SECTION
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
 
-  init_number return_age
-  init_vector return_probability(1,ns)
-  init_vector spawn_return_prob(1,ns)
+
+///////////////////////////////////////////////////////////////////////////////
+//////// ADDITIONAL PARAMETERS FROM DAT FILE //////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+  init_number return_age // used if move_swith ==6
+  init_vector return_probability(1,ns) // used if overlap_swith==6
+  init_vector spawn_return_prob(1,ns) // used if overlap_swith==2
   init_number phase_F //must be turned on (==1) if F_type==3
   init_number phase_dummy //must be turned on (==1) if F_type!=3
+  init_vector tspawn(1,ns) //time of spawning
+  init_vector steep(1,ns) //B-H steepness
+  init_vector R_ave(1,ns) //Average Recruitment or R0 for B-H S-R curve
 
-  init_vector tspawn(1,ns)  //time of spawning
-  init_vector steep(1,ns)  //BH steepness
-  init_vector R_ave(1,ns)  //Average Recruitment or R0 for BH SR curve
+
   //check that this ragged array is set up properly
-  init_5darray input_T(1,ns,1,nreg,1,na,1,ns,1,nreg)  //movement
-  init_matrix input_residency_larval(1,ns,1,nreg)  //larval residency
-  init_3darray input_residency(1,ns,1,nreg,1,na)
-  init_3darray sel_beta1(1,ns,1,nreg,1,nf)  //selectivity parameter for logistic selectivity
-  init_3darray sel_beta2(1,ns,1,nreg,1,nf)  //selectivity parameter for logistic selectivity
-  init_4darray input_selectivity(1,ns,1,nreg,1,na,1,nf)
-  init_3darray input_F(1,nstocks,1,nreg,1,nf)
+  init_5darray input_T(1,ns,1,nreg,1,na,1,ns,1,nreg)  //movement matrix 
+  init_matrix input_residency_larval(1,ns,1,nreg)  //larval residency probability
+  init_3darray input_residency(1,ns,1,nreg,1,na) //
+  init_3darray sel_beta1(1,ns,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2(1,ns,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3(1,ns,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4(1,ns,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_4darray input_selectivity(1,ns,1,nreg,1,na,1,nf) //
+  init_3darray input_F(1,ns,1,nreg,1,nf)
   init_number input_F_MSY
   init_matrix input_M(1,ns,1,na)
   init_vector sigma_recruit(1,ns)
@@ -165,9 +184,15 @@ DATA_SECTION
   int u
   int d
 
- !! cout <<"debug="<< debug << endl;
- !! cout<< "If debug !=1541 then .Dat File not setup Correctly"<<endl;
+ !! cout << "debug = " << debug << endl;
+ !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
+
+ //!!cout << input_T <<endl;
+ //!!cout << sel_beta4 << endl;
+ //!!cout << input_u << endl; // testing a problem I found in the dat file...fixed
+ 
+ //!!exit(43);
 
 PARAMETER_SECTION
 
@@ -323,6 +348,8 @@ PARAMETER_SECTION
   objective_function_value f
 
  !! cout << "parameters set" << endl;
+
+
 INITIALIZATION_SECTION  //set initial values
      
   F_est .7;
@@ -341,6 +368,10 @@ PROCEDURE_SECTION
   get_SPR();
 
   get_abundance();
+
+  //test to see if selectivity calcs are working with double logistic selectivity switch - looks fine
+  //cout << selectivity << endl;
+  //exit(43);
  
   evaluate_the_objective_function();
      
@@ -506,10 +537,15 @@ FUNCTION get_selectivity
             for (int a=1;a<=nages;a++)
              {
               for (int z=1;z<=nfleets(j,r);z++)
-               { 
-                 if(select_switch==1) //logistic selectivity
+               {
+                 if(select_switch==2) //4 parameter double logistic selectivity
                   {
-                   selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z))));
+                   selectivity(j,r,y,a,z)=1/((1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))))*(1+mfexp(-sel_beta3(j,r,z)*(a-sel_beta4(j,r,z)))));
+                  }
+                 if(select_switch==1) //two parameter logistic selectivity
+                  {
+                   selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))));
+                   //selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z)))); 
                   }
                  if(select_switch==0) //input selectivity at age constant by year
                   {
@@ -520,6 +556,7 @@ FUNCTION get_selectivity
            }
           }
          }
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 FUNCTION get_F_age
@@ -849,13 +886,13 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                   if(use_TAC>0)  //Find the fully selected F that would result in the TAC
+                   if(model_type_switch>0)  //Find the fully selected F that would result in the TAC
                      {
                       for (int a=1;a<=nages;a++)
                        {
                          for(int x=1;x<=nfleets(j,r);x++)
                            {
-                             if(use_TAC==1)
+                             if(model_type_switch==1)
                                 {
                                  if(overlap_switch>0)
                                    {
@@ -931,7 +968,7 @@ FUNCTION get_abundance
                                       }
                                      }
 
-                             if(use_TAC==2)
+                             if(model_type_switch==2)
                                 {
                                  if(overlap_switch>0)
                                    {
@@ -1065,7 +1102,7 @@ FUNCTION get_abundance
                  }
                 if(a>1)
                  {
-                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
+                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a))); //
                  }
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
@@ -1781,13 +1818,13 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                   if(use_TAC>0)  //Find the fully selected F that would result in the TAC
+                   if(model_type_switch>0)  //Find the fully selected F that would result in the TAC
                      {
                       for (int a=1;a<=nages;a++)
                        {
                          for(int x=1;x<=nfleets(j,r);x++)
                            {
-                             if(use_TAC==1)
+                             if(model_type_switch==1)
                                 {
                                  if(overlap_switch>0)
                                    {
@@ -1862,7 +1899,7 @@ FUNCTION get_abundance
                                        } 
                                       }
                                      }
-                             if(use_TAC==2)
+                             if(model_type_switch==2)
                                 {
                                  if(overlap_switch>0)
                                    {
@@ -2425,6 +2462,10 @@ REPORT_SECTION
 //  report<<sel_beta1<<endl;
 //  report<<"$sel_beta2"<<endl;
 //  report<<sel_beta2<<endl;
+//  report<<"$sel_beta3"<<endl;
+//  report<<sel_beta3<<endl;
+//  report<<"$sel_beta4"<<endl;
+//  report<<sel_beta4<<endl;
 //  report<<"$input_selectivity"<<endl;
 //  report<<input_selectivity<<endl;
 //  report<<"$input_F"<<endl;
