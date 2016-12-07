@@ -160,7 +160,7 @@ DATA_SECTION
 
   init_3darray input_TAC(1,ns,1,nreg,1,nf)
   init_3darray input_u(1,ns,1,nreg,1,nf)
-  init_number max_Fnew
+  init_number max_Fnew //
   init_number Fnew_start
   init_number NR_iterations
   init_number NR_dev
@@ -369,16 +369,18 @@ PROCEDURE_SECTION
 
   get_abundance();
 
-  //test to see if selectivity calcs are working with double logistic selectivity switch - looks fine
-  //cout << selectivity << endl;
+  //cout << init_abund << endl;
   //exit(43);
  
   evaluate_the_objective_function();
-     
+
+
+///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
 
-  ///new functional forms
-  // simulate yearly differences and age-based movement
+//POSSIBLE ADDITIONS:
+  //new functional forms
+  //simulate yearly differences and age-based movement
   //random movement same as a random F value
   //random walk
   //density dependent
@@ -468,7 +470,7 @@ FUNCTION get_movement
                     {
                      T(j,r,y,a,k,n)=0;
                     }
-                   }
+                  }
                  if(move_switch==1) // use input movement
                   {
                    T(j,r,y,a,k,n)=input_T(j,r,a,k,n);
@@ -515,50 +517,50 @@ FUNCTION get_movement
                    }
                   }              
                 }
-      }
-     } 
+       }
+      } 
+     }
     }
    }
   }
- }
 
+
+///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
+//POSSIBLE ADDITIONS:
+  //yearly selectivity
 
-///////////////// Yearly selectivity potentially
-
-///////////////////////// PUT IN NEW SWITCH FOR GAMMA/DOUBLE NORMAL ///////////////////////////////////////////
-
-      for (int j=1;j<=nstocks;j++)
-       {
-        for (int r=1;r<=nregions(j);r++)
-         {
-          for (int y=1;y<=nyrs;y++)
+  for (int j=1;j<=nstocks;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+      for (int y=1;y<=nyrs;y++)
+        {
+         for (int a=1;a<=nages;a++)
            {
-            for (int a=1;a<=nages;a++)
-             {
-              for (int z=1;z<=nfleets(j,r);z++)
-               {
-                 if(select_switch==2) //4 parameter double logistic selectivity
-                  {
-                   selectivity(j,r,y,a,z)=1/((1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))))*(1+mfexp(-sel_beta3(j,r,z)*(a-sel_beta4(j,r,z)))));
-                  }
-                 if(select_switch==1) //two parameter logistic selectivity
-                  {
-                   selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))));
-                   //selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z)))); 
-                  }
-                 if(select_switch==0) //input selectivity at age constant by year
-                  {
-                   selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
-                  }
-             }
+            for (int z=1;z<=nfleets(j,r);z++)
+              {
+               if(select_switch==2) //4 parameter double logistic selectivity
+                {
+                 selectivity(j,r,y,a,z)=1/((1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))))*(1+mfexp(-sel_beta3(j,r,z)*(a-sel_beta4(j,r,z)))));
+                }
+                if(select_switch==1) //two parameter logistic selectivity
+                {
+                 selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))));
+                //selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z)))); 
+                }
+                if(select_switch==0) //input selectivity at age constant by year
+                {
+                 selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
+                }
+              }
             }
-           }
           }
-         }
+        }
+      }
 
-//////////////////////////////////////////////////////////////////////////////////////////
 
+///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
    random_number_generator myrand(myseed);
 
@@ -581,80 +583,85 @@ FUNCTION get_F_age
  // random walk
 
 
-     for (int j=1;j<=nstocks;j++)
+  for (int j=1;j<=nstocks;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+      for (int y=1;y<=nyrs;y++)
        {
-        for (int r=1;r<=nregions(j);r++)
+        for (int a=1;a<=nages;a++)
          {
-          for (int y=1;y<=nyrs;y++)
-           {
-            for (int a=1;a<=nages;a++)
-             {
-              for (int z=1;z<=nfleets(j,r);z++)
-               { 
-                 if(F_switch==1) //input F directly
-                  {
-                   F_year(j,r,y,z)=input_F(j,r,z);
-                  }
-                 if(F_switch==2) //input single yearly F (i.e., using single stock FMSY for all stocks)
-                  {
-                   F_year(j,r,y,z)=input_F_MSY;
-                  }
-                 if(F_switch==3) //estimate F that achieves desired Total F
-                  {
-                   F_year(j,r,y,z)=F_est(j,r);
-                  }
-                 if(F_switch==4) //split F_MSY by nstocks
-                  {
-                   F_year(j,r,y,z)=input_F_MSY/nstocks;
-                  }
-                 if(F_switch==5) //split F_MSY by total number of regions
-                  {
-                   F_year(j,r,y,z)=input_F_MSY/sum(nregions);
-                  }
-                 if(F_switch==6) //split F_MSY by total number of fleets
-                  {
-                   F_year(j,r,y,z)=input_F_MSY/sum(nfleets);
-                  }
-             //    if(F_switch==7) //random walk in F
-             //     {
-             //      F_year(j,r,y,z)=F_est(j,r,z);
-             //     }
-               F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
-               F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
-               M(j,r,y,a)=input_M(j,a);
-             }
-            }
+          for (int z=1;z<=nfleets(j,r);z++)
+           { 
+             if(F_switch==1) //input F directly
+              {
+               F_year(j,r,y,z)=input_F(j,r,z);
+              }
+             if(F_switch==2) //input single yearly F (i.e., using single stock FMSY for all stocks)
+              {
+               F_year(j,r,y,z)=input_F_MSY;
+              }
+             if(F_switch==3) //estimate F that achieves desired Total F
+              {
+               F_year(j,r,y,z)=F_est(j,r);
+              }
+             if(F_switch==4) //split F_MSY by nstocks
+              {
+               F_year(j,r,y,z)=input_F_MSY/nstocks;
+              }
+             if(F_switch==5) //split F_MSY by total number of regions
+              {
+               F_year(j,r,y,z)=input_F_MSY/sum(nregions);
+              }
+             if(F_switch==6) //split F_MSY by total number of fleets
+              {
+               F_year(j,r,y,z)=input_F_MSY/sum(nfleets);
+              }
+         //  if(F_switch==7) //random walk in F
+         //   {
+         //    F_year(j,r,y,z)=F_est(j,r,z);
+         //   }
+             F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
+             F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
+             M(j,r,y,a)=input_M(j,a);
            }
           }
          }
+        }
+       }
+
+
 
 FUNCTION get_vitals
-   random_number_generator myrand(myseed);
- for (int p=1;p<=nstocks;p++)
-  {
-   for (int j=1;j<=nstocks;j++)
-    {
-     for (int r=1;r<=nregions(j);r++)
-      {
-       for (int y=1;y<=nyrs;y++)
-        {
-         for (int a=1;a<=nages;a++)
-          {
-           for (int z=1;z<=nfleets(j,r);z++)
-            {
-                 weight_stock(j,y,a)=input_weight(j,a);
-                 weight_catch(j,y,a)=input_catch_weight(j,a);
+//POSSIBLE ADDITIONS:
+  //random walk in apportionment or random to give time-varying
+  //switch for input recruitment devs by year to recreate a given stock trajectory
+ 
+  random_number_generator myrand(myseed);
+  
+  for (int p=1;p<=nstocks;p++)
+   {
+    for (int j=1;j<=nstocks;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int y=1;y<=nyrs;y++)
+         {
+          for (int a=1;a<=nages;a++)
+           {
+            for (int z=1;z<=nfleets(j,r);z++)
+             {
+              weight_stock(j,y,a)=input_weight(j,a);
+              weight_catch(j,y,a)=input_catch_weight(j,a);
+              
               if(recruit_devs_switch==0)  //use stock recruit relationship directly
                 {
                  rec_devs(j,y)=1;
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-        ///// CHECK THIS CALCULATION MAKE SURE USING NEW RANDN every time through loop
-        /// rand_rec.fill_randn(myrand);
-
-  //switch for input recruitment devs by year to recreate a given stock trajectory
-  
+////// CHECK THIS CALCULATION MAKE SURE USING NEW RANDN every time through loop
+////// rand_rec.fill_randn(myrand);
                  rec_devs(j,y)=mfexp(randn(myrand)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
                 }
                if(SSB_type==1) //fecundity based SSB
@@ -665,9 +672,6 @@ FUNCTION get_vitals
                 {
                  wt_mat_mult(j,y,a)=0.5*weight_stock(j,y,a)*maturity(j,a);
                 }
-
-   /// random walk in apportionment or random to give time-varying
-
                if(apportionment_type==1) //input recruitment apportionment directly by stock and region
                 {
                  Rec_Prop(j,r,y)=input_Rec_prop(j,r);
@@ -680,53 +684,57 @@ FUNCTION get_vitals
                 {
                  Rec_Prop(j,r,y)=1;
                 }
-        }
+             }
+           }
+         }
        }
-      }
      }
-    }
    }
 
+
+///////SPR CALCS///////
 FUNCTION get_SPR
- if(Rec_type==2) //BH recruitment
-  {
-   for (int k=1;k<=nstocks;k++)
-    {
-     for (int n=1;n<=nages;n++)
-      {
-                    if(n==1)
-                       {
-                        SPR_N(k,n)=1000;
-                        SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
-                       }
-                    if(n>1 && n<nages)
-                       {
-                        SPR_N(k,n)=SPR_N(k,n-1)*mfexp(-M(k,1,1,n-1));
-                        SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
-                       }
-                    if(n==nages)
-                       {
-                        SPR_N(k,n)=SPR_N(k,n-1)*mfexp(-M(k,1,1,n))*(1/(1-mfexp(-M(k,1,1,n))));
-                        SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
-                       }
+  if(Rec_type==2) //BH recruitment
+   {
+    for (int k=1;k<=nstocks;k++)
+     {
+      for (int n=1;n<=nages;n++)
+       {
+        if(n==1)
+         {
+          SPR_N(k,n)=1000;
+          SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
+         }
+        if(n>1 && n<nages)
+         {
+          SPR_N(k,n)=SPR_N(k,n-1)*mfexp(-M(k,1,1,n-1));
+          SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
+         }
+        if(n==nages)
+         {
+          SPR_N(k,n)=SPR_N(k,n-1)*mfexp(-M(k,1,1,n))*(1/(1-mfexp(-M(k,1,1,n))));
+          SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
+         }
        }
      SPR(k)=sum(SPR_SSB(k))/1000; 
      alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
      beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
      SSB_zero(k)=SPR(k)*R_ave(k);
-   }
-  }
+     }
+   } 
+
+
 FUNCTION get_abundance
        for (int y=1;y<=nyrs;y++)
         {
 
 //need to add all_natal calcs for all values that might want to compare across an area, because regular non-natal homing calcs do not account for different weights across natal populations so if if any part of calc involves weight it needs to use the biomass_all_natal value not just biomass_AM
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////// Y==1 Overlap Calcs //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////// Y==1 Overlap Calcs ///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
              if(y==1)
               {
@@ -824,8 +832,8 @@ FUNCTION get_abundance
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
     
-                  abundance_at_age_BM(j,r,y,a)=init_abund(j,r,a);
-                  recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
+                abundance_at_age_BM(j,r,y,a)=init_abund(j,r,a);
+                recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
                 abundance_move_temp=0;
                 bio_move_temp=0;
@@ -1052,8 +1060,8 @@ FUNCTION get_abundance
                    }
                   }
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           for (int a=1;a<=nages;a++)
-             {
+         for (int a=1;a<=nages;a++)
+           {
            for (int p=1;p<=nstocks;p++)
             {
              for (int j=1;j<=nstocks;j++)
