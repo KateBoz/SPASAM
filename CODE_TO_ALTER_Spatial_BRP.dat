@@ -12,7 +12,7 @@
 4
 4
 4
-#use_TAC
+#model_type_swtich
   #==0 do not use TAC to set F
   #==1 use TAC to set F
   #==2 use uMSY to set F
@@ -53,11 +53,11 @@
   #==5 overall F is is split evenly among all regions (each fleet uses region F)
   #==6 overall F is split evenly among fleets
   #==7 random walk in F (NOT YET IMPLEMENTED)
-1
+6
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
-0
+1
 #SSB_type
   #==1 fecundity based SSB
   #==2 weight based SSB
@@ -71,7 +71,7 @@
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
-2
+1
 #return_age
   #age of return migration for move_switch==6
 4
@@ -408,7 +408,7 @@
 9641.48 8989.029 8408.09 7773.53 7101.21 5023.13 4185.78 3127.06 3293.869 2940.64 2927.02 2464.83 2247.14 3109.879 2164.131 557.81 1575.49 1124.92 704.033 3580.36
 2726.02 2625.819 2489.689 2293.18 2050 1375.78 1203.631 905.271 446.254 445.114 242.991 180.707 113.199 137.075 44.415 12.363 20.899 16.924 10.985 37.493
 #input_TAC
- #TAC that are matching if use_TAC==1
+ #TAC that are matching if model_type_switchC==1
 1 1 1 1
 1 1 1 1
 1 1 1 1
