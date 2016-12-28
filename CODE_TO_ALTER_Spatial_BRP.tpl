@@ -122,6 +122,7 @@ DATA_SECTION
   init_number Rec_type
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  //==3 input recruitment - use for 
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,8 +137,9 @@ DATA_SECTION
   init_vector tspawn(1,ns) //time of spawning
   init_vector steep(1,ns) //B-H steepness
   init_vector R_ave(1,ns) //Average Recruitment or R0 for B-H S-R curve
-
-
+  init_vector amplitude(1,ns) //amplitude of periodic recruitment in % of R_ave 
+  init_vector freq(1,ns) //frequency of recruitment in years (ie 10 for peak every 10 years)
+  
   //check that this ragged array is set up properly
   init_5darray input_T(1,ns,1,nreg,1,na,1,ns,1,nreg)  //movement matrix 
   init_matrix input_residency_larval(1,ns,1,nreg)  //larval residency probability
@@ -157,6 +159,7 @@ DATA_SECTION
   init_matrix maturity(1,ns,1,na)
   init_matrix input_Rec_prop(1,ns,1,nreg)
   init_3darray init_abund(1,ns,1,nreg,1,na)
+  init_matrix rec_index_sigma(1,ns,1,nreg)
 
   init_3darray input_TAC(1,ns,1,nreg,1,nf)
   init_3darray input_u(1,ns,1,nreg,1,nf)
@@ -188,10 +191,10 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
- //!!cout << input_T <<endl;
- //!!cout << sel_beta4 << endl;
- //!!cout << input_u << endl; // testing a problem I found in the dat file...fixed
  
+ 
+ //!!cout << rec_index_sigma << endl;
+ //!!cout << freq << endl;
  //!!exit(43);
 
 PARAMETER_SECTION
@@ -227,6 +230,9 @@ PARAMETER_SECTION
 
  3darray recruits_BM(1,nst,1,nr,1,nyr)
  3darray recruits_AM(1,nst,1,nr,1,nyr)
+ 
+ 3darray rec_index_BM(1,nst,1,nr,1,nyr)
+
  4darray abundance_at_age_BM(1,nst,1,nr,1,nyr,1,nag)
  4darray abundance_at_age_AM(1,nst,1,nr,1,nyr,1,nag)
  4darray abundance_in(1,nst,1,nr,1,nyr,1,nag)
@@ -369,7 +375,9 @@ PROCEDURE_SECTION
 
   get_abundance();
 
-  //cout << init_abund << endl;
+ 
+  //cout << recruits_BM << endl;
+  //cout << rec_index_BM << endl;
   //exit(43);
  
   evaluate_the_objective_function();
@@ -636,6 +644,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given stock trajectory
+  //what if recruit index came before or after movement
  
   random_number_generator myrand(myseed);
   
@@ -654,7 +663,7 @@ FUNCTION get_vitals
               weight_stock(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
               
-              if(recruit_devs_switch==0)  //use stock recruit relationship directly
+               if(recruit_devs_switch==0)  //use stock recruit relationship directly
                 {
                  rec_devs(j,y)=1;
                 }
@@ -684,6 +693,10 @@ FUNCTION get_vitals
                 {
                  Rec_Prop(j,r,y)=1;
                 }
+               //if(apportionment_type==3)
+                //{
+                // Rec_Prop(j,r,y) = rec_index_BM(j,r,y)/sum(rec_index_BM(j,r,y));
+                //}
              }
            }
          }
@@ -725,6 +738,8 @@ FUNCTION get_SPR
 
 
 FUNCTION get_abundance
+  random_number_generator myrand(myseed);
+
        for (int y=1;y<=nyrs;y++)
         {
 
@@ -778,7 +793,7 @@ FUNCTION get_abundance
                    }
                   }
 
-  ////MAYBE USE A 'WHILE' STATEMENT TO SIMPLIFY
+  
   
                     if(move_switch!=6 || move_switch!=7  || a==1) //if movement is not type=6,7 or a==1 (and movement type 6)
                      {
@@ -798,13 +813,13 @@ FUNCTION get_abundance
                         abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(j,r,a);
                       }
                      }
-     /////DO FOLLOWING CALCS FOR BM AS WELL                
+ ////////DO FOLLOWING CALCS FOR BM AS WELL                
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_stock(p,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
-   /////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
 
                 abundance_at_age_AM_overlap_stock(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
@@ -827,13 +842,16 @@ FUNCTION get_abundance
                 
 
 
- //////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////
-   ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance/////////////////////////////////////////////////////////////// //////////////////////////////////////////////////////////////////////////////
     
                 abundance_at_age_BM(j,r,y,a)=init_abund(j,r,a);
                 recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
+
+            ////get year one recruitment index
+                rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+
 
                 abundance_move_temp=0;
                 bio_move_temp=0;
@@ -852,7 +870,7 @@ FUNCTION get_abundance
  //// ADD IN BM CALCS TO ENSURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
-           /////////////////////////////
+/////////////////////////////
                    }
                   if(overlap_switch==0)
                    {
@@ -885,6 +903,9 @@ FUNCTION get_abundance
               }
               }
               } //end age loop
+
+
+
  ///////////////////////////////////////////////////////////////////////////////////
  ////////////////NEWTON-RAPHSON for YEAR 1////////////////////////////////////////////////////////////////////////////
  //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1106,11 +1127,11 @@ FUNCTION get_abundance
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 if(a==1)
                  {
-                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))*(1-tspawn(p))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
+                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F(j,r,y,a)+M(j,r,y,a))*(1-tspawn(p))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
                  }
                 if(a>1)
                  {
-                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a))); //
+                  catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a))); //
                  }
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
@@ -1232,6 +1253,9 @@ FUNCTION get_abundance
                      recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to stock SSB but not region SSB)
                     }
                   }
+
+ ////////////add recruits_BM with error (recruitment index) - and apportion switch 3
+ 
                  if(Rec_type==2) //BH recruitment
                   {
                    if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a stock
@@ -1271,8 +1295,13 @@ FUNCTION get_abundance
                     }
                   }
                  }
-                
-              
+
+
+//////////////////finish filling out the recruitment index
+    
+                 rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////a==1 overlap calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2390,6 +2419,7 @@ FUNCTION get_abundance
                  }
                 }
                }
+         
 
 FUNCTION evaluate_the_objective_function
    f=0.0;
@@ -2460,6 +2490,10 @@ REPORT_SECTION
   report<<R_ave<<endl;
   report<<"$SSB_zero"<<endl;
   report<<SSB_zero<<endl;
+
+
+
+
 //  report<<"$input_T"<<endl;
 //  report<<input_T<<endl;
 //  report<<"$input_residency"<<endl;
@@ -2493,9 +2527,11 @@ REPORT_SECTION
 //  report<<"$maturity"<<endl;
 //  report<<maturity<<endl;
 //  report<<"$input_Rec_prop"<<endl;
-// report<<input_Rec_prop<<endl;
+//  report<<input_Rec_prop<<endl;
 //  report<<"$init_abund"<<endl;
 //  report<<init_abund<<endl;
+//  report<<$"rec_index_sigma"<<end;
+//  report<<rec_index_sigma<<end;
 
 //  report<<"$F_est"<<endl;
 //  report<<F_est<<endl;
@@ -2526,6 +2562,8 @@ REPORT_SECTION
   report<<alpha<<endl;
   report<<"$beta"<<endl;
   report<<beta<<endl;
+
+
 //  report<<"$abundance_at_age_BM"<<endl;
 //  report<<abundance_at_age_BM<<endl;
 //  report<<"$abundance_at_age_AM"<<endl;
@@ -2570,6 +2608,10 @@ REPORT_SECTION
 //  report<<"$catch_at_age_total"<<endl;
 //  report<<catch_at_age_total<<endl;
 
+//  report<<"$recruits_BM"<<endl;
+//  report<<recruits_BM<<endl;
+//  report<<"$rec_index_BM"<<endl;
+//  report<<rec_index_BM<<end;
 
 
 //  report<<"$harvest_rate_region_num"<<endl;
