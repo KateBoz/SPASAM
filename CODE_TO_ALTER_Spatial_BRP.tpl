@@ -160,7 +160,8 @@ DATA_SECTION
   init_matrix input_Rec_prop(1,ns,1,nreg)
   init_3darray init_abund(1,ns,1,nreg,1,na)
   init_matrix rec_index_sigma(1,ns,1,nreg)
-
+  init_vector  caa_sigma(1,na)
+ 
   init_3darray input_TAC(1,ns,1,nreg,1,nf)
   init_3darray input_u(1,ns,1,nreg,1,nf)
   init_number max_Fnew //
@@ -204,7 +205,7 @@ PARAMETER_SECTION
   !! int nyr=nyrs;
   !! int nag=nages;
   !! imatrix nfl=nfleets;
-  
+   
  init_matrix F_est(1,nst,1,nr,phase_F)
 
  6darray T(1,nst,1,nr,1,nyr,1,nag,1,nst,1,nr)
@@ -282,6 +283,25 @@ PARAMETER_SECTION
  3darray SSB_stock_overlap(1,nst,1,nst,1,nyr)
  matrix SSB_natal_overlap(1,nst,1,nyr)
 
+ 4darray true_caa_fleet_total(1,nst,1,nr,1,nyr,1,nfl)
+ 4darray true_caa_overlap_reg_total(1,nst,1,nst,1,nr,1,nyr)
+ 5darray true_caa_fleet_temp(1,nst,1,nr,1,nyr,1,nfl,1,nag)
+ 5darray true_caa_overlap_reg_temp(1,nst,1,nst,1,nr,1,nyr,1,nag)
+ 
+ 5darray CAA_prop_fleet(1,nst,1,nr,1,nyr,1,nfl,1,nag)
+ 5darray CAA_prop_overlap(1,nst,1,nr,1,nyr,1,nfl,1,nag)
+ 
+ 5darray obs_caa_fleet(1,nst,1,nr,1,nyr,1,nfl,1,nag)
+ 4darray obs_caa_fleet_total(1,nst,1,nr,1,nyr,1,nfl)
+ 5darray obs_prop_fleet(1,nst,1,nr,1,nyr,1,nfl,1,nag)
+
+ 5darray obs_caa_overlap_reg(1,nst,1,nst,1,nr,1,nyr,1,nag)
+ 4darray obs_caa_overlap_reg_total(1,nst,1,nst,1,nr,1,nyr)
+ 5darray obs_prop_overlap_reg(1,nst,1,nst,1,nr,1,nyr,1,nag)
+
+
+
+
  5darray catch_at_age_region_overlap(1,nst,1,nst,1,nr,1,nyr,1,nag)
  4darray yield_region_overlap(1,nst,1,nst,1,nr,1,nyr)
  4darray catch_at_age_stock_overlap(1,nst,1,nst,1,nyr,1,nag)
@@ -354,7 +374,7 @@ PARAMETER_SECTION
   objective_function_value f
 
  !! cout << "parameters set" << endl;
-
+ 
 
 INITIALIZATION_SECTION  //set initial values
      
@@ -374,12 +394,11 @@ PROCEDURE_SECTION
   get_SPR();
 
   get_abundance();
+  
+  get_rec_index();
 
- 
-  //cout << recruits_BM << endl;
-  //cout << rec_index_BM << endl;
-  //exit(43);
- 
+  get_rand_CAA_prop();
+
   evaluate_the_objective_function();
 
 
@@ -850,7 +869,7 @@ FUNCTION get_abundance
                 recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
             ////get year one recruitment index
-                rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               // rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
 
 
                 abundance_move_temp=0;
@@ -1299,7 +1318,7 @@ FUNCTION get_abundance
 
 //////////////////finish filling out the recruitment index
     
-                 rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                 //rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2070,7 +2089,11 @@ FUNCTION get_abundance
                    recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
  
                    abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
+
                    catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))*(1-tspawn(j))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a)); //account for time of spawning in catch (tspawn divides out in F/(F+M
+
+                   //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
+                   
                    yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
                    yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                    catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2142,6 +2165,9 @@ FUNCTION get_abundance
                    
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
+
+                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
+                  
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2212,6 +2238,9 @@ FUNCTION get_abundance
    
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
+
+                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
+
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2280,6 +2309,9 @@ FUNCTION get_abundance
                    
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
+
+                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
+                   
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2308,6 +2340,7 @@ FUNCTION get_abundance
                 depletion_stock(j,y)=biomass_stock(j,y)/biomass_stock(j,1);
                 depletion_total(y)=biomass_total(y)/biomass_total(1);
         } //end nages if statement
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2419,7 +2452,92 @@ FUNCTION get_abundance
                  }
                 }
                }
-         
+
+
+
+ 
+
+FUNCTION get_rec_index //function to calculate recruitment index
+
+// can add after movement too for larval drift scenario
+  random_number_generator myrand(myseed);
+
+  for (int j=1;j<=nstocks;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+      for (int y=1;y<=nyrs;y++)
+       {
+        rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+       }
+     }
+   }
+
+
+
+
+FUNCTION get_rand_CAA_prop
+ random_number_generator myrand(myseed);
+ //calculate the total CAA for each stock/area/region/fleet for non-natal and natal calcs
+ 
+  for (int p=1;p<=nstocks;p++)
+   {
+    for (int j=1;j<=nstocks;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int y=1;y<=nyrs;y++)
+         {
+          for (int z=1;z<=nfleets(j,r);z++)
+             {
+           for (int a=1;a<=nages;a++)
+               {
+               
+            if(overlap_switch==0)//for non-natal homing -
+              {
+               true_caa_fleet_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z); //summing catch across age
+               true_caa_fleet_total(j,r,y,z) = sum(true_caa_fleet_temp(j,r,y,z));
+               //calc random catches assuming true are means with log-normal age-specific error
+               obs_caa_fleet(j,r,y,z,a)= true_caa_fleet_temp(j,r,y,z,a)*mfexp(randn(myrand)*caa_sigma(a)-0.5*square(caa_sigma(a)));
+               obs_caa_fleet_total(j,r,y,z) = sum(obs_caa_fleet(j,r,y,z));
+               
+             for (int a=1;a<=nages;a++)
+               {
+               CAA_prop_fleet(j,r,y,z,a) =  true_caa_fleet_temp(j,r,y,z,a)/true_caa_fleet_total(j,r,y,z);
+               //observed age comp
+               obs_prop_fleet(j,r,y,z,a) = obs_caa_fleet(j,r,y,z,a)/obs_caa_fleet_total(j,r,y,z);
+               }
+              }
+               
+            if(overlap_switch>0)//for natal-homing...havent really tested this
+              {
+               true_caa_overlap_reg_temp(p,j,r,y,a) = catch_at_age_region_overlap(p,j,r,y,a);
+               true_caa_overlap_reg_total(p,j,r,y) = sum(true_caa_overlap_reg_temp(p,j,r,y));
+               //calc random catches assuming true are means with log-normal age-specific error
+               obs_caa_overlap_reg(p,j,r,y,a)= true_caa_overlap_reg_temp(p,j,r,y,a)*mfexp(randn(myrand)*caa_sigma(a)-0.5*square(caa_sigma(a)));
+               obs_caa_overlap_reg_total(p,j,r,y) = sum(obs_caa_overlap_reg(p,j,r,y));
+
+
+              for (int a=1;a<=nages;a++)
+               {
+               CAA_prop_overlap(p,j,r,y,a) = true_caa_overlap_reg_temp(p,j,r,y,a)/true_caa_overlap_reg_total(p,j,r,y);
+               //observed age comp
+               obs_prop_overlap_reg(p,j,r,y,a)= obs_caa_overlap_reg(p,j,r,y,a)/obs_caa_overlap_reg_total(p,j,r,y);
+               }
+              }
+             }
+            }
+          }  
+        }
+      }
+    }
+
+
+  //cout<<obs_caa_fleet<<endl;
+  //cout<<obs_caa_fleet_total<<endl;
+  //exit(43);
+
+
 
 FUNCTION evaluate_the_objective_function
    f=0.0;
@@ -2438,7 +2556,8 @@ FUNCTION evaluate_the_objective_function
                 }
                }
               }
-              
+
+
 REPORT_SECTION
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
@@ -2607,6 +2726,16 @@ REPORT_SECTION
 //  report<<catch_at_age_stock<<endl;
 //  report<<"$catch_at_age_total"<<endl;
 //  report<<catch_at_age_total<<endl;
+
+//  report<<"$obs_caa_fleet"<<endl;
+//  report<<obs_caa_fleet<<endl;
+//  report<<"$obs_prop_fleet"<<endl;
+//  report<<obs_prop_fleet<<endl;
+
+//  report<<"$obs_caa_overlap_reg"<<endl;
+//  report<<obs_caa_overlap_reg<<endl;
+//  report<<"$obs_prop_overlap_reg"<<endl;
+//  report<<obs_prop_overlap_reg<<endl;
 
 //  report<<"$recruits_BM"<<endl;
 //  report<<recruits_BM<<endl;

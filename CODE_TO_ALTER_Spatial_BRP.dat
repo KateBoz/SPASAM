@@ -1,7 +1,7 @@
 #nages
 20
 #nyrs
-200
+50
 #nstocks
 1
 #nregions
@@ -31,7 +31,7 @@
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
   #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
-1
+0
 #overlap switch
   #==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock)
   #==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
@@ -42,7 +42,7 @@
   #==0 input selectivity
   #==1 logistic selectivity based on input sel_beta1 and sel_beta2
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
-1
+0
 #F_switch
   #==1 input F
   #==2 input single overall F (FMSY)
@@ -51,7 +51,7 @@
   #==5 overall F is is split evenly among all regions (each fleet uses region F)
   #==6 overall F is split evenly among fleets
   #==7 random walk in F (NOT YET IMPLEMENTED)
-6
+1
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -71,7 +71,7 @@
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
-  #==3 periodic (sine wave type)
+  #==3 cyclical (sine wave type)
 1
 
 #return_age - age of return migration for move_switch==6
@@ -241,9 +241,9 @@
 0.97197	0.54888
 0.781903659	0.095831707
 #input_F
-0 0 
-0 0 
-0 0 
+0.2 0.2 
+0.2 0.2 
+0.2 0.2 
 #F_MSY
 0.5
 
@@ -276,6 +276,9 @@
 0.2
 0.2
 0.2
+
+#caa_sigma
+0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 #error for age comps
 
 #input_TAC
  #TAC that are matching if model_type_switch==1
