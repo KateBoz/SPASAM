@@ -72,7 +72,7 @@
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
   #==3 cyclical (sine wave type)
-1
+3
 
 #return_age - age of return migration for move_switch==6
 4
@@ -91,9 +91,9 @@
 #R_ave
 4291.260
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
-0.2
+0.3
 #freq - period of occilation for recruitment variation. Use when Rec_type ==3
-15
+10
 #input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
 0.9	0.05	0.00
 0.9	0.05	0.00

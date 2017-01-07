@@ -139,7 +139,6 @@ DATA_SECTION
   init_vector R_ave(1,ns) //Average Recruitment or R0 for B-H S-R curve
   init_vector amplitude(1,ns) //amplitude of periodic recruitment in % of R_ave 
   init_vector freq(1,ns) //frequency of recruitment in years (ie 10 for peak every 10 years)
-  
   //check that this ragged array is set up properly
   init_5darray input_T(1,ns,1,nreg,1,na,1,ns,1,nreg)  //movement matrix 
   init_matrix input_residency_larval(1,ns,1,nreg)  //larval residency probability
@@ -160,7 +159,7 @@ DATA_SECTION
   init_matrix input_Rec_prop(1,ns,1,nreg)
   init_3darray init_abund(1,ns,1,nreg,1,na)
   init_matrix rec_index_sigma(1,ns,1,nreg)
-  init_vector  caa_sigma(1,na)
+  init_vector caa_sigma(1,na)
  
   init_3darray input_TAC(1,ns,1,nreg,1,nf)
   init_3darray input_u(1,ns,1,nreg,1,nf)
@@ -171,6 +170,9 @@ DATA_SECTION
   
   init_int debug
   init_number myseed
+
+  vector years(1,nyrs)
+  !!years.fill_seqadd(double(1),1.0);
   
   int a
   int y
@@ -205,8 +207,9 @@ PARAMETER_SECTION
   !! int nyr=nyrs;
   !! int nag=nages;
   !! imatrix nfl=nfleets;
-   
+
  init_matrix F_est(1,nst,1,nr,phase_F)
+
 
  6darray T(1,nst,1,nr,1,nyr,1,nag,1,nst,1,nr)
  5darray selectivity(1,nst,1,nr,1,nyr,1,nag,1,nfl)
@@ -234,6 +237,8 @@ PARAMETER_SECTION
  
  3darray rec_index_BM(1,nst,1,nr,1,nyr)
 
+ vector env_rec(1,nyr)
+ 
  4darray abundance_at_age_BM(1,nst,1,nr,1,nyr,1,nag)
  4darray abundance_at_age_AM(1,nst,1,nr,1,nyr,1,nag)
  4darray abundance_in(1,nst,1,nr,1,nyr,1,nag)
@@ -298,9 +303,6 @@ PARAMETER_SECTION
  5darray obs_caa_overlap_reg(1,nst,1,nst,1,nr,1,nyr,1,nag)
  4darray obs_caa_overlap_reg_total(1,nst,1,nst,1,nr,1,nyr)
  5darray obs_prop_overlap_reg(1,nst,1,nst,1,nr,1,nyr,1,nag)
-
-
-
 
  5darray catch_at_age_region_overlap(1,nst,1,nst,1,nr,1,nyr,1,nag)
  4darray yield_region_overlap(1,nst,1,nst,1,nr,1,nyr)
@@ -392,8 +394,15 @@ PROCEDURE_SECTION
   get_vitals();
 
   get_SPR();
+  
+  get_env_Rec();
+
+  //cout<<env_rec<<endl;
 
   get_abundance();
+
+  //cout<<recruits_BM<<endl;
+  //exit(43);
   
   get_rec_index();
 
@@ -753,7 +762,34 @@ FUNCTION get_SPR
      beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
      SSB_zero(k)=SPR(k)*R_ave(k);
      }
-   } 
+   }
+
+
+FUNCTION get_env_Rec // calculate temporally autocorrelated recruitment - input period and amplitude
+
+   for (int y=1;y<=nyrs;y++)
+         {
+         for (int j=1;j<=nstocks;j++)
+             {
+            for (int r=1;r<=nregions(j);r++)
+               {
+          if(y==1)
+             {
+             env_rec(y)=init_abund(j,r,1);
+             }
+             
+          if(y>1)
+            {
+            env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*PI)/freq)*years(y)+freq);
+             }
+           }
+         }
+
+       }
+
+
+ //cout<<env_rec<<endl;
+ //exit(43);
 
 
 FUNCTION get_abundance
@@ -1286,6 +1322,18 @@ FUNCTION get_abundance
                      recruits_BM(j,r,y)=((SSB_stock_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_stock_overlap(p,j,y-1)))*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1)));
                     }
                   }
+                  
+                 if(Rec_type==3) //cyclical recruitment
+                  {
+                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a stock
+                    {
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*Rec_Prop(j,r,y);
+                    }
+                   if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a stock
+                    {
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to stock SSB but not region SSB)
+                    }
+                  }
                  }
                  }
 
@@ -1312,6 +1360,18 @@ FUNCTION get_abundance
                     {
                      recruits_BM(j,r,y)=((SSB_stock(j,y-1))/(alpha(j)+beta(j)*SSB_stock(j,y-1)))*rec_devs(j,y)*(SSB_region(j,r,y-1)/SSB_stock(j,y-1));
                     }
+
+                 if(Rec_type==3) //average recruitment
+                  {
+                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a stock
+                    {
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*Rec_Prop(j,r,y);
+                    }
+                   if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a stock
+                    {
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*(SSB_region(j,r,y-1)/SSB_stock(j,y-1));
+                    }
+                  }
                   }
                  }
 
@@ -1459,6 +1519,18 @@ FUNCTION get_abundance
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regions within a stock
                     {
                      abundance_move_temp(k,n)=((SSB_stock(k,y-1))/(alpha(k)+beta(k)*SSB_stock(k,y-1)))*rec_devs(k,y)*(SSB_region(k,n,y-1)/SSB_stock(k,y-1))*T(k,n,y,a,j,r);
+                    }
+                  }
+
+                if(Rec_type==3) //cyclical recruitment
+                  {
+                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a stock
+                    {
+                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    }
+                   if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a stock
+                    {
+                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y)*(SSB_region(k,n,y-1)/SSB_stock(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
                 }
@@ -2165,9 +2237,6 @@ FUNCTION get_abundance
                    
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
-
-                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
-                  
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
