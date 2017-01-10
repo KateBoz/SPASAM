@@ -67,7 +67,7 @@
   #==2 recruits are apportioned equally to each region within a stock
   #==3 recruits are apportioned based on rec index in each region = working on this...
   
-1
+2
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -91,9 +91,9 @@
 #R_ave
 4291.260
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
-0.3
+0.2
 #freq - period of occilation for recruitment variation. Use when Rec_type ==3
-10
+15
 #input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
 0.9	0.05	0.00
 0.9	0.05	0.00
