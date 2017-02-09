@@ -72,8 +72,7 @@
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
   #==3 cyclical (sine wave type)
-3
-
+2
 #return_age - age of return migration for move_switch==6
 4
 #return_probability- probability of returning for move_switch==6
@@ -279,6 +278,12 @@
 
 #caa_sigma
 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 #error for age comps
+
+#ESS
+200
+
+#N
+100
 
 #input_TAC
  #TAC that are matching if model_type_switch==1
