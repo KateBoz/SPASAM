@@ -32,7 +32,7 @@ DATA_SECTION
   init_int nyrs //number of years for simulation
   init_int npops //number of populations
 
-///////////// DESCRIBE ALL OF THESE RAGGED ARRAYS and population setups (regionp per area fleets per region)
+///////////// DESCRIBE ALL OF THESE RAGGED ARRAYS and population setups (regions per area, fleets per region)
   !! int np=npops;
   !! int ny=nyrs;
   !! int na=nages;
@@ -153,15 +153,23 @@ DATA_SECTION
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
   init_vector sigma_recruit(1,np)
+
+// change to 3darray
   init_matrix input_weight(1,np,1,na)
+  
   init_matrix input_catch_weight(1,np,1,na)
+
+//change to 3darray
   init_matrix fecundity(1,np,1,na)
-  init_matrix maturity(1,np,1,na)
+
+//changed to 3darray for maturity by area - sums across the areas for 
+  init_3darray maturity(1,np,1,nreg,1,na)
+  
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_3darray init_abund(1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
-  init_vector  caa_sigma(1,na)
-  init_number ESS //effective sample size for observed caa (ie. number of hauls)
+  init_vector caa_sigma(1,na)
+  init_number ESS //effective sample size for observed caa (ie. number of hauls)//for multinomial obs CAA
   init_number N //samples per haul for observed caa
  
   init_3darray input_TAC(1,np,1,nreg,1,nf)
@@ -198,8 +206,8 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
- !!cout << ESS << endl;
- !!exit(43);
+ //!!cout << ESS << endl;
+ //!!exit(43);
 
 PARAMETER_SECTION
 
@@ -221,7 +229,16 @@ PARAMETER_SECTION
  matrix rec_devs(1,nps,1,nyr)
  3darray weight_population(1,nps,1,nyr,1,nag)
  3darray weight_catch(1,nps,1,nyr,1,nag)
+
+//calcs for population only
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
+
+// create as 4darray for region specific calcs
+ 4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
+
+ 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity
+ matrix ave_mat(1,nps,1,nag) //to calc average maturit
+ 
  3darray weight_population_overlap(1,nps,1,nyr,1,nag)
  3darray weight_catch_overlap(1,nps,1,nyr,1,nag)
  3darray wt_mat_mult_overlap(1,nps,1,nyr,1,nag)
@@ -384,11 +401,6 @@ PARAMETER_SECTION
   objective_function_value f
 
  !! cout << "parameters set" << endl;
-
-
-// !! cout<<CAA_temp<<endl;
-// !! cout<<CAA_temp2<<endl;
- //!! exit(43);
  
 
 INITIALIZATION_SECTION  //set initial values
@@ -687,9 +699,9 @@ FUNCTION get_vitals
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
-     {
-      for (int r=1;r<=nregions(j);r++)
-       {
+     {  
+      for (int r=1;r<=nregions(j);r++)   
+       {       
         for (int y=1;y<=nyrs;y++)
          {
           for (int a=1;a<=nages;a++)
@@ -698,7 +710,12 @@ FUNCTION get_vitals
              {
               weight_population(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
+
+              ///calc aver matruity across the regions for global SPR calculations
+              ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
+              ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity
               
+                         
                if(recruit_devs_switch==0)  //use population recruit relationship directly
                 {
                  rec_devs(j,y)=1;
@@ -711,11 +728,13 @@ FUNCTION get_vitals
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*fecundity(j,a)*maturity(j,a);
+                 wt_mat_mult(j,y,a)=0.5*fecundity(j,a)*ave_mat(j,a);//for non-region specific
+                 wt_mat_mult_reg(j,r,y,a)=0.5*fecundity(j,a)*maturity(j,r,a);// for vary by region
                 }
                if(SSB_type==2) //weight based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*weight_population(j,y,a)*maturity(j,a);
+                 wt_mat_mult(j,y,a)=0.5*weight_population(j,y,a)*ave_mat(j,a);//for non area specific
+                 wt_mat_mult_reg(j,r,y,a)=0.5*weight_population(j,y,a)*maturity(j,r,a);
                 }
                if(apportionment_type==1) //input recruitment apportionment directly by population and region
                 {
@@ -740,14 +759,22 @@ FUNCTION get_vitals
      }
    }
 
- //cout<<Rec_Prop<<endl;
+ //cout<<ave_mat_temp<<endl;
+ //cout<<maturity<<endl;
+ //cout<<ave_mat<<endl;
+ //cout<<wt_mat_mult<<endl; 
  //exit(43);
 
 
 
 ///////SPR CALCS///////
+
+//Temporarily the SPR calcs are done with average matrucity across all the regions - while the full SSB calcs
+// are using the region specific matruity
+
+
 FUNCTION get_SPR
-  if(Rec_type==2) //BH recruitment
+  if(Rec_type=2) //BH recruitment = fix this
    {
     for (int k=1;k<=npops;k++)
      {
@@ -776,7 +803,8 @@ FUNCTION get_SPR
      }
    }
 
-
+ //cout<<SSB_zero<<endl;
+ //exit(43);
 
 
 FUNCTION get_env_Rec // calculate temporally autocorrelated recruitment - input period and amplitude
@@ -1162,7 +1190,7 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j,r);z++)
                   {
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
-                SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult(p,y,a); 
+                SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult_reg(p,r,y,a); //changed mat by region
                 SSB_region_overlap(p,j,r,y)=sum(SSB_region_temp_overlap(p,j,r,y));
 
                   SSB_overlap_natal=0;
@@ -1273,7 +1301,7 @@ FUNCTION get_abundance
               }
               if(overlap_switch==0)
               {
-                SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult(j,y,a); 
+                SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); // changed mat by region
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
               }
                 SSB_population_temp(j,y,r)=SSB_region(j,r,y); 
@@ -1293,6 +1321,11 @@ FUNCTION get_abundance
 ////////////////Recruitment Calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////need to fix and use SSB and R_ave for BH calcs.
+
+
+
 
              if(y>1)
               {
@@ -1315,7 +1348,7 @@ FUNCTION get_abundance
                  {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
                      recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1329,11 +1362,11 @@ FUNCTION get_abundance
  
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
-                     recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y)*Rec_Prop(j,r,y);
+                    recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
-                   if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
+                   if(apportionment_type==0) //use relative SSB to apportion recruitment among regions within a population
                     {
                      recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1)));
                     }
@@ -2474,7 +2507,7 @@ FUNCTION get_abundance
    // to natal population (i.e., remove this SSB from the non-natal areas...doesn't impact SR calcs so can do this outside
    //loops without conpequence to model
    
-                SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult(p,y,a); 
+                SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult_reg(p,r,y,a); //added region
                 SSB_region_overlap(p,j,r,y)=sum(SSB_region_temp_overlap(p,j,r,y));
                  SSB_overlap_natal=0;
                   if(overlap_switch==2) //spawning return calculationp
@@ -2512,7 +2545,7 @@ FUNCTION get_abundance
               }
               if(overlap_switch==0)
               {
-                SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult(j,y,a); 
+                SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); 
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
               }
                 SSB_population_temp(j,y,r)=SSB_region(j,r,y);
@@ -2572,8 +2605,9 @@ FUNCTION get_abundance
                 }
                }
                
- //cout<<recruits_BM<<endl;
+// cout<<recruits_BM<<endl;
  //cout<<SSB_region<<endl;
+ //cout<<SSB_population_overlap<<endl;
  //exit(43);
  
 
