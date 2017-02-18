@@ -154,9 +154,17 @@ wd_figs<-paste0(wd,"\\MSY Results\\Figures",sep="")
 #set to results for grabbing values
 setwd(wd_results)
 
+#progress bar for finding MSY
+pb<- winProgressBar(paste("MSY Search Progress Bar"), label=paste("Grabbing values from 0 of ",n_perm," simulations",sep=""),max=100)
+
 #run loop to get all the values into msy_results into a csv for plotting
-for(i in 1:nrow(permutation)){
-out=readList(paste0("Report",1,".rep",sep=""))
+for(i in 1:n_perm){
+  
+#start progress  
+setWinProgressBar(pb,(i/n_perm*100),label=paste("Grabbing values from ", i,"of ", n_perm," simulations",sep=""))
+  
+#read report 
+out=readList(paste0("Report",i,".rep",sep=""))
 
 #store results to a full spreadsheet add them in slowly for easy changes- check to see if it matches the .csv made above
 
@@ -185,6 +193,7 @@ write.csv(msy_pan,"MSY_true.csv")
 
 } #end value grab
 
+close(pb)
 #move results files to figs folder
 invisible(file.copy(from=paste0(wd_results,"\\MSY_results.csv",sep=""),to=paste0(wd_figs,"\\MSY_results.csv",sep="")))
 invisible(file.remove(paste0(wd_results,"\\MSY_results.csv",sep="")))
