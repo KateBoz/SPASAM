@@ -124,7 +124,7 @@ N_par_pop<-7 # number of parameters for stock
 msy_results<-data.frame(matrix(NA,nrow = nrow(permutation),ncol=((N_par_reg*nregions)+N_par_pop))) # number of parameters with multiple regions+number of total pop values
  
 #fill in the table slowly for error checking
-names(msy_results)[1]<-c("ntrial")
+names(msy_results)[1]<-c("perm")
 
 
 #fill in the rest will loops so can be changed as needed 
@@ -168,7 +168,7 @@ out=readList(paste0("Report",i,".rep",sep=""))
 
 #store results to a full spreadsheet add them in slowly for easy changes- check to see if it matches the .csv made above
 
-temp<-c(1,permutation[1,],
+temp<-c(i,permutation[i,],
         out$biomass_total[nyrs],
         out$yield_region[,nyrs],
         out$yield_total[nyrs],
@@ -185,15 +185,17 @@ msy_results[i,]<-temp
 #results
 write.csv(msy_results,"MSY_results.csv")
 
+} #end value grab
+
 
 # Getting the MSY vals
 t<-which(msy_results$yield_total==max(msy_results$yield_total))
 msy_pan<-msy_results[t,]
 write.csv(msy_pan,"MSY_true.csv")
 
-} #end value grab
-
 close(pb)
+
+
 #move results files to figs folder
 invisible(file.copy(from=paste0(wd_results,"\\MSY_results.csv",sep=""),to=paste0(wd_figs,"\\MSY_results.csv",sep="")))
 invisible(file.remove(paste0(wd_results,"\\MSY_results.csv",sep="")))
