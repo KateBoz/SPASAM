@@ -118,6 +118,7 @@ DATA_SECTION
   //==0 apportionment to each region is based on relative SSB in region compared to population SSB
   //==1 input apportionment
   //==2 recruits are apportioned equally to each region within a population
+  //==3 recruits are approtioned randomly to each region within a population
   
   init_number Rec_type
   //==1 population-recruit relationship assumes an average value based on R_ave
@@ -237,7 +238,7 @@ PARAMETER_SECTION
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
 
  3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity
- matrix ave_mat(1,nps,1,nag) //to calc average maturit
+ matrix ave_mat(1,nps,1,nag) //to calc average maturity
  
  3darray weight_population_overlap(1,nps,1,nyr,1,nag)
  3darray weight_catch_overlap(1,nps,1,nyr,1,nag)
@@ -252,7 +253,9 @@ PARAMETER_SECTION
 
  3darray recruits_BM(1,nps,1,nr,1,nyr)
  3darray recruits_AM(1,nps,1,nr,1,nyr)
- 
+ 3darray Rec_prop_temp(1,nps,1,nyr,1,nr)
+ matrix Rec_prop_temp2(1,nps,1,nyr)
+
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
 
  vector env_rec(1,nyr)
@@ -315,8 +318,8 @@ PARAMETER_SECTION
  5darray CAA_prop_overlap(1,nps,1,nr,1,nyr,1,nfl,1,nag)
 
 
-  vector CAA_temp(1,N)
-  vector CAA_temp2(1,nag)
+ vector CAA_temp(1,N)
+ vector CAA_temp2(1,nag)
  
  5darray obs_caa_fleet(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  4darray obs_caa_fleet_total(1,nps,1,nr,1,nyr,1,nfl)
@@ -325,9 +328,6 @@ PARAMETER_SECTION
  5darray obs_caa_overlap_reg(1,nps,1,nps,1,nr,1,nyr,1,nag)
  4darray obs_caa_overlap_reg_total(1,nps,1,nps,1,nr,1,nyr)
  5darray obs_prop_overlap_reg(1,nps,1,nps,1,nr,1,nyr,1,nag)
-
-
-
 
  5darray catch_at_age_region_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  4darray yield_region_overlap(1,nps,1,nps,1,nr,1,nyr)
@@ -355,7 +355,14 @@ PARAMETER_SECTION
  matrix Bratio_natal_overlap(1,nps,1,nyr)
  matrix Bratio_population(1,nps,1,nyr)
  vector Bratio_total(1,nyr)
- 
+
+ 3darray SSB_region_init(1,nps,1,nr,1,nag)
+ 3darray SSB_region_init_temp(1,nps,1,nag,1,nr)
+ matrix SSB_pop_temp(1,nps,1,nag)
+
+ vector SSB_pop_init(1,nps)
+
+
  matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
  5darray yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
@@ -583,7 +590,7 @@ FUNCTION get_movement
 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
-//POSSIBLE ADDITIOnp:
+//POSSIBLE ADDITIONS:
   //yearly selectivity
 
   for (int j=1;j<=npops;j++)
@@ -711,7 +718,7 @@ FUNCTION get_vitals
               weight_population(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
 
-              ///calc aver matruity across the regions for global SPR calculations
+              ///calc aver maturity across the regions for global SPR calculations
               ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
               ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity
               
@@ -748,33 +755,34 @@ FUNCTION get_vitals
                 {
                  Rec_Prop(j,r,y)=1;
                 }
-               //if(apportionment_type==3)
-                //{
-                // Rec_Prop(j,r,y) = rec_index_BM(j,r,y)/sum(rec_index_BM(j,r,y));
-                //}
+               if(apportionment_type==3)//completely random apportionment
+                {
+                Rec_prop_temp(j,y,r)=randu(myrand);//generate a positive random number bw 0-1
+                Rec_prop_temp2(j,y)=sum(Rec_prop_temp(j,y));
+                
+                for (int r=1;r<=nregions(j);r++){   
+                Rec_Prop(j,r,y)=Rec_prop_temp(j,y,r)/Rec_prop_temp2(j,y);
+                }
+
+               }   
              }
-           }
+           }         
          }
        }
      }
    }
 
- //cout<<ave_mat_temp<<endl;
- //cout<<maturity<<endl;
- //cout<<ave_mat<<endl;
- //cout<<wt_mat_mult<<endl; 
- //exit(43);
 
 
 
 ///////SPR CALCS///////
 
-//Temporarily the SPR calcs are done with average matrucity across all the regions - while the full SSB calcs
-// are using the region specific matruity
-
+//Temporarily the SPR calcs are done with average maturity across all the regions - while the full SSB calcs
+// are using the region specific maturity
 
 FUNCTION get_SPR
-  if(Rec_type=2) //BH recruitment = fix this
+//Part 1
+  if(Rec_type=2) //BH recruitment
    {
     for (int k=1;k<=npops;k++)
      {
@@ -796,14 +804,39 @@ FUNCTION get_SPR
           SPR_SSB(k,n)=wt_mat_mult(k,1,n)*SPR_N(k,n);
          }
        }
-     SPR(k)=sum(SPR_SSB(k))/1000; 
-     alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
-     beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
+     SPR(k)=sum(SPR_SSB(k))/1000;
      SSB_zero(k)=SPR(k)*R_ave(k);
      }
-   }
+    }
 
- //cout<<SSB_zero<<endl;
+
+//Part II
+//B-H parameters by-passing the SPR calculations using initial abund for calcs. Used for recruitment calculations when Rec_Type=2
+//Assumes year 1 of the model is unfished equilibrium SSB biomass
+  if(Rec_type=2) 
+    for (int j=1;j<=npops;j++)//characteristics of the "from" population
+     {  
+      for (int r=1;r<=nregions(j);r++)   
+       {       
+          for (int a=1;a<=nages;a++)
+           {
+            SSB_region_init(j,r,a)=init_abund(j,r,a)*input_weight(j,a)*maturity(j,r,a);
+            SSB_region_init_temp(j,a,r)=SSB_region_init(j,r,a);
+            SSB_pop_temp(j,a)=sum(SSB_region_init_temp(j,a));
+            SSB_pop_init(j)=sum(SSB_pop_temp(j));
+            //SSB_population_temp(j,1,r)=SSB_region(j,r,1); 
+            //SSB_population_init(j)=sum(SSB_population_temp(j,1));
+            
+            alpha(j)=(SSB_pop_init(j)/R_ave(j))*((1-steep(j))/(4*steep(j)));
+            beta(j)=(5*steep(j)-1)/(4*steep(j)*R_ave(j));
+     }}}
+
+
+   
+ //cout<<SSB_region_init<<endl;
+ //cout<<SSB_pop_init<<endl;
+ //cout<<alpha<<endl;
+ //cout<<beta<<endl;
  //exit(43);
 
 
@@ -830,7 +863,7 @@ FUNCTION get_env_Rec // calculate temporally autocorrelated recruitment - input 
        }
 
  //cout<<env_rec<<endl;
-// exit(43);
+ // exit(43);
 
 
 
@@ -1372,6 +1405,8 @@ FUNCTION get_abundance
                     }
                   }
 
+
+
 //fix this up
                 if(Rec_type==3) //environmental recruitment
                   {
@@ -1379,7 +1414,7 @@ FUNCTION get_abundance
                     {
                      recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
-                   if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
+                   if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a population
                     {
                      recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
                     }
