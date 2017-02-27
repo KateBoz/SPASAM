@@ -10,7 +10,7 @@
 2
 2
 2
-#model_type_swtich
+#model_type_switch
   #==0 do not use TAC to set F
   #==1 use TAC to set F
   #==2 use uMSY to set F
@@ -65,9 +65,8 @@
   #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
   #==1 input apportionment
   #==2 recruits are apportioned equally to each region within a stock
-  #==3 recruits are apportioned based on rec index in each region = working on this...
-  
-1
+  #==3 recruits are apportioned completely randomly
+3
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -292,7 +291,7 @@
 1 1 
 1 1 
 1 1 
-#input_u //needed to repeat the row 3 times to get the 3 x 4 matrix fixed
+#input_u //needed to repeat the row 3 times
 .0491 .0491
 0.15 0.15 
 0.15 0.15 
