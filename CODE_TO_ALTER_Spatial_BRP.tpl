@@ -68,7 +68,7 @@ DATA_SECTION
   //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off-diag)
 
 
-////// ADD MOVEMENT SWITCHES DEnpITY-DEPENDENT, possibly for metamictic with ontogenetic movement
+////// ADD MOVEMENT SWITCHES DENSITY-DEPENDENT, possibly for metamictic with ontogenetic movement
   init_number move_switch
   //==0 no movement
   //==1 input movement
@@ -108,7 +108,12 @@ DATA_SECTION
   init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
-  
+
+
+  init_number maturity_switch
+  //==0 for equal by area or average
+  //==1 weighted average by equil_ssb_apportion
+
   init_number SSB_type
   //==1 fecundity based SSB
   //==2 weight based SSB
@@ -154,6 +159,7 @@ DATA_SECTION
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
   init_vector sigma_recruit(1,np)
+  init_vector sigma_rec_prop(1,np) //error around recruit apportionment
 
 // change to 3darray
   init_matrix input_weight(1,np,1,na)
@@ -167,6 +173,8 @@ DATA_SECTION
   init_3darray maturity(1,np,1,nreg,1,na)
   
   init_matrix input_Rec_prop(1,np,1,nreg)
+  init_matrix equil_ssb_apport(1,np,1,nreg)
+  
   init_3darray init_abund(1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_vector caa_sigma(1,na)
@@ -207,7 +215,7 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
- //!!cout << ESS << endl;
+ //!!cout << input_selectivity << endl;
  //!!exit(43);
 
 PARAMETER_SECTION
@@ -254,6 +262,7 @@ PARAMETER_SECTION
  3darray recruits_BM(1,nps,1,nr,1,nyr)
  3darray recruits_AM(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp(1,nps,1,nyr,1,nr)
+ 3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
  matrix Rec_prop_temp2(1,nps,1,nyr)
 
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
@@ -317,7 +326,6 @@ PARAMETER_SECTION
  5darray CAA_prop_fleet(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  5darray CAA_prop_overlap(1,nps,1,nr,1,nyr,1,nfl,1,nag)
 
-
  vector CAA_temp(1,N)
  vector CAA_temp2(1,nag)
  
@@ -356,12 +364,11 @@ PARAMETER_SECTION
  matrix Bratio_population(1,nps,1,nyr)
  vector Bratio_total(1,nyr)
 
- 3darray SSB_region_init(1,nps,1,nr,1,nag)
- 3darray SSB_region_init_temp(1,nps,1,nag,1,nr)
- matrix SSB_pop_temp(1,nps,1,nag)
-
- vector SSB_pop_init(1,nps)
-
+//removed when fixed SPR calcs with weighted average
+ //3darray SSB_region_init(1,nps,1,nr,1,nag)
+ //3darray SSB_region_init_temp(1,nps,1,nag,1,nr)
+ //matrix SSB_pop_temp(1,nps,1,nag)
+ //vector SSB_pop_init(1,nps)
 
  matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
@@ -430,8 +437,8 @@ PROCEDURE_SECTION
   get_env_Rec();
 
   get_abundance();
-  
-  get_rec_index();
+
+  //get_rec_index(); code is still there for function but doesn't run. Calcs are embedded in abuncance calcs
 
   get_rand_CAA_prop();
 
@@ -718,10 +725,16 @@ FUNCTION get_vitals
               weight_population(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
 
+              if(maturity_switch==0){ // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
               ///calc aver maturity across the regions for global SPR calculations
               ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
-              ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity
-              
+              ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+              }
+
+              if(maturity_switch==1){// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
+              ave_mat_temp(j,a,r)= maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
+              ave_mat(j,a) = sum(ave_mat_temp(j,a)); //average maturity weighted by equil_ssb_apport
+              }
                          
                if(recruit_devs_switch==0)  //use population recruit relationship directly
                 {
@@ -735,12 +748,12 @@ FUNCTION get_vitals
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*fecundity(j,a)*ave_mat(j,a);//for non-region specific
+                 wt_mat_mult(j,y,a)=0.5*fecundity(j,a)*ave_mat(j,a);//for non-region specific - average for population
                  wt_mat_mult_reg(j,r,y,a)=0.5*fecundity(j,a)*maturity(j,r,a);// for vary by region
                 }
                if(SSB_type==2) //weight based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*weight_population(j,y,a)*ave_mat(j,a);//for non area specific
+                 wt_mat_mult(j,y,a)=0.5*weight_population(j,y,a)*ave_mat(j,a);//for non area specific - average for population
                  wt_mat_mult_reg(j,r,y,a)=0.5*weight_population(j,y,a)*maturity(j,r,a);
                 }
                if(apportionment_type==1) //input recruitment apportionment directly by population and region
@@ -763,15 +776,38 @@ FUNCTION get_vitals
                 for (int r=1;r<=nregions(j);r++){   
                 Rec_Prop(j,r,y)=Rec_prop_temp(j,y,r)/Rec_prop_temp2(j,y);
                 }
+                }
+                
+               if(apportionment_type==4)
+                {
+                 Rec_prop_temp(j,y,r)=input_Rec_prop(j,r);
+                 Rec_prop_temp1(j,y,r)=(Rec_prop_temp(j,y,r)+(mfexp(randn(myrand)*sigma_rec_prop(j)-.5*square(sigma_rec_prop(j)))))-1;//applying the additive error
+                  if(Rec_prop_temp1(j,y,r)<0) {Rec_prop_temp1(j,y,r)=0;}//need to reset negative values to 0
 
+                 Rec_prop_temp2(j,y)=sum(Rec_prop_temp1(j,y));
+                
+                 for (int r=1;r<=nregions(j);r++){   
+                 Rec_Prop(j,r,y)=Rec_prop_temp1(j,y,r)/Rec_prop_temp2(j,y);
+                    }
+                   }
+
+               if(apportionment_type==5)
+
+
+
+                /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
                }   
              }
            }         
          }
        }
      }
-   }
-
+  
+  //cout<<Rec_prop_temp<<endl;
+  //cout<<Rec_prop_temp1<<endl;
+  //cout<<Rec_prop_temp2<<endl;
+  //cout<<Rec_Prop<<endl;
+  //exit(43);
 
 
 
@@ -806,41 +842,19 @@ FUNCTION get_SPR
        }
      SPR(k)=sum(SPR_SSB(k))/1000;
      SSB_zero(k)=SPR(k)*R_ave(k);
+     //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
+     alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
+     beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
      }
     }
-
-
-//Part II
-//B-H parameters by-passing the SPR calculations using initial abund for calcs. Used for recruitment calculations when Rec_Type=2
-//Assumes year 1 of the model is unfished equilibrium SSB biomass
-  if(Rec_type=2) 
-    for (int j=1;j<=npops;j++)//characteristics of the "from" population
-     {  
-      for (int r=1;r<=nregions(j);r++)   
-       {       
-          for (int a=1;a<=nages;a++)
-           {
-            SSB_region_init(j,r,a)=init_abund(j,r,a)*input_weight(j,a)*maturity(j,r,a);
-            SSB_region_init_temp(j,a,r)=SSB_region_init(j,r,a);
-            SSB_pop_temp(j,a)=sum(SSB_region_init_temp(j,a));
-            SSB_pop_init(j)=sum(SSB_pop_temp(j));
-            //SSB_population_temp(j,1,r)=SSB_region(j,r,1); 
-            //SSB_population_init(j)=sum(SSB_population_temp(j,1));
-            
-            alpha(j)=(SSB_pop_init(j)/R_ave(j))*((1-steep(j))/(4*steep(j)));
-            beta(j)=(5*steep(j)-1)/(4*steep(j)*R_ave(j));
-     }}}
-
-
-   
- //cout<<SSB_region_init<<endl;
- //cout<<SSB_pop_init<<endl;
+    
+ //cout<<SSB_zero<<endl;
  //cout<<alpha<<endl;
  //cout<<beta<<endl;
  //exit(43);
 
 
-FUNCTION get_env_Rec // calculate temporally autocorrelated recruitment - input period and amplitude
+FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
 
    for (int y=1;y<=nyrs;y++)
          {
@@ -980,8 +994,8 @@ FUNCTION get_abundance
                 abundance_at_age_BM(j,r,y,a)=init_abund(j,r,a);
                 recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
-            ////get year one recruitment index
-               // rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+            ///get year one recruitment index
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
 
 
                 abundance_move_temp=0;
@@ -1463,7 +1477,7 @@ FUNCTION get_abundance
 
 //////////////////finish filling out the recruitment index
     
-                 //rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                 rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2640,7 +2654,7 @@ FUNCTION get_abundance
                 }
                }
                
-// cout<<recruits_BM<<endl;
+ //cout<<recruits_BM<<endl;
  //cout<<SSB_region<<endl;
  //cout<<SSB_population_overlap<<endl;
  //exit(43);
