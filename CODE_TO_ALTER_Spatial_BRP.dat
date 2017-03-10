@@ -72,7 +72,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with error surrounding the input proportions
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-4
+1
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -151,6 +151,12 @@
 0	0.12	0.54	0.66	0.81	1	1	1	1	1	1	1	1	1	1
 0	0.12	0.54	0.66	0.81	1	1	1	1	1	1	1	1	1	1
 
+#input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
+0	0.35	0.61	0.54	0.66	1	1	1	1	1	1	1	1	1	1
+0	0.35	0.61	0.54	0.66	1	1	1	1	1	1	1	1	1	1
+#q_survey(by population, area and fleet)
+1
+1
 #input_F
 0.2
 0.2
@@ -166,7 +172,6 @@
 0.101	0.273	0.377	0.473	0.545	0.622	0.674	0.754	0.805	0.833	0.909	0.952	0.938	0.918	0.982
 #input_catch_weight
 0.101	0.273	0.377	0.473	0.545	0.622	0.674	0.754	0.805	0.833	0.909	0.952	0.938	0.918	0.982
-
 #fecundity
 0.00000 0.00000 0.00000 0.50000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 1.00000 
 #maturity
@@ -175,7 +180,6 @@
 #input_Rec_prop
 0
 1
-
 #Equil_ssb_apportion
 .2612
 .7888
@@ -183,12 +187,15 @@
 #init_abund
 2333746.999 1861672.226	1485089.634 1184682.884	945042.9811 753877.8929	601382.0416 479733.3406	382691.9698 305280.3116	243527.6307 194266.3993	154969.8232 123622.2332	98615.69319
 259305.2222 206852.4696	165009.9594 131631.4315	105004.7757 83764.21032	66820.22684 53303.70451	42521.32997 33920.03463	27058.62563 21585.15547	17218.86925 13735.80369	10957.29924
-
 #rec_index_sigma
 0.5
 0.5
-
+#sigma_survey_index
+0.2
+0.2
 #caa_sigma
+0.329242 0.329242 0.346917 0.368632 0.395312 0.42809 0.468362 0.517841 0.57863 0.653316	0.745076 0.857813 0.996322 1.1665 1.37557
+#caa_sigma_survey
 0.329242 0.329242 0.346917 0.368632 0.395312 0.42809 0.468362 0.517841 0.57863 0.653316	0.745076 0.857813 0.996322 1.1665 1.37557
 
 #ESS
