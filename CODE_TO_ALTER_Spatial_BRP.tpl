@@ -300,8 +300,11 @@ PARAMETER_SECTION
  4darray OBS_index_region_prop(1,nps,1,nr,1,nyr,1,nag)
  3darray OBS_index_pop_temp(1,nps,1,nyr,1,nr)
  matrix  OBS_index_population(1,nps,1,nyr)
- 3darray apport_region_survey(1,nps,1,nr,1,nyr)
-
+ 4darray OBS_survey_biomass_age(1,nps,1,nr,1,nyr,1,nag)
+ 3darray OBS_survey_biomass_region(1,nps,1,nr,1,nyr)
+ 3darray OBS_survey_biomass_pop_temp(1,nps,1,nyr,1,nr)
+ 3darray apport_region_survey(1,nps,1,nr,1,nyr)//apportion by numbers
+ 3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)//apportion by biomass
 
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
@@ -454,9 +457,11 @@ PROCEDURE_SECTION
 
   get_abundance();
   
-  //cout<<OBS_index_region<<endl;
-  //cout<<OBS_index_population<<endl;
+ 
   //cout<<apport_region_survey<<endl;
+  //cout<<apport_region_survey_biomass<<endl;
+  //cout<<OBS_survey_biomass_age <<endl;
+  //cout<<OBS_survey_biomass_region <<endl;
   //exit(43);
 
   //get_rec_index(); code is still there for function but doesn't run. Calcs are embedded in abuncance calcs
@@ -1108,12 +1113,21 @@ FUNCTION get_abundance
 
                 //apply the process error of aging...probably overkill
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
-                   for (int a=1;a<=nages;a++)
+                   for (int m=1;m<=nages;m++)
                     {
-                    OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));
+                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
                     }
-                    
+
+                OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
+                OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
+                OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
+               
+                
+                
+//apportion variables
                 apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
+                apport_region_survey_biomass(j,r,y)= OBS_survey_biomass_region(j,r,y)/sum(OBS_survey_biomass_pop_temp(j,y));
+     
     
               }
               }
@@ -2157,13 +2171,21 @@ FUNCTION get_abundance
 
                 //apply the process error of aging...probably overkill
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
-                   for (int a=1;a<=nages;a++)
+                   for (int m=1;m<=nages;m++)
                     {
-                    OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));
+                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));
                     }
-                    
-                apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
 
+                OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
+                OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
+                OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
+               
+                
+                
+//apportion variables
+                apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
+                apport_region_survey_biomass(j,r,y)= OBS_survey_biomass_region(j,r,y)/sum(OBS_survey_biomass_pop_temp(j,y));
+     
        }
        }
        }
