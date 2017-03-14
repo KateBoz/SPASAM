@@ -109,7 +109,7 @@ DATA_SECTION
   //==0 use stock-recruit relationphip directly
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 
-  init_number maturity_switch
+  init_number maturity_switch_equil
   //==0 for equal by area or average
   //==1 weighted average by equil_ssb_apportion
 
@@ -457,12 +457,12 @@ PROCEDURE_SECTION
 
   get_abundance();
   
-  
-  cout<<apport_region_survey<<endl;
-  cout<<apport_region_survey_biomass<<endl;
+ 
+  //cout<<apport_region_survey<<endl;
+  //cout<<apport_region_survey_biomass<<endl;
   //cout<<OBS_survey_biomass_age <<endl;
   //cout<<OBS_survey_biomass_region <<endl;
-  exit(43);
+  //exit(43);
 
   //get_rec_index(); code is still there for function but doesn't run. Calcs are embedded in abuncance calcs
 
@@ -775,13 +775,13 @@ FUNCTION get_vitals
               weight_population(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
 
-              if(maturity_switch==0){ // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
+              if(maturity_switch_equil==0){ // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
               ///calc aver maturity across the regions for global SPR calculations
               ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
               ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
               }
 
-              if(maturity_switch==1){// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
+              if(maturity_switch_equil==1){// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
               ave_mat_temp(j,a,r)= maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
               ave_mat(j,a) = sum(ave_mat_temp(j,a)); //average maturity weighted by equil_ssb_apport
               }
@@ -826,8 +826,7 @@ FUNCTION get_vitals
                 for (int r=1;r<=nregions(j);r++){   
                 Rec_Prop(j,r,y)=Rec_prop_temp(j,y,r)/Rec_prop_temp2(j,y);
                 }
-                }
-                
+                } 
                if(apportionment_type==4)
                 {
                  Rec_prop_temp(j,y,r)=input_Rec_prop(j,r);
@@ -1482,7 +1481,7 @@ FUNCTION get_abundance
                  {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
                      recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1496,7 +1495,7 @@ FUNCTION get_abundance
  
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
                     recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1511,7 +1510,7 @@ FUNCTION get_abundance
 //fix this up
                 if(Rec_type==3) //environmental recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1527,7 +1526,7 @@ FUNCTION get_abundance
               {
                 if(Rec_type==1) //average recruitment
                   {
-                  if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1538,7 +1537,7 @@ FUNCTION get_abundance
                   }
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1550,7 +1549,7 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //average recruitment
                   {
-                  if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      recruits_BM(j,r,y)=env_rec(y)* rec_devs(j,y)*Rec_Prop(j,r,y);
                     }
@@ -1601,7 +1600,7 @@ FUNCTION get_abundance
                  {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                       abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
@@ -1613,7 +1612,7 @@ FUNCTION get_abundance
 
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                       abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
@@ -1625,7 +1624,7 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                       abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
@@ -1641,7 +1640,7 @@ FUNCTION get_abundance
               {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                     abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
@@ -1652,7 +1651,7 @@ FUNCTION get_abundance
                     }
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                 if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                     abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
@@ -1664,7 +1663,7 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //environmental recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }

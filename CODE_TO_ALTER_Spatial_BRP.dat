@@ -56,7 +56,7 @@
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 0
-#maturity_switch
+#maturity_switch_equil
   #==0 if maturity is equal across areas or straight average if unequal
   #==1 weighted average of maturity if unequal across areas. Weighted by equilibrium ssb apportionment(equil_ssb_appor).
 1
@@ -72,7 +72,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with error surrounding the input proportions
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-1
+4
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
