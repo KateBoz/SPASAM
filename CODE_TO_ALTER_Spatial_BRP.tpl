@@ -1,3 +1,4 @@
+
 /////////////////////////////////////////////////////////
 // Spatial Operating Model built by Daniel Goethel (NMFS SEFSC)  
 // edited by Katelyn Bosley
@@ -7,57 +8,54 @@
 //homing calcs do not account for different weights across natal populations so if if any part of calc involves weight
 //it needs to use the biomass_all_natal value not just biomass_AM
 
-
 GLOBALS_SECTION
   #include "admodel.h"
   #define EOUT(var) cout <<#var<<" "<<var<<endl;
- // enum MovementType{
-  //     NO_MOVEMENT = 0,
-  //     }
 
 TOP_OF_MAIN_SECTION
   arrmblsize=500000000;
   gradient_structure::set_MAX_NVAR_OFFSET(5000000);
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(5000000);
 
-
-//input data file containp values for switches in the model
-
 DATA_SECTION
 ////////////////////////////////////////////////////////////////////////////////////
 /////MODEL STRUCTURE INPUTS/////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-
   init_int nages //number of ages
   init_int nyrs //number of years for simulation
   init_int npops //number of populations
-
-///////////// DESCRIBE ALL OF THESE RAGGED ARRAYS and population setups (regions per area, fleets per region)
+///////////// Indices for ragged arrays (can't be type init so need to establish as integer)
   !! int np=npops;
   !! int ny=nyrs;
   !! int na=nages;
-  //////////////////////////////////////////////////////
-  
+//////////////////////////////////////////////////////
   init_ivector nregions(1,np) //number of regions within a population - for metamictic regions = areas, populations = 1
-
   !! ivector nreg=nregions;
-  
   init_imatrix nfleets(1,np,1,nreg) //number of fleets in each region by each population
-
   !! imatrix nf=nfleets;
-
-
+  init_imatrix nfleets_survey(1,np,1,nreg) //number of fleets in each region by each population
+  !! imatrix nfs=nfleets_survey;
 ////////////////////////////////////////////////////////////////////////////////////
 //////////////SWITCHES//////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
 ///// Changes the type of harvest model 
   init_number model_type_switch
-  //==0 use to simulate catch based on input F
-  //==1 use input TAC to set F
+  //==0 use to simulate catch based on input F (use if searching for MSY)
+  //==1 use input TAC to set F (use if want to input a desired harvest level and use NR to determine associated F)
   //==2 use input harvest rate
 
-
+ //used when model type>0
+  init_number parse_TAC
+  //==0 do not alter the input TAC or harvest rate
+  //==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
+  init_number parse_TAC_source
+  //==0 recruitment index_BM
+  //==1 recruitment index_AM
+  //==2 survey numbers
+  //==3 survey biomass
+  //==4 historical catch (NEEDS WORK)
+  
 ///// Changes the type of larval movement pattern (sets age class 1 movements)
   init_number larval_move_switch
   //==0 no movement
@@ -67,7 +65,7 @@ DATA_SECTION
   //==4 symmetric movement across all populations and regions
   //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off-diag)
 
-
+///// Sets the type of adult movement pattern (sets age class>1 movements)
 ////// ADD MOVEMENT SWITCHES DENSITY-DEPENDENT, possibly for metamictic with ontogenetic movement
   init_number move_switch
   //==0 no movement
@@ -81,15 +79,17 @@ DATA_SECTION
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
 //////////////////////////////////////////////////////
 
-////// SEPARATE INTO POP STRUCTURE AND SPAWN RETURN SWITCHES
-  init_number overlap_switch
-  //==0 no overlap (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
-  //==1 do overlap (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
-  //==2 do overlap with natal migration (a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
-  //overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+////// Population Structure switches
+  init_number natal_homing_switch
+  //==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  //==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  //natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+
+  init_number spawn_return_switch
+   //==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   //==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 //////////////////////////////////////////////////////
 
-////// ADD DOUBLE SELECTIVITY ////////////////////////
   init_number select_switch
   //==0 input selectivity
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
@@ -109,10 +109,15 @@ DATA_SECTION
   //==0 use stock-recruit relationphip directly
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 
+ //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
   //==0 for equal by area or average
-  //==1 weighted average by equil_ssb_apportion
-
+  //==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  //SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  //Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  //With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  //When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+  
   init_number SSB_type
   //==1 fecundity based SSB
   //==2 weight based SSB
@@ -125,18 +130,17 @@ DATA_SECTION
   //==3 recruits are approtioned randomly to each region within a population
   
   init_number Rec_type
-  //==1 population-recruit relationship assumes an average value based on R_ave
+  //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt population-recruit functions based on population-specific input steepness, R0 (R_ave), M, and weight
   //==3 environmental recruitment - sine fucntion based on amplitude and frequency
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //////// ADDITIONAL PARAMETERS FROM DAT FILE //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
   init_number return_age // used if move_swith ==6
-  init_vector return_probability(1,np) // used if overlap_swith==6
-  init_vector spawn_return_prob(1,np) // used if overlap_swith==2
+  init_vector return_probability(1,np) // used if move_swith==6
+  init_vector spawn_return_prob(1,np) // used if natal_homing_swith==2
   init_number phase_F //must be turned on (==1) if F_type==3
   init_number phase_dummy //must be turned on (==1) if F_type!=3
   init_vector tspawn(1,np) //time of spawning
@@ -145,7 +149,6 @@ DATA_SECTION
   init_vector amplitude(1,np) //amplitude of periodic recruitment in % of R_ave 
   init_vector freq(1,np) //frequency of recruitment in years (ie 10 for peak every 10 years)
   
-  //check that this ragged array is set up properly
   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)  //movement matrix 
   init_matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
   init_3darray input_residency(1,np,1,nreg,1,na) //
@@ -154,8 +157,8 @@ DATA_SECTION
   init_3darray sel_beta3(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
   init_3darray sel_beta4(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
   init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
-  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nf)//survey selectivity
-  init_3darray q_survey(1,np,1,nreg,1,nf) // catchability for different surveys(fleets)operating in different areas
+  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
+  init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
@@ -187,6 +190,8 @@ DATA_SECTION
  
   init_3darray input_TAC(1,np,1,nreg,1,nf)
   init_3darray input_u(1,np,1,nreg,1,nf)
+
+//NR parameters
   init_number max_Fnew //
   init_number Fnew_start
   init_number NR_iterationp
@@ -229,7 +234,7 @@ PARAMETER_SECTION
   !! int nyr=nyrs;
   !! int nag=nages;
   !! imatrix nfl=nfleets;
-  
+  !! imatrix nfls=nfleets_survey;  
    
  init_matrix F_est(1,nps,1,nr,phase_F)
  
@@ -268,6 +273,12 @@ PARAMETER_SECTION
  matrix Rec_prop_temp2(1,nps,1,nyr)
 
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_prop_BM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_BM_temp(1,nps,1,nyr,1,nr)
+ 3darray rec_index_AM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_prop_AM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_AM_temp(1,nps,1,nyr,1,nr)
+
  vector env_rec(1,nyr)
 
 //abundance 
@@ -288,8 +299,8 @@ PARAMETER_SECTION
  4darray bio_leave(1,nps,1,nr,1,nyr,1,nag)
  
  //survey index
- 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- 5darray true_survey_index_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+ 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 5darray true_survey_index_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfls)
  4darray true_survey_index_region_age(1,nps,1,nr,1,nyr,1,nag)
  4darray true_survey_index_region_prop(1,nps,1,nr,1,nyr,1,nag)
  3darray true_survey_index_region(1,nps,1,nr,1,nyr)
@@ -428,7 +439,9 @@ PARAMETER_SECTION
  vector fofFvect(1,nag)
  vector fprimeFhigh(1,nag)
  vector fprimeFlow(1,nag)
-
+ 3darray TAC(1,nps,1,nr,1,nfl)
+ 3darray u(1,nps,1,nr,1,nfl)
+ 
  init_number dummy(phase_dummy)
 
   objective_function_value f
@@ -665,7 +678,7 @@ FUNCTION get_selectivity
          {
           for (int a=1;a<=nages;a++)
             {
-             for (int z=1;z<=nfleets(j,r);z++)
+             for (int z=1;z<=nfleets_survey(j,r);z++)
                {
                 survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
               }
@@ -775,16 +788,16 @@ FUNCTION get_vitals
               weight_population(j,y,a)=input_weight(j,a);
               weight_catch(j,y,a)=input_catch_weight(j,a);
 
-              if(maturity_switch_equil==0){ // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
-              ///calc aver maturity across the regions for global SPR calculations
-              ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
-              ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
-              }
-
-              if(maturity_switch_equil==1){// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
-              ave_mat_temp(j,a,r)= maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
-              ave_mat(j,a) = sum(ave_mat_temp(j,a)); //average maturity weighted by equil_ssb_apport
-              }
+              if(maturity_switch_equil==0) // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
+               { 
+                ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
+                ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+               }
+              if(maturity_switch_equil==1)
+               {// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
+                ave_mat_temp(j,a,r)= maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
+                ave_mat(j,a) = sum(ave_mat_temp(j,a)); //average maturity weighted by equil_ssb_apport
+               }
                          
                if(recruit_devs_switch==0)  //use population recruit relationship directly
                 {
@@ -1042,7 +1055,8 @@ FUNCTION get_abundance
 
  ///get year one recruitment index
                rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
-
+               rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
+               rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
                 abundance_move_temp=0;
                 bio_move_temp=0;
@@ -1055,7 +1069,7 @@ FUNCTION get_abundance
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);                   
                    }
                   }
-                  if(overlap_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
                    {
 
  //// ADD IN BM CALCS TO ENSURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
@@ -1063,7 +1077,7 @@ FUNCTION get_abundance
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
 /////////////////////////////
                    }
-                  if(overlap_switch==0)
+                  if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
                     biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
@@ -1082,23 +1096,28 @@ FUNCTION get_abundance
                 biomass_total(y)=sum(biomass_total_temp(y));
 
                 recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
+                
+                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
+                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
+
                 abundance_in(j,r,y,a)=sum(abundance_move_temp)-abundance_move_temp(j,r);
                 abundance_res(j,r,y,a)=abundance_move_temp(j,r);
                 abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                 bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                 bio_res(j,r,y,a)=bio_move_temp(j,r);
                 bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
-
-
-
-    /// survey index  1. Currently set up for more than 1 survey fleet
-                true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
-                true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
-                true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
+    
+              } //end fleets loop
+                 for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+                  {              
+                   true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
+                   true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
+                   true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
                   for (int m=1;m<=nages;m++)
                     {
-                      true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,a)/true_survey_index_region(j,r,y);
-                     }
+                     true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,m)/true_survey_index_region(j,r,y);
+                    }
 
                 true_survey_index_pop_temp(j,y,r)=true_survey_index_region(j,r,y);
                 true_survey_index_population(j,y)=sum(true_survey_index_pop_temp(j,y));
@@ -1114,7 +1133,7 @@ FUNCTION get_abundance
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
                    for (int m=1;m<=nages;m++)
                     {
-                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
+                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,m)/sum(OBS_index_region_age(j,r,y));   
                     }
 
                 OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
@@ -1123,12 +1142,11 @@ FUNCTION get_abundance
                
                 
                 
-//apportion variables
+                 //apportion variables
                 apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
                 apport_region_survey_biomass(j,r,y)= OBS_survey_biomass_region(j,r,y)/sum(OBS_survey_biomass_pop_temp(j,y));
-     
-    
-              }
+                   
+                } //end survey_fleets
               }
               }
               }
@@ -1152,13 +1170,39 @@ FUNCTION get_abundance
                            {
                              if(model_type_switch==1)
                                 {
-                                 if(overlap_switch>0)
+                                 if(natal_homing_switch>0)
                                    {
-                                   if(input_TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_TAC(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 TAC(j,r,x)=input_TAC(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(TAC(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -1178,23 +1222,48 @@ FUNCTION get_abundance
                                                 fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                                 fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                                }
-                                             } 
- 
-                                            fofF=sum(fofFvect)-input_TAC(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
+                                             }
+                                              fofF=sum(fofFvect)-TAC(j,r,x);
+                                              fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
+                                              Fnew=Fnew-(fofF/fprimeF);                                           
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
                                           if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
                                          }
                                          } 
                                        }
-                                 if(overlap_switch==0)
+                                 if(natal_homing_switch==0)
                                    {
-                                   if(input_TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_TAC(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 TAC(j,r,x)=input_TAC(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(TAC(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -1215,8 +1284,7 @@ FUNCTION get_abundance
                                               fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                               }
                                              }
-
-                                            fofF=sum(fofFvect)-input_TAC(j,r,x);
+                                            fofF=sum(fofFvect)-TAC(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -1228,13 +1296,39 @@ FUNCTION get_abundance
 
                              if(model_type_switch==2)
                                 {
-                                 if(overlap_switch>0)
+                                 if(natal_homing_switch>0)
                                    {
-                                   if(input_u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_u(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 u(j,r,x)=input_u(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -1255,8 +1349,7 @@ FUNCTION get_abundance
                                                 fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
                                                }
                                              } 
- 
-                                            fofF=sum(fofFvect)-input_u(j,r,x);
+                                            fofF=sum(fofFvect)-u(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -1264,13 +1357,39 @@ FUNCTION get_abundance
                                          }
                                          } 
                                        }
-                                 if(overlap_switch==0)
+                                 if(natal_homing_switch==0)
                                    {
-                                   if(input_u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_u(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 u(j,r,x)=input_u(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -1291,8 +1410,7 @@ FUNCTION get_abundance
                                               fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
                                               }
                                              }
-
-                                            fofF=sum(fofFvect)-input_u(j,r,x);
+                                            fofF=sum(fofFvect)-u(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -1325,7 +1443,7 @@ FUNCTION get_abundance
                 SSB_region_overlap(p,j,r,y)=sum(SSB_region_temp_overlap(p,j,r,y));
 
                   SSB_overlap_natal=0;
-                  if(overlap_switch==2)
+                  if(natal_homing_switch==1 && spawn_return_switch==1)
                    {
                     for(int k=1;k<=npops;k++)
                      {
@@ -1423,14 +1541,14 @@ FUNCTION get_abundance
                 depletion_population(j,y)=biomass_population(j,y)/biomass_population(j,1);
                 depletion_total(y)=biomass_total(y)/biomass_total(1);
 
-              if(overlap_switch>0)
+              if(natal_homing_switch>0)
                {
                if(p==j)
                {
                 SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);  //if natal homing only account for SSB that is in its natal populationp area, don't sum across natal populationp
                }
               }
-              if(overlap_switch==0)
+              if(natal_homing_switch==0)
               {
                 SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); // changed mat by region
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
@@ -1457,13 +1575,10 @@ FUNCTION get_abundance
 
 ////need to fix and use SSB and R_ave for BH calcs.
 
-
-
-
-             if(y>1)
-              {
-               for (int a=1;a<=nages;a++)
-                {
+    if(y>1)
+     {
+        for (int a=1;a<=nages;a++)
+          {
            for (int p=1;p<=npops;p++)
             {
              for (int j=1;j<=npops;j++)
@@ -1472,10 +1587,9 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j,r);z++)
                   {
-                  
                if(a==1)
                 {
-                 if(overlap_switch==1 || overlap_switch==2)
+                 if(natal_homing_switch>0)
                  {
                  if(p==j)
                  {
@@ -1505,8 +1619,6 @@ FUNCTION get_abundance
                     }
                   }
 
-
-
 //fix this up
                 if(Rec_type==3) //environmental recruitment
                   {
@@ -1522,7 +1634,7 @@ FUNCTION get_abundance
                  }
                  }
 
-             if(overlap_switch==0)
+             if(natal_homing_switch==0)
               {
                 if(Rec_type==1) //average recruitment
                   {
@@ -1559,12 +1671,9 @@ FUNCTION get_abundance
                    }
                  }
                  }
-
-
-//////////////////finish filling out the recruitment index
-    
-                 rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
-
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
+               rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1594,7 +1703,7 @@ FUNCTION get_abundance
   ///////////NEED TO CHECK WHY USING FULL RECRUITMENT FUNCTIOnp TO CALCULATE MOVEMENT OF AGE-1 FISH HERE, MIGHT BE ABLE TO CONDEnpE CODE AND USE RECRUITS_BM OR ABUNDANCE_BM
 
 
-                 if(overlap_switch==1 || overlap_switch==2)
+                 if(natal_homing_switch>0)
                  {
                  if(p==k)
                  {
@@ -1636,7 +1745,7 @@ FUNCTION get_abundance
                  }
                  }
                  
-             if(overlap_switch==0)
+             if(natal_homing_switch==0)
               {
                  if(Rec_type==1) //average recruitment
                   {
@@ -1676,7 +1785,6 @@ FUNCTION get_abundance
                 }
                    }
                   }
-         
 
                 abundance_at_age_AM_overlap_region(p,j,y,a,r)=sum(abundance_move_overlap_temp);
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
@@ -1713,7 +1821,7 @@ FUNCTION get_abundance
                    {
 
 
-             if(overlap_switch==0)
+             if(natal_homing_switch==0)
               {
                  if(Rec_type==1) //average recruitment
                   {
@@ -1753,7 +1861,7 @@ FUNCTION get_abundance
                    }
                   }
                   
-                  if(overlap_switch>0)
+                  if(natal_homing_switch>0)
                    {
   //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
                   
@@ -1761,7 +1869,7 @@ FUNCTION get_abundance
                     biomass_AM(j,r,y)=biomass_AM_overlap_region_all_natal(j,r,y);
                     
                    }
-                  if(overlap_switch==0)
+                  if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
                     biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
@@ -1771,6 +1879,10 @@ FUNCTION get_abundance
 
                    }
 
+                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
+                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
+                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
                 biomass_population_temp(j,y,r)=biomass_AM(j,r,y);
                 biomass_population(j,y)=sum(biomass_population_temp(j,y));
@@ -1873,7 +1985,7 @@ FUNCTION get_abundance
                    }
                   }
 
-                  if(overlap_switch>0)
+                  if(natal_homing_switch>0)
                    {
   //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
                   
@@ -1881,7 +1993,7 @@ FUNCTION get_abundance
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
                   
                    }
-                  if(overlap_switch==0)
+                  if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
                     biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
@@ -1993,7 +2105,7 @@ FUNCTION get_abundance
                    }
                   }
                   
-                  if(overlap_switch>0)
+                  if(natal_homing_switch>0)
                    {
 
   //// ADD IN BM CALCS TO ENSURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
@@ -2002,7 +2114,7 @@ FUNCTION get_abundance
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
 
                    }
-                  if(overlap_switch==0)
+                  if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
                     biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
@@ -2010,7 +2122,6 @@ FUNCTION get_abundance
                     biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
-
 
                 biomass_population_temp(j,y,r)=biomass_AM(j,r,y);
                 biomass_population(j,y)=sum(biomass_population_temp(j,y));
@@ -2023,11 +2134,6 @@ FUNCTION get_abundance
                 bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                 bio_res(j,r,y,a)=bio_move_temp(j,r);
                 bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
-
-
-
-
-
 
           } //end a>2 <nages if statement
 
@@ -2117,7 +2223,7 @@ FUNCTION get_abundance
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);
                    }
                   }
-                  if(overlap_switch>0)
+                  if(natal_homing_switch>0)
                    {
   //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
 
@@ -2125,7 +2231,7 @@ FUNCTION get_abundance
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
 
                    }
-                  if(overlap_switch==0)
+                  if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
                 biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
@@ -2148,15 +2254,16 @@ FUNCTION get_abundance
 
         } //end nages if statement
 
-
-/////////////////////SURVEY INDEX CALCULATIONS CONTINUED////////////////
-                true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
-                true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
-                true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
-                 // for (int m=1;m<=nages;m++)
-                   // {
-                     // true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,a)/true_survey_index_region(j,r,y);
-                     //}
+              } //end fleets loop
+                 for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+                  {              
+                   true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
+                   true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
+                   true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
+                  for (int m=1;m<=nages;m++)
+                    {
+                     true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,m)/true_survey_index_region(j,r,y);
+                    }
 
                 true_survey_index_pop_temp(j,y,r)=true_survey_index_region(j,r,y);
                 true_survey_index_population(j,y)=sum(true_survey_index_pop_temp(j,y));
@@ -2172,7 +2279,7 @@ FUNCTION get_abundance
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
                    for (int m=1;m<=nages;m++)
                     {
-                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));
+                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,m)/sum(OBS_index_region_age(j,r,y));   
                     }
 
                 OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
@@ -2181,11 +2288,12 @@ FUNCTION get_abundance
                
                 
                 
-//apportion variables
+                 //apportion variables
                 apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
                 apport_region_survey_biomass(j,r,y)= OBS_survey_biomass_region(j,r,y)/sum(OBS_survey_biomass_pop_temp(j,y));
-     
-       }
+                   
+                } //end survey_fleets
+
        }
        }
        }
@@ -2197,8 +2305,7 @@ FUNCTION get_abundance
  /////////////////NEWTON RAPHSON CALCS//////////////////////////////////////////////////////////////////
  ///////////////////////////////////////////////////////////////////////////////////
  ///////////////////////////////////////////////////////////////////////////////////
-
-          for (int p=1;p<=npops;p++)
+           for (int p=1;p<=npops;p++)
             {
              for (int j=1;j<=npops;j++)
               {
@@ -2212,13 +2319,39 @@ FUNCTION get_abundance
                            {
                              if(model_type_switch==1)
                                 {
-                                 if(overlap_switch>0)
+                                 if(natal_homing_switch>0)
                                    {
-                                   if(input_TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_TAC(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 TAC(j,r,x)=input_TAC(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(TAC(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -2238,23 +2371,48 @@ FUNCTION get_abundance
                                                 fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                                 fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                                }
-                                             } 
-                                            fofF=sum(fofFvect)-input_TAC(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
+                                             }
+                                              fofF=sum(fofFvect)-TAC(j,r,x);
+                                              fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
+                                              Fnew=Fnew-(fofF/fprimeF);                                           
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
                                           if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
                                          }
                                          } 
                                        }
-    ///////////////////////////////////////////////
-                                 if(overlap_switch==0)
+                                 if(natal_homing_switch==0)
                                    {
-                                   if(input_TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_TAC(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 TAC(j,r,x)=input_TAC(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  TAC(j,r,x)=rec_index_prop_BM(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  TAC(j,r,x)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(TAC(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(TAC(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -2275,8 +2433,7 @@ FUNCTION get_abundance
                                               fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                               }
                                              }
-
-                                            fofF=sum(fofFvect)-input_TAC(j,r,x);
+                                            fofF=sum(fofFvect)-TAC(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -2285,15 +2442,42 @@ FUNCTION get_abundance
                                        } 
                                       }
                                      }
+
                              if(model_type_switch==2)
                                 {
-                                 if(overlap_switch>0)
+                                 if(natal_homing_switch>0)
                                    {
-                                   if(input_u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_u(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 u(j,r,x)=input_u(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -2302,7 +2486,7 @@ FUNCTION get_abundance
                                            for(int s=1;s<=nages;s++)
                                              {
                                               if(s==1)
-                                               {
+                                               {  
                                                  fofFvect(s)=(((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
                                                  fprimeFhigh(s)=((((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
                                                  fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);                                              
@@ -2314,8 +2498,7 @@ FUNCTION get_abundance
                                                 fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
                                                }
                                              } 
-                                            
-                                            fofF=sum(fofFvect)-input_u(j,r,x);
+                                            fofF=sum(fofFvect)-u(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -2323,14 +2506,39 @@ FUNCTION get_abundance
                                          }
                                          } 
                                        }
-    ////////////////////////////////                               
-                                 if(overlap_switch==0)
+                                 if(natal_homing_switch==0)
                                    {
-                                   if(input_u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                       Fnew=0;
-                                      }
-                                   if(input_u(j,r,x)>0)
+                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 u(j,r,x)=input_u(j,r,x);
+                                                }
+                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                                {
+                                                 if(parse_TAC_source==0)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==1)
+                                                  {
+                                                  u(j,r,x)=rec_index_prop_BM(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==2)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==3)
+                                                  {
+                                                  u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                  }
+                                                 if(parse_TAC_source==4)
+                                                  {
+                                                  }
+                                                 }
+                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
+                                       {
+                                        Fnew=0;
+                                       }
+                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
                                         for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
@@ -2351,8 +2559,7 @@ FUNCTION get_abundance
                                               fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
                                               }
                                              }
-
-                                            fofF=sum(fofFvect)-input_u(j,r,x);
+                                            fofF=sum(fofFvect)-u(j,r,x);
                                             fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
                                             Fnew=Fnew-(fofF/fprimeF);
                                           if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
@@ -2369,6 +2576,7 @@ FUNCTION get_abundance
                     }
                    }
                   }
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //a==1 natal homing
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2413,10 +2621,6 @@ FUNCTION get_abundance
 ///////////////////a==1 metapop type abundance calcs////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-                   recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
  
                    abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
 
@@ -2673,7 +2877,6 @@ FUNCTION get_abundance
                 depletion_total(y)=biomass_total(y)/biomass_total(1);
         } //end nages if statement
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////SSB calcs////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2690,7 +2893,7 @@ FUNCTION get_abundance
                 SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult_reg(p,r,y,a); //added region
                 SSB_region_overlap(p,j,r,y)=sum(SSB_region_temp_overlap(p,j,r,y));
                  SSB_overlap_natal=0;
-                  if(overlap_switch==2) //spawning return calculationp
+                  if(natal_homing_switch==1 && spawn_return_switch==1) //spawning return calculationp
                    {
                     for(int k=1;k<=npops;k++)
                      {
@@ -2716,14 +2919,14 @@ FUNCTION get_abundance
                 SSB_natal_overlap_temp(p,y,j)=SSB_population_overlap(p,j,y);
                 SSB_natal_overlap(p,y)=sum(SSB_natal_overlap_temp(p,y));  /// this is adjusted below outside y loop to account for fish not spawning
 
-              if(overlap_switch>0)
+              if(natal_homing_switch>0)
                {
                if(p==j)  //accounts for not being in natal area
                {
                 SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);
                }
               }
-              if(overlap_switch==0)
+              if(natal_homing_switch==0)
               {
                 SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); 
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
@@ -2742,21 +2945,18 @@ FUNCTION get_abundance
    }
    }
   } // end age loop
-
  } //end yr>1 loop
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  } //end y loop
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-     } //end y loop
-
-
-  /////now adjusting natal homing ssb for spawning migration scenarios where fish left non-natal area
+/////now adjusting natal homing ssb for spawning migration scenarios where fish left non-natal area
        for (int p=1;p<=npops;p++)
         {
          for (int j=1;j<=npops;j++)
@@ -2768,7 +2968,7 @@ FUNCTION get_abundance
                for (int y=1;y<=nyrs;y++)
                 {
                  SSB_overlap_natal=0;
-                  if(overlap_switch==2)
+                  if(natal_homing_switch==1 && spawn_return_switch==1)
                     {
                     if(p!=j)  //update SSB that doesn't spawn (ie doesn't return to natal population)
                     {
@@ -2795,30 +2995,8 @@ FUNCTION get_abundance
  //exit(43);
  
 
-FUNCTION get_rec_index //function to calculate recruitment index
-
-// can add after movement too for larval drift scenario
-  random_number_generator myrand(myseed);
-
-  for (int j=1;j<=npops;j++)
-   {
-    for (int r=1;r<=nregions(j);r++)
-     {
-      for (int y=1;y<=nyrs;y++)
-       {
-        rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
-       }
-     }
-   }
-   
- //cout<<recruits_BM<<endl;
- //cout<<rec_index_BM<<endl;
- //cout<<env_rec<<endl;
- //exit(43);
-
-
-
 FUNCTION get_rand_CAA_prop
+ ///NEED TO CHECK THESE
  random_number_generator myrand(myseed);
  //calculate the total CAA for each population/area/region/fleet for non-natal and natal calcs
  
@@ -2835,7 +3013,7 @@ FUNCTION get_rand_CAA_prop
            for (int a=1;a<=nages;a++)
                {
                
-            if(overlap_switch==0)//for non-natal homing -
+            if(natal_homing_switch==0)//for non-natal homing -
               {
                true_caa_fleet_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z); //summing catch across age
                true_caa_fleet_total(j,r,y,z) = sum(true_caa_fleet_temp(j,r,y,z));
@@ -2851,7 +3029,7 @@ FUNCTION get_rand_CAA_prop
                }
               }
                
-            if(overlap_switch>0)//for natal-homing...havent really tested this
+            if(natal_homing_switch>0)//for natal-homing...havent really tested this
               {
                true_caa_overlap_reg_temp(p,j,r,y,a) = catch_at_age_region_overlap(p,j,r,y,a);
                true_caa_overlap_reg_total(p,j,r,y) = sum(true_caa_overlap_reg_temp(p,j,r,y));
@@ -2921,8 +3099,8 @@ REPORT_SECTION
   report<<larval_move_switch<<endl;
   report<<"$move_switch"<<endl;
   report<<move_switch<<endl;
-  report<<"$overlap_switch"<<endl;
-  report<<overlap_switch<<endl;
+  report<<"$natal_homing_switch"<<endl;
+  report<<natal_homing_switch<<endl;
   report<<"$F_switch"<<endl;
   report<<F_switch<<endl;
   report<<"$recruit_devs_switch"<<endl;
