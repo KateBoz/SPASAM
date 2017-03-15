@@ -3,11 +3,14 @@
 15
 #nyrs
 200
-#nstocks
+#npopulations
 1
 #nregions
 2
 #nfleets
+1
+1
+#nfleets_survey
 1
 1
 #model_type_switch
@@ -15,6 +18,17 @@
   #==1 use TAC to set F
   #==2 use uMSY to set F
 0
+# parse_TAC
+  #==0 do not alter the input TAC or harvest rate
+  #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
+1
+#parse_TAC_source
+  #==0 recruitment index_BM
+  #==1 recruitment index_AM
+  #==2 survey numbers
+  #==3 survey biomass
+  #==4 historical catch (NEEDS WORK)
+0  
 #larval_move_switch
   #==0 no movement
   #==1 input movement
@@ -32,11 +46,14 @@
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
   #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
 1
-#overlap switch
-  #==0 no overlap (SSB is sum of SSB in stock regardless of natal origin; weight/mat/fecund/ are based on current stock not natal stock)
-  #==1 do overlap (a fish only adds to SSB if it is in its natal stock at spawning time; weight/mat/fecund/ are based on natal stock)
-  #==2 do overlap with natal migration (a fraction of fish return to natal stock to spawn (instantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal stock)
-  #overlap>0 assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), overlap==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 0
 #select_switch
   #==0 input selectivity
@@ -57,8 +74,12 @@
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 0
 #maturity_switch_equil
-  #==0 if maturity is equal across areas or straight average if unequal
-  #==1 weighted average of maturity if unequal across areas. Weighted by equilibrium ssb apportionment(equil_ssb_appor).
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
 1
 #SSB_type
   #==1 fecundity based SSB
@@ -72,7 +93,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with error surrounding the input proportions
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-4
+1
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight

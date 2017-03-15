@@ -1114,11 +1114,7 @@ FUNCTION get_abundance
                    true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
                    true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
                    true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
-                  for (int m=1;m<=nages;m++)
-                    {
-                     true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,m)/true_survey_index_region(j,r,y);
-                    }
-
+                   true_survey_index_region_prop(j,r,y,a)=true_survey_index_region_age(j,r,y,a)/true_survey_index_region(j,r,y);
                 true_survey_index_pop_temp(j,y,r)=true_survey_index_region(j,r,y);
                 true_survey_index_population(j,y)=sum(true_survey_index_pop_temp(j,y));
 
@@ -1131,18 +1127,13 @@ FUNCTION get_abundance
 
                 //apply the process error of aging...probably overkill
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
-                   for (int m=1;m<=nages;m++)
-                    {
-                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,m)/sum(OBS_index_region_age(j,r,y));   
-                    }
+
+                 OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
 
                 OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
                 OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
                 OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
-               
-                
-                
-                 //apportion variables
+             //apportion variables
                 apport_region_survey(j,r,y)=OBS_index_region(j,r,y)/OBS_index_population(j,y);
                 apport_region_survey_biomass(j,r,y)= OBS_survey_biomass_region(j,r,y)/sum(OBS_survey_biomass_pop_temp(j,y));
                    
@@ -1689,10 +1680,8 @@ FUNCTION get_abundance
                  {
                    abundance_at_age_BM_overlap_region(p,j,y,a,r)=0;
                  }
-
-
+                 
                 abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
-
                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
@@ -1879,10 +1868,10 @@ FUNCTION get_abundance
 
                    }
 
-                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
-                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
-                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
-                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
+               recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
+               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
+               rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
                 biomass_population_temp(j,y,r)=biomass_AM(j,r,y);
                 biomass_population(j,y)=sum(biomass_population_temp(j,y));
@@ -2260,11 +2249,7 @@ FUNCTION get_abundance
                    true_survey_index_fleet(j,r,y,a,z)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
                    true_survey_index_region_age(j,r,y,a)=sum(true_survey_index_fleet(j,r,y,a));
                    true_survey_index_region(j,r,y)=sum(true_survey_index_region_age(j,r,y));
-                  for (int m=1;m<=nages;m++)
-                    {
-                     true_survey_index_region_prop(j,y,r,m)=true_survey_index_region_age(j,r,y,m)/true_survey_index_region(j,r,y);
-                    }
-
+                   true_survey_index_region_prop(j,r,y,a)=true_survey_index_region_age(j,r,y,a)/true_survey_index_region(j,r,y);
                 true_survey_index_pop_temp(j,y,r)=true_survey_index_region(j,r,y);
                 true_survey_index_population(j,y)=sum(true_survey_index_pop_temp(j,y));
 
@@ -2277,14 +2262,12 @@ FUNCTION get_abundance
 
                 //apply the process error of aging...probably overkill
                 OBS_index_region_age(j,r,y,a)=true_survey_index_region_age(j,r,y,a)*mfexp(randn(myrand)*caa_sigma_survey(a)-0.5*square(caa_sigma_survey(a)));
-                   for (int m=1;m<=nages;m++)
-                    {
-                    OBS_index_region_prop(j,r,y,m)=OBS_index_region_age(j,r,y,m)/sum(OBS_index_region_age(j,r,y));   
-                    }
 
-                OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
-                OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
-                OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
+                   OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
+
+               OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
+               OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
+               OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
                
                 
                 
