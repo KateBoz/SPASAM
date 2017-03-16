@@ -165,16 +165,23 @@ DATA_SECTION
   init_vector sigma_recruit(1,np)
   init_vector sigma_rec_prop(1,np) //error around recruit apportionment
 
-// change to 3darray
-  init_matrix input_weight(1,np,1,na)
-  
-  init_matrix input_catch_weight(1,np,1,na)
-
-//change to 3darray
-  init_matrix fecundity(1,np,1,na)
-
-//changed to 3darray for maturity by area - sums across the areas for 
+//##########################################################################################################################################
+//#########################################################################################################################################
+//##########################################################################################################################################
+//#########################################################################################################################################
+//######### FOR NATAL HOMING THERE IS NO ACCOUNTING OF REGIONAL DIFFERENCES IN VITAL RATES ACROSS REGIONS WITHIN A POPULATION
+//######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
+//######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
+//#########################################################################################################################################
+  init_3darray input_weight(1,np,1,nreg,1,na)
+  init_3darray input_catch_weight(1,np,1,nreg,1,na)
+  init_3darray fecundity(1,np,1,nreg,1,na)
   init_3darray maturity(1,np,1,nreg,1,na)
+  init_matrix prop_fem(1,np,1,nreg) //proportion of population assumed to be female for SSB calcs (typically use 0.5)
+  //##########################################################################################################################################
+//#########################################################################################################################################
+//##########################################################################################################################################
+//#########################################################################################################################################
   
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_matrix equil_ssb_apport(1,np,1,nreg)
@@ -246,17 +253,12 @@ PARAMETER_SECTION
  4darray F(1,nps,1,nr,1,nyr,1,nag)
  4darray M(1,nps,1,nr,1,nyr,1,nag)
  matrix rec_devs(1,nps,1,nyr)
- 3darray weight_population(1,nps,1,nyr,1,nag)
- 3darray weight_catch(1,nps,1,nyr,1,nag)
+ 4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
+ 4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
-
  3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity
  matrix ave_mat(1,nps,1,nag) //to calc average maturity
- 
- 3darray weight_population_overlap(1,nps,1,nyr,1,nag)
- 3darray weight_catch_overlap(1,nps,1,nyr,1,nag)
- 3darray wt_mat_mult_overlap(1,nps,1,nyr,1,nag)
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
  matrix SPR_N(1,nps,1,nag)
  matrix SPR_SSB(1,nps,1,nag)
@@ -697,25 +699,6 @@ FUNCTION get_selectivity
 FUNCTION get_F_age
    random_number_generator myrand(myseed);
 
- /// GOING TO NEED TIME-VARYING F
- // Year component to input F
- // Random variation/noise (e.g., TAC model) around an average value (or around input F values)
- //  rand_F.fill_randn(myrand1);
- //  for (int n=1;n<=nyrs_F_pre_TAC;n++) //prior to TAC fishery is assumed to fluctuate around scalar*FMSY if scalar=1.0 then fluctuates around FMSY otherwise can fluctuate around some hi or low F value to increase/decrease population size relative to BMSY
- //  {
- //   SIM_F_devs(n)=mfexp(rand_F(n)*sigma_F-0.5*square(sigma_F));
- //   if(SIM_Fmsy_switch==1) //set F=input F for all years
- //   {
- //    SIM_F_pre_TAC(n)=Fmsy;
- //   }
- //   if(SIM_Fmsy_switch==0) //set F=scalar*Fmsy
- //   {    
- //    SIM_F_pre_TAC(n)=Fmsy_scalar*Fmsy*SIM_F_devs(n);
- //   }
- //  }
- // random walk
-
-
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -763,13 +746,28 @@ FUNCTION get_F_age
         }
        }
 
-
+ /// GOING TO NEED TIME-VARYING F
+ // Year component to input F
+ // Random variation/noise (e.g., TAC model) around an average value (or around input F values)
+ //  rand_F.fill_randn(myrand1);
+ //  for (int n=1;n<=nyrs_F_pre_TAC;n++) //prior to TAC fishery is assumed to fluctuate around scalar*FMSY if scalar=1.0 then fluctuates around FMSY otherwise can fluctuate around some hi or low F value to increase/decrease population size relative to BMSY
+ //  {
+ //   SIM_F_devs(n)=mfexp(rand_F(n)*sigma_F-0.5*square(sigma_F));
+ //   if(SIM_Fmsy_switch==1) //set F=input F for all years
+ //   {
+ //    SIM_F_pre_TAC(n)=Fmsy;
+ //   }
+ //   if(SIM_Fmsy_switch==0) //set F=scalar*Fmsy
+ //   {    
+ //    SIM_F_pre_TAC(n)=Fmsy_scalar*Fmsy*SIM_F_devs(n);
+ //   }
+ //  }
+ // random walk
 
 FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
-  //what if recruit index came before or after movement
  
   random_number_generator myrand(myseed);
   
@@ -785,18 +783,38 @@ FUNCTION get_vitals
            {
             for (int z=1;z<=nfleets(j,r);z++)
              {
-              weight_population(j,y,a)=input_weight(j,a);
-              weight_catch(j,y,a)=input_catch_weight(j,a);
+              weight_population(j,r,y,a)=input_weight(j,r,a);
+              weight_catch(j,r,y,a)=input_catch_weight(j,r,a);
 
               if(maturity_switch_equil==0) // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
-               { 
-                ave_mat_temp(j,a,r)= maturity(j,r,a);//rearranging for summing
-                ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+               {
+                if(SSB_type==1) //fecundity based SSB
+                 {
+                  ave_mat_temp(j,a,r)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a);//rearranging for summing
+                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                 }
+               if(SSB_type==2) //weight based SSB
+                {
+                  ave_mat_temp(j,a,r)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);//rearranging for summing
+                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                }
                }
               if(maturity_switch_equil==1)
-               {// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity
-                ave_mat_temp(j,a,r)= maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
-                ave_mat(j,a) = sum(ave_mat_temp(j,a)); //average maturity weighted by equil_ssb_apport
+               {// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity/weight
+                if(SSB_type==1) //fecundity based SSB
+                 {
+                  ave_mat_temp(j,a,r)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
+                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                 }
+               if(SSB_type==2) //weight based SSB
+                {
+                  ave_mat_temp(j,a,r)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);//rearranging for summing
+                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
+                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                }
                }
                          
                if(recruit_devs_switch==0)  //use population recruit relationship directly
@@ -811,13 +829,11 @@ FUNCTION get_vitals
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*fecundity(j,a)*ave_mat(j,a);//for non-region specific - average for population
-                 wt_mat_mult_reg(j,r,y,a)=0.5*fecundity(j,a)*maturity(j,r,a);// for vary by region
+                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a);// for yearly SSB calcs
                 }
                if(SSB_type==2) //weight based SSB
                 {
-                 wt_mat_mult(j,y,a)=0.5*weight_population(j,y,a)*ave_mat(j,a);//for non area specific - average for population
-                 wt_mat_mult_reg(j,r,y,a)=0.5*weight_population(j,y,a)*maturity(j,r,a);
+                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);
                 }
                if(apportionment_type==1) //input recruitment apportionment directly by population and region
                 {
@@ -864,22 +880,12 @@ FUNCTION get_vitals
          }
        }
      }
-  
-  //cout<<Rec_prop_temp<<endl;
-  //cout<<Rec_prop_temp1<<endl;
-  //cout<<Rec_prop_temp2<<endl;
-  //cout<<Rec_Prop<<endl;
-  //exit(43);
+ 
 
-
-
-///////SPR CALCS///////
-
-//Temporarily the SPR calcs are done with average maturity across all the regions - while the full SSB calcs
-// are using the region specific maturity
+//SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
+// while the full SSB calcs use the region specific maturity/weight
 
 FUNCTION get_SPR
-//Part 1
   if(Rec_type=2) //BH recruitment
    {
     for (int k=1;k<=npops;k++)
@@ -909,12 +915,6 @@ FUNCTION get_SPR
      beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
      }
     }
-    
- //cout<<SSB_zero<<endl;
- //cout<<alpha<<endl;
- //cout<<beta<<endl;
- //exit(43);
-
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
 
@@ -1019,7 +1019,7 @@ FUNCTION get_abundance
                      }
  ////////DO FOLLOWING CALCS FOR BM AS WELL                
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,y,a);
+                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
@@ -1027,8 +1027,8 @@ FUNCTION get_abundance
 
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
-                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
@@ -1066,7 +1066,7 @@ FUNCTION get_abundance
                   for (int n=1;n<=nregions(k);n++)
                    {
                      abundance_move_temp(k,n)=init_abund(k,n,a)*T(k,n,y,a,j,r);
-                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);                   
+                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);                   
                    }
                   }
                   if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
@@ -1080,8 +1080,8 @@ FUNCTION get_abundance
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
-                    biomass_AM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_AM(j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
                     biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
@@ -1106,7 +1106,7 @@ FUNCTION get_abundance
                 abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                 bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                 bio_res(j,r,y,a)=bio_move_temp(j,r);
-                bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
+                bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
     
               } //end fleets loop
                  for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
@@ -1130,7 +1130,7 @@ FUNCTION get_abundance
 
                  OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
 
-                OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
+                OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,r,y,a);
                 OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
                 OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
              //apportion variables
@@ -1264,15 +1264,15 @@ FUNCTION get_abundance
                                             {
                                               if(s==1)
                                               {
-                                               fofFvect(s)=weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFhigh(s)=weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
+                                               fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
+                                               fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
+                                               fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
                                               }
                                               if(s>1)
                                               {
-                                              fofFvect(s)=weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFhigh(s)=weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                               }
                                              }
                                             fofF=sum(fofFvect)-TAC(j,r,x);
@@ -1390,15 +1390,15 @@ FUNCTION get_abundance
                                             {
                                               if(s==1)
                                               {
-                                               fofFvect(s)=(weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFhigh(s)=(weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
+                                               fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
+                                               fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
+                                               fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
                                               }
                                               if(s>1)
                                               {
-                                              fofFvect(s)=(weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFhigh(s)=(weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
                                               }
                                              }
                                             fofF=sum(fofFvect)-u(j,r,x);
@@ -1471,11 +1471,11 @@ FUNCTION get_abundance
                  {
                   catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a))); //
                  }
-                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
+                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
                 catch_at_age_population_overlap(p,j,y,a)=sum(catch_at_age_population_temp_overlap(p,j,y,a));
-                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,y,a)*catch_at_age_population_overlap(p,j,y,a);
+                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,r,y,a)*catch_at_age_population_overlap(p,j,y,a);
                 yield_population_overlap(p,j,y)=sum(yield_population_temp_overlap(p,j,y));
                 catch_at_age_natal_temp_overlap(p,y,a,j)=catch_at_age_population_overlap(p,j,y,a);
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
@@ -1509,14 +1509,14 @@ FUNCTION get_abundance
                  {
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
                  }
-                yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
+                yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                 yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                 catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
-                yield_region_temp(j,r,y,a)=weight_catch(j,y,a)*catch_at_age_region(j,r,y,a);
+                yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                 yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                 catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
                 catch_at_age_population(j,y,a)=sum(catch_at_age_population_temp(j,y,a));
-                yield_population_temp(j,y,a)=weight_catch(j,y,a)*catch_at_age_population(j,y,a);
+                yield_population_temp(j,y,a)=weight_catch(j,r,y,a)*catch_at_age_population(j,y,a);
                 yield_population(j,y)=sum(yield_population_temp(j,y));
                 catch_at_age_total_temp(y,a,j)=catch_at_age_population(j,y,a);
                 catch_at_age_total(y,a)=sum(catch_at_age_total_temp(y,a));
@@ -1777,14 +1777,14 @@ FUNCTION get_abundance
 
                 abundance_at_age_AM_overlap_region(p,j,y,a,r)=sum(abundance_move_overlap_temp);
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,y,a);
+                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
-                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
@@ -1846,7 +1846,7 @@ FUNCTION get_abundance
                     }
                   }
                 }
-                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);
+                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
                   
@@ -1861,8 +1861,8 @@ FUNCTION get_abundance
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
-                    biomass_AM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_AM(j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
                     biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
 
@@ -1883,7 +1883,7 @@ FUNCTION get_abundance
                abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                bio_res(j,r,y,a)=bio_move_temp(j,r);
-               bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
+               bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
 
             } //end a==1 if statement
 
@@ -1940,14 +1940,14 @@ FUNCTION get_abundance
                        }
                       }
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,y,a);
+                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
-                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
@@ -1970,7 +1970,7 @@ FUNCTION get_abundance
                   for (int n=1;n<=nregions(k);n++)
                    {
                      abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1))*(1-tspawn(k)))*T(k,n,y,a,j,r);
-                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);
+                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
 
@@ -1985,8 +1985,8 @@ FUNCTION get_abundance
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
-                    biomass_AM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_AM(j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
                     biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
 
@@ -2003,7 +2003,7 @@ FUNCTION get_abundance
                    abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                    bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                    bio_res(j,r,y,a)=bio_move_temp(j,r);
-                   bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
+                   bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
 
              } //end a==2 if statement
 
@@ -2060,14 +2060,14 @@ FUNCTION get_abundance
                        }
                       }
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,y,a);
+                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
-                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
@@ -2090,7 +2090,7 @@ FUNCTION get_abundance
                   for (int n=1;n<=nregions(k);n++)
                    {
                      abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*T(k,n,y,a,j,r);
-                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);
+                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
                   
@@ -2106,8 +2106,8 @@ FUNCTION get_abundance
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
-                    biomass_AM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_AM(j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
                     biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
@@ -2122,7 +2122,7 @@ FUNCTION get_abundance
                 abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                 bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                 bio_res(j,r,y,a)=bio_move_temp(j,r);
-                bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
+                bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
 
           } //end a>2 <nages if statement
 
@@ -2179,14 +2179,14 @@ FUNCTION get_abundance
                        }
                       }
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,y,a);
+                biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
 
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
-                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
@@ -2209,7 +2209,7 @@ FUNCTION get_abundance
                   for (int n=1;n<=nregions(k);n++)
                    {
                      abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*T(k,n,y,a,j,r)+abundance_at_age_AM(k,n,y-1,a)*mfexp(-(M(k,n,y-1,a)+F(k,n,y-1,a)))*T(k,n,y,a,j,r);;
-                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,y,a);
+                     bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
                   if(natal_homing_switch>0)
@@ -2223,8 +2223,8 @@ FUNCTION get_abundance
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                biomass_BM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_BM(j,r,y,a);
-                biomass_AM_age(j,r,y,a)=weight_population(j,y,a)*abundance_at_age_AM(j,r,y,a);
+                biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
                 biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                 biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
@@ -2239,7 +2239,7 @@ FUNCTION get_abundance
                    abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                    bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                    bio_res(j,r,y,a)=bio_move_temp(j,r);
-                   bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
+                   bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
 
         } //end nages if statement
 
@@ -2265,7 +2265,7 @@ FUNCTION get_abundance
 
                    OBS_index_region_prop(j,r,y,a)=OBS_index_region_age(j,r,y,a)/sum(OBS_index_region_age(j,r,y));   
 
-               OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,y,a);
+               OBS_survey_biomass_age(j,r,y,a)= OBS_index_region_age(j,r,y,a)*weight_population(j,r,y,a);
                OBS_survey_biomass_region(j,r,y)=sum(OBS_survey_biomass_age(j,r,y));
                OBS_survey_biomass_pop_temp(j,y,r)=OBS_survey_biomass_region(j,r,y);
                
@@ -2405,15 +2405,15 @@ FUNCTION get_abundance
                                             {
                                               if(s==1)
                                               {
-                                               fofFvect(s)=weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFhigh(s)=weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
+                                               fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
+                                               fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
+                                               fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
                                               }
                                               if(s>1)
                                               {
-                                              fofFvect(s)=weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFhigh(s)=weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFlow(s)=weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
+                                              fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
                                               }
                                              }
                                             fofF=sum(fofFvect)-TAC(j,r,x);
@@ -2531,15 +2531,15 @@ FUNCTION get_abundance
                                             {
                                               if(s==1)
                                               {
-                                               fofFvect(s)=(weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFhigh(s)=(weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
+                                               fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
+                                               fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
+                                               fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
                                               }
                                               if(s>1)
                                               {
-                                              fofFvect(s)=(weight_catch(j,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFhigh(s)=(weight_catch(j,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFlow(s)=(weight_catch(j,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
+                                              fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
                                               }
                                              }
                                             fofF=sum(fofFvect)-u(j,r,x);
@@ -2581,11 +2581,11 @@ FUNCTION get_abundance
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))*(1-tspawn(j))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
-                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
+                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
                 catch_at_age_population_overlap(p,j,y,a)=sum(catch_at_age_population_temp_overlap(p,j,y,a));
-                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,y,a)*catch_at_age_population_overlap(p,j,y,a);
+                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,r,y,a)*catch_at_age_population_overlap(p,j,y,a);
                 yield_population_overlap(p,j,y)=sum(yield_population_temp_overlap(p,j,y));
                 catch_at_age_natal_temp_overlap(p,y,a,j)=catch_at_age_population_overlap(p,j,y,a);
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
@@ -2611,14 +2611,14 @@ FUNCTION get_abundance
 
                    //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
                    
-                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
+                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                    yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                    catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
-                   yield_region_temp(j,r,y,a)=weight_catch(j,y,a)*catch_at_age_region(j,r,y,a);
+                   yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                    yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                    catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
                    catch_at_age_population(j,y,a)=sum(catch_at_age_population_temp(j,y,a));
-                   yield_population_temp(j,y,a)=weight_catch(j,y,a)*catch_at_age_population(j,y,a);
+                   yield_population_temp(j,y,a)=weight_catch(j,r,y,a)*catch_at_age_population(j,y,a);
                    yield_population(j,y)=sum(yield_population_temp(j,y));
 
                 abundance_population_temp(j,y,a,r)=abundance_at_age_AM(j,r,y,a);
@@ -2656,11 +2656,11 @@ FUNCTION get_abundance
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
-                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
+                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
                 catch_at_age_population_overlap(p,j,y,a)=sum(catch_at_age_population_temp_overlap(p,j,y,a));
-                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,y,a)*catch_at_age_population_overlap(p,j,y,a);
+                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,r,y,a)*catch_at_age_population_overlap(p,j,y,a);
                 yield_population_overlap(p,j,y)=sum(yield_population_temp_overlap(p,j,y));
                 catch_at_age_natal_temp_overlap(p,y,a,j)=catch_at_age_population_overlap(p,j,y,a);
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
@@ -2687,14 +2687,14 @@ FUNCTION get_abundance
 
                   //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
                   
-                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
+                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
-                  yield_region_temp(j,r,y,a)=weight_catch(j,y,a)*catch_at_age_region(j,r,y,a);
+                  yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
                   catch_at_age_population(j,y,a)=sum(catch_at_age_population_temp(j,y,a));
-                  yield_population_temp(j,y,a)=weight_catch(j,y,a)*catch_at_age_population(j,y,a);
+                  yield_population_temp(j,y,a)=weight_catch(j,r,y,a)*catch_at_age_population(j,y,a);
                   yield_population(j,y)=sum(yield_population_temp(j,y));
 
                 abundance_population_temp(j,y,a,r)=abundance_at_age_AM(j,r,y,a);
@@ -2729,11 +2729,11 @@ FUNCTION get_abundance
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
-                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
+                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
                 catch_at_age_population_overlap(p,j,y,a)=sum(catch_at_age_population_temp_overlap(p,j,y,a));
-                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,y,a)*catch_at_age_population_overlap(p,j,y,a);
+                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,r,y,a)*catch_at_age_population_overlap(p,j,y,a);
                 yield_population_overlap(p,j,y)=sum(yield_population_temp_overlap(p,j,y));
                 catch_at_age_natal_temp_overlap(p,y,a,j)=catch_at_age_population_overlap(p,j,y,a);
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
@@ -2760,14 +2760,14 @@ FUNCTION get_abundance
 
                   //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
 
-                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
+                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
-                  yield_region_temp(j,r,y,a)=weight_catch(j,y,a)*catch_at_age_region(j,r,y,a);
+                  yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
                   catch_at_age_population(j,y,a)=sum(catch_at_age_population_temp(j,y,a));
-                  yield_population_temp(j,y,a)=weight_catch(j,y,a)*catch_at_age_population(j,y,a);
+                  yield_population_temp(j,y,a)=weight_catch(j,r,y,a)*catch_at_age_population(j,y,a);
                   yield_population(j,y)=sum(yield_population_temp(j,y));
 
                 abundance_population_temp(j,y,a,r)=abundance_at_age_AM(j,r,y,a);
@@ -2801,11 +2801,11 @@ FUNCTION get_abundance
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
-                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
+                yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
                 catch_at_age_population_overlap(p,j,y,a)=sum(catch_at_age_population_temp_overlap(p,j,y,a));
-                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,y,a)*catch_at_age_population_overlap(p,j,y,a);
+                yield_population_temp_overlap(p,j,y,a)=weight_catch(p,r,y,a)*catch_at_age_population_overlap(p,j,y,a);
                 yield_population_overlap(p,j,y)=sum(yield_population_temp_overlap(p,j,y));
                 catch_at_age_natal_temp_overlap(p,y,a,j)=catch_at_age_population_overlap(p,j,y,a);
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
@@ -2831,14 +2831,14 @@ FUNCTION get_abundance
 
                   //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
                    
-                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,y,a)*catch_at_age_fleet(j,r,y,a,z);
+                  yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
-                  yield_region_temp(j,r,y,a)=weight_catch(j,y,a)*catch_at_age_region(j,r,y,a);
+                  yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
                   catch_at_age_population(j,y,a)=sum(catch_at_age_population_temp(j,y,a));
-                  yield_population_temp(j,y,a)=weight_catch(j,y,a)*catch_at_age_population(j,y,a);
+                  yield_population_temp(j,y,a)=weight_catch(j,r,y,a)*catch_at_age_population(j,y,a);
                   yield_population(j,y)=sum(yield_population_temp(j,y));
 
                 abundance_population_temp(j,y,a,r)=abundance_at_age_AM(j,r,y,a);
