@@ -25,10 +25,16 @@
 #parse_TAC_source
   #==0 recruitment index_BM
   #==1 recruitment index_AM
-  #==2 survey numbers
-  #==3 survey biomass
-  #==4 historical catch (NEEDS WORK)
-0  
+  #==2 survey biomass
+  #==3 historical catch (NEEDS WORK)
+0
+#init_number TAC_survey_parse_timelag_switch
+ # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0)
+  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in first year
+0
+#init_number TAC_survey_parse_timelag
+ # //whole number value to implement a time lag in year that use survey apportionment from
+0
 #larval_move_switch
   #==0 no movement
   #==1 input movement
@@ -109,7 +115,10 @@
 -1
 #phase_dummy - must be turned on (==1) if F_type!=3
 1
-#tspawn
+#tspawn in proportion of year (0-1)
+0
+#tsurvey in proportion of year (0-1)
+0
 0
 #steep
 0.814
