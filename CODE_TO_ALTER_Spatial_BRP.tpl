@@ -189,6 +189,7 @@ DATA_SECTION
   init_3darray init_abund(1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_matrix sigma_survey_index(1,np,1,nreg)
+  init_3darray sigma_catch(1,np,1,nreg,1,nf)
   init_vector caa_sigma(1,na)
   init_vector caa_sigma_survey(1,na)
   
@@ -369,7 +370,9 @@ PARAMETER_SECTION
  4darray obs_caa_overlap_reg_total(1,nps,1,nps,1,nr,1,nyr)
  5darray obs_prop_overlap_reg(1,nps,1,nps,1,nr,1,nyr,1,nag)
 
+ 6darray catch_at_age_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray catch_at_age_region_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
+ 5darray yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
  4darray yield_region_overlap(1,nps,1,nps,1,nr,1,nyr)
  4darray catch_at_age_population_overlap(1,nps,1,nps,1,nyr,1,nag)
  3darray yield_population_overlap(1,nps,1,nps,1,nyr)
@@ -385,6 +388,7 @@ PARAMETER_SECTION
  matrix biomass_natal_overlap(1,nps,1,nyr)
  3darray catch_at_age_natal_overlap(1,nps,1,nyr,1,nag)
  matrix yield_natal_overlap(1,nps,1,nyr)
+ 5darray harvest_rate_region_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
  4darray harvest_rate_region_bio_overlap(1,nps,1,nps,1,nr,1,nyr)
  3darray harvest_rate_population_bio_overlap(1,nps,1,nps,1,nyr)
  matrix harvest_rate_natal_bio_overlap(1,nps,1,nyr)
@@ -395,12 +399,6 @@ PARAMETER_SECTION
  matrix Bratio_natal_overlap(1,nps,1,nyr)
  matrix Bratio_population(1,nps,1,nyr)
  vector Bratio_total(1,nyr)
-
- //removed when fixed SPR calcs with weighted average
- //3darray SSB_region_init(1,nps,1,nr,1,nag)
- //3darray SSB_region_init_temp(1,nps,1,nag,1,nr)
- //matrix SSB_pop_temp(1,nps,1,nag)
- //vector SSB_pop_init(1,nps)
 
  matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
@@ -419,6 +417,20 @@ PARAMETER_SECTION
  5darray SSB_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  matrix abundance_move_overlap_temp(1,nps,1,nr)
 
+ //Observed Yield
+ 5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ 4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
+ 3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
+ matrix OBS_yield_natal_overlap(1,nyr,1,nps)
+ vector OBS_yield_total_overlap(1,nyr)
+ 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
+ 3darray OBS_yield_region(1,nps,1,nyr,1,nr)
+ matrix OBS_yield_population(1,nyr,1,nps)
+ vector OBS_yield_total(1,nyr)
+ 3darray apport_yield_region(1,nps,1,nr,1,nyr)
+
+ 5darray OBS_yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nps)
+ 6darray yield_region_fleet_temp_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray yield_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  4darray yield_population_temp_overlap(1,nps,1,nps,1,nyr,1,nag)
  4darray abundance_natal_temp_overlap(1,nps,1,nyr,1,nag,1,nps)
@@ -697,7 +709,7 @@ FUNCTION get_selectivity
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
-   random_number_generator myrand(myseed);
+   random_number_generator myrand7(myseed+4534);
 
   for (int j=1;j<=npops;j++)
    {
@@ -749,7 +761,7 @@ FUNCTION get_F_age
  /// GOING TO NEED TIME-VARYING F
  // Year component to input F
  // Random variation/noise (e.g., TAC model) around an average value (or around input F values)
- //  rand_F.fill_randn(myrand1);
+ //  rand_F.fill_randn(myrand7);
  //  for (int n=1;n<=nyrs_F_pre_TAC;n++) //prior to TAC fishery is assumed to fluctuate around scalar*FMSY if scalar=1.0 then fluctuates around FMSY otherwise can fluctuate around some hi or low F value to increase/decrease population size relative to BMSY
  //  {
  //   SIM_F_devs(n)=mfexp(rand_F(n)*sigma_F-0.5*square(sigma_F));
@@ -769,7 +781,8 @@ FUNCTION get_vitals
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
  
-  random_number_generator myrand(myseed);
+  random_number_generator myrand3(myseed+4120); //recruitment devs
+  random_number_generator myrand4(myseed+123); //recruitment apportionment devs
   
   for (int p=1;p<=npops;p++)
    {
@@ -825,7 +838,7 @@ FUNCTION get_vitals
                 {
 ////// CHECK THIS CALCULATION MAKE SURE USING NEW RANDN every time through loop
 ////// rand_rec.fill_randn(myrand);
-                 rec_devs(j,y)=mfexp(randn(myrand)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
+                 rec_devs(j,y)=mfexp(randn(myrand3)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
@@ -849,7 +862,7 @@ FUNCTION get_vitals
                 }
                if(apportionment_type==3)//completely random apportionment
                 {
-                Rec_prop_temp(j,y,r)=randu(myrand);//generate a positive random number bw 0-1
+                Rec_prop_temp(j,y,r)=randu(myrand4);//generate a positive random number bw 0-1
                 Rec_prop_temp2(j,y)=sum(Rec_prop_temp(j,y));
                 
                 for (int r=1;r<=nregions(j);r++){   
@@ -859,7 +872,7 @@ FUNCTION get_vitals
                if(apportionment_type==4)
                 {
                  Rec_prop_temp(j,y,r)=input_Rec_prop(j,r);
-                 Rec_prop_temp1(j,y,r)=(Rec_prop_temp(j,y,r)+(mfexp(randn(myrand)*sigma_rec_prop(j)-.5*square(sigma_rec_prop(j)))))-1;//applying the additive error
+                 Rec_prop_temp1(j,y,r)=(Rec_prop_temp(j,y,r)+(mfexp(randn(myrand4)*sigma_rec_prop(j)-.5*square(sigma_rec_prop(j)))))-1;//applying the additive error
                   if(Rec_prop_temp1(j,y,r)<0) {Rec_prop_temp1(j,y,r)=0;}//need to reset negative values to 0
 
                  Rec_prop_temp2(j,y)=sum(Rec_prop_temp1(j,y));
@@ -943,7 +956,9 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
 
 
 FUNCTION get_abundance
-  random_number_generator myrand(myseed);
+  random_number_generator myrand(myseed); //survey biomass observation erro
+  random_number_generator myrand2(myseed+3201); // yield observation error
+  random_number_generator myrand5(myseed+13); // recruit index observation error
 
        for (int y=1;y<=nyrs;y++)
         {
@@ -956,10 +971,10 @@ FUNCTION get_abundance
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-             if(y==1)
-              {
-               for (int a=1;a<=nages;a++)
-                 {
+       if(y==1)
+         {
+         for (int a=1;a<=nages;a++)
+          {
            for (int p=1;p<=npops;p++)
             {
              for (int j=1;j<=npops;j++)
@@ -1054,7 +1069,7 @@ FUNCTION get_abundance
                 recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
  ///get year one recruitment index
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
@@ -1097,7 +1112,7 @@ FUNCTION get_abundance
 
                 recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
                 
-                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                 rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                 rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -1460,17 +1475,20 @@ FUNCTION get_abundance
                 SSB_population_overlap(p,j,y)=sum(SSB_population_temp_overlap(p,j,y));
                 SSB_natal_overlap_temp(p,y,j)=SSB_population_overlap(p,j,y);
                 SSB_natal_overlap(p,y)=sum(SSB_natal_overlap_temp(p,y));
-
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
                 if(a==1)
                  {
                   catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F(j,r,y,a)+M(j,r,y,a))*(1-tspawn(p))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
+                  catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))*(1-tspawn(p))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
                  }
                 if(a>1)
                  {
                   catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a))); //
+                  catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
                  }
+                yield_region_fleet_temp_overlap(p,j,r,z,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_fleet_overlap(p,j,r,z,y,a);
+                yield_region_fleet_overlap(p,j,r,z,y)=sum(yield_region_fleet_temp_overlap(p,j,r,z,y));
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
@@ -1481,6 +1499,7 @@ FUNCTION get_abundance
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
                 yield_natal_temp_overlap(p,y,j)=yield_population_overlap(p,j,y);
                 yield_natal_overlap(p,y)=sum(yield_natal_temp_overlap(p,y));
+                harvest_rate_region_fleet_bio_overlap(p,j,r,z,y)=yield_region_fleet_overlap(p,j,r,z,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_region_bio_overlap(p,j,r,y)=yield_region_overlap(p,j,r,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_population_bio_overlap(p,j,y)=yield_population_overlap(p,j,y)/biomass_population_overlap(p,j,y);
                 harvest_rate_natal_bio_overlap(p,y)=yield_natal_overlap(p,y)/biomass_natal_overlap(p,y);
@@ -1489,8 +1508,6 @@ FUNCTION get_abundance
                 depletion_natal_overlap(p,y)=biomass_natal_overlap(p,y)/biomass_natal_overlap(p,1);
                 Bratio_population_overlap(p,j,y)=SSB_population_overlap(p,j,y)/SSB_zero(p);
                 Bratio_natal_overlap(p,y)=SSB_natal_overlap(p,y)/SSB_zero(p);
-              
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1499,7 +1516,6 @@ FUNCTION get_abundance
 //////////////////////  CONTINUATION of NON-NATAL HOMING CALCS ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  
                 abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                 if(a==1)
                  {
@@ -1551,7 +1567,26 @@ FUNCTION get_abundance
                 Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
 
-
+                //YIELD observation error
+                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
+               if(natal_homing_switch==0)
+                {
+                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                }
+               if(natal_homing_switch==1)
+                {
+                 OBS_yield_fleet(j,r,y,z)=sum(OBS_yield_fleet_temp(j,r,y,z));  
+                }
+                OBS_yield_region_overlap(p,j,y,r)=sum(OBS_yield_region_fleet_overlap(p,j,r,y));
+                OBS_yield_population_overlap(p,y,j)=sum(OBS_yield_region_overlap(p,j,y));
+                OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
+                OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
+                OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
+                OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
+                OBS_yield_total(y)=sum(OBS_yield_population(y));
+             //apportion variables
+                apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
                }
               }
              }
@@ -1662,7 +1697,7 @@ FUNCTION get_abundance
                    }
                  }
                  }
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
@@ -1869,7 +1904,7 @@ FUNCTION get_abundance
                    }
 
                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
-               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -2577,10 +2612,12 @@ FUNCTION get_abundance
             {
 
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
-
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
+                catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))*(1-tspawn(p))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))*(1-tspawn(j))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
+                yield_region_fleet_temp_overlap(p,j,r,z,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_fleet_overlap(p,j,r,z,y,a);
+                yield_region_fleet_overlap(p,j,r,z,y)=sum(yield_region_fleet_temp_overlap(p,j,r,z,y));
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
@@ -2591,6 +2628,7 @@ FUNCTION get_abundance
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
                 yield_natal_temp_overlap(p,y,j)=yield_population_overlap(p,j,y);
                 yield_natal_overlap(p,y)=sum(yield_natal_temp_overlap(p,y));
+                harvest_rate_region_fleet_bio_overlap(p,j,r,z,y)=yield_region_fleet_overlap(p,j,r,z,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_region_bio_overlap(p,j,r,y)=yield_region_overlap(p,j,r,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_population_bio_overlap(p,j,y)=yield_population_overlap(p,j,y)/biomass_population_overlap(p,j,y);
                 harvest_rate_natal_bio_overlap(p,y)=yield_natal_overlap(p,y)/biomass_natal_overlap(p,y);
@@ -2598,7 +2636,6 @@ FUNCTION get_abundance
                 depletion_population_overlap(p,j,y)=biomass_population_overlap(p,j,y)/biomass_population_overlap(p,j,1);
                 depletion_natal_overlap(p,y)=biomass_natal_overlap(p,y)/biomass_natal_overlap(p,1);
                
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////a==1 metapop type abundance calcs////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2606,7 +2643,6 @@ FUNCTION get_abundance
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
                    abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
-
                    catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))*(1-tspawn(j))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a)); //account for time of spawning in catch (tspawn divides out in F/(F+M
 
                    //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
@@ -2638,10 +2674,7 @@ FUNCTION get_abundance
                 depletion_region(j,r,y)=biomass_AM(j,r,y)/biomass_AM(j,r,1);
                 depletion_population(j,y)=biomass_population(j,y)/biomass_population(j,1);
                 depletion_total(y)=biomass_total(y)/biomass_total(1);
-
-
             } //end a==1 loop
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2650,12 +2683,13 @@ FUNCTION get_abundance
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    if(a==2)
     {
-
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
-
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
-                catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
+                catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
+                yield_region_fleet_temp_overlap(p,j,r,z,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_fleet_overlap(p,j,r,z,y,a);
+                yield_region_fleet_overlap(p,j,r,z,y)=sum(yield_region_fleet_temp_overlap(p,j,r,z,y));
+                catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));              
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
                 catch_at_age_population_temp_overlap(p,j,y,a,r)=catch_at_age_region_overlap(p,j,r,y,a);
@@ -2666,27 +2700,22 @@ FUNCTION get_abundance
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
                 yield_natal_temp_overlap(p,y,j)=yield_population_overlap(p,j,y);
                 yield_natal_overlap(p,y)=sum(yield_natal_temp_overlap(p,y));
+                harvest_rate_region_fleet_bio_overlap(p,j,r,z,y)=yield_region_fleet_overlap(p,j,r,z,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_region_bio_overlap(p,j,r,y)=yield_region_overlap(p,j,r,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_population_bio_overlap(p,j,y)=yield_population_overlap(p,j,y)/biomass_population_overlap(p,j,y);
                 harvest_rate_natal_bio_overlap(p,y)=yield_natal_overlap(p,y)/biomass_natal_overlap(p,y);
                 depletion_region_overlap(p,j,r,y)=biomass_AM_overlap_region(p,j,r,y)/biomass_AM_overlap_region(p,j,r,1);
                 depletion_population_overlap(p,j,y)=biomass_population_overlap(p,j,y)/biomass_population_overlap(p,j,1);
                 depletion_natal_overlap(p,y)=biomass_natal_overlap(p,y)/biomass_natal_overlap(p,1);
-              
-                 
-
+                            
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////a==2 metapop type abundance calcs////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- 
                    
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
-                  catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
-
-                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
-                  
+                  catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));                  
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2725,9 +2754,11 @@ FUNCTION get_abundance
              if(a>2 && a<nages)
                {
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
-
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
+                catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
+                yield_region_fleet_temp_overlap(p,j,r,z,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_fleet_overlap(p,j,r,z,y,a);
+                yield_region_fleet_overlap(p,j,r,z,y)=sum(yield_region_fleet_temp_overlap(p,j,r,z,y));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
@@ -2739,27 +2770,21 @@ FUNCTION get_abundance
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
                 yield_natal_temp_overlap(p,y,j)=yield_population_overlap(p,j,y);
                 yield_natal_overlap(p,y)=sum(yield_natal_temp_overlap(p,y));
+                harvest_rate_region_fleet_bio_overlap(p,j,r,z,y)=yield_region_fleet_overlap(p,j,r,z,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_region_bio_overlap(p,j,r,y)=yield_region_overlap(p,j,r,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_population_bio_overlap(p,j,y)=yield_population_overlap(p,j,y)/biomass_population_overlap(p,j,y);
                 harvest_rate_natal_bio_overlap(p,y)=yield_natal_overlap(p,y)/biomass_natal_overlap(p,y);
                 depletion_region_overlap(p,j,r,y)=biomass_AM_overlap_region(p,j,r,y)/biomass_AM_overlap_region(p,j,r,1);
                 depletion_population_overlap(p,j,y)=biomass_population_overlap(p,j,y)/biomass_population_overlap(p,j,1);
                 depletion_natal_overlap(p,y)=biomass_natal_overlap(p,y)/biomass_natal_overlap(p,1);
-                
-                 
-
+                                
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////a>2 a<nages metapop type abundance calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-   
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////   
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
-
-                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
-
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2797,9 +2822,11 @@ FUNCTION get_abundance
            if(a==nages) //account for fish already in plus group
             {
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
-
                 abundance_natal_temp_overlap(p,y,a,j)=abundance_at_age_AM_overlap_population(p,j,y,a);
                 abundance_natal_overlap(p,y,a)=sum(abundance_natal_temp_overlap(p,y,a));
+                catch_at_age_region_fleet_overlap(p,j,r,z,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-mfexp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z)/(F_fleet(j,r,y,a,z)+M(j,r,y,a)));              
+                yield_region_fleet_temp_overlap(p,j,r,z,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_fleet_overlap(p,j,r,z,y,a);
+                yield_region_fleet_overlap(p,j,r,z,y)=sum(yield_region_fleet_temp_overlap(p,j,r,z,y));
                 catch_at_age_region_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*(1.0-exp(-(F(j,r,y,a)+M(j,r,y,a))))*(F(j,r,y,a)/(F(j,r,y,a)+M(j,r,y,a)));
                 yield_region_temp_overlap(p,j,r,y,a)=weight_catch(p,r,y,a)*catch_at_age_region_overlap(p,j,r,y,a);
                 yield_region_overlap(p,j,r,y)=sum(yield_region_temp_overlap(p,j,r,y));
@@ -2811,6 +2838,7 @@ FUNCTION get_abundance
                 catch_at_age_natal_overlap(p,y,a)=sum(catch_at_age_natal_temp_overlap(p,y,a));
                 yield_natal_temp_overlap(p,y,j)=yield_population_overlap(p,j,y);
                 yield_natal_overlap(p,y)=sum(yield_natal_temp_overlap(p,y));
+                harvest_rate_region_fleet_bio_overlap(p,j,r,z,y)=yield_region_fleet_overlap(p,j,r,z,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_region_bio_overlap(p,j,r,y)=yield_region_overlap(p,j,r,y)/biomass_AM_overlap_region(p,j,r,y);
                 harvest_rate_population_bio_overlap(p,j,y)=yield_population_overlap(p,j,y)/biomass_population_overlap(p,j,y);
                 harvest_rate_natal_bio_overlap(p,y)=yield_natal_overlap(p,y)/biomass_natal_overlap(p,y);
@@ -2823,14 +2851,9 @@ FUNCTION get_abundance
 ////////////////a==nages metapop type abundance calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-           
-                   
+     
                   abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                   catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a));
-
-                  //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
-                   
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -2923,6 +2946,27 @@ FUNCTION get_abundance
                 Bratio_natal_overlap(p,y)=SSB_natal_overlap(p,y)/SSB_zero(p);
                 Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
+
+                //YIELD observation error
+                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
+               if(natal_homing_switch==0)
+                {
+                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                }
+               if(natal_homing_switch==1)
+                {
+                 OBS_yield_fleet(j,r,y,z)=sum(OBS_yield_fleet_temp(j,r,y,z));  
+                }
+                OBS_yield_region_overlap(p,j,y,r)=sum(OBS_yield_region_fleet_overlap(p,j,r,y));
+                OBS_yield_population_overlap(p,y,j)=sum(OBS_yield_region_overlap(p,j,y));
+                OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
+                OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
+                OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
+                OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
+                OBS_yield_total(y)=sum(OBS_yield_population(y));
+             //apportion variables
+                apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
    }
    }
    }
@@ -2980,7 +3024,7 @@ FUNCTION get_abundance
 
 FUNCTION get_rand_CAA_prop
  ///NEED TO CHECK THESE
- random_number_generator myrand(myseed);
+ random_number_generator myrand6(myseed+64532);
  //calculate the total CAA for each population/area/region/fleet for non-natal and natal calcs
  
   for (int p=1;p<=npops;p++)
@@ -3001,7 +3045,7 @@ FUNCTION get_rand_CAA_prop
                true_caa_fleet_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z); //summing catch across age
                true_caa_fleet_total(j,r,y,z) = sum(true_caa_fleet_temp(j,r,y,z));
                //calc random catches assuming true are meanp with log-normal age-specific error
-               obs_caa_fleet(j,r,y,z,a)= true_caa_fleet_temp(j,r,y,z,a)*mfexp(randn(myrand)*caa_sigma(a)-0.5*square(caa_sigma(a)));
+               obs_caa_fleet(j,r,y,z,a)= true_caa_fleet_temp(j,r,y,z,a)*mfexp(randn(myrand6)*caa_sigma(a)-0.5*square(caa_sigma(a)));
                obs_caa_fleet_total(j,r,y,z) = sum(obs_caa_fleet(j,r,y,z));
                
              for (int a=1;a<=nages;a++)
@@ -3017,7 +3061,7 @@ FUNCTION get_rand_CAA_prop
                true_caa_overlap_reg_temp(p,j,r,y,a) = catch_at_age_region_overlap(p,j,r,y,a);
                true_caa_overlap_reg_total(p,j,r,y) = sum(true_caa_overlap_reg_temp(p,j,r,y));
                //calc random catches assuming true are meanp with log-normal age-specific error
-               obs_caa_overlap_reg(p,j,r,y,a)= true_caa_overlap_reg_temp(p,j,r,y,a)*mfexp(randn(myrand)*caa_sigma(a)-0.5*square(caa_sigma(a)));
+               obs_caa_overlap_reg(p,j,r,y,a)= true_caa_overlap_reg_temp(p,j,r,y,a)*mfexp(randn(myrand6)*caa_sigma(a)-0.5*square(caa_sigma(a)));
                obs_caa_overlap_reg_total(p,j,r,y) = sum(obs_caa_overlap_reg(p,j,r,y));
 
 
@@ -3314,6 +3358,15 @@ REPORT_SECTION
   report<<"$yield_total"<<endl;
   report<<yield_total<<endl;
 
+  report<<"$OBS_yield_fleet"<<endl;
+  report<<OBS_yield_fleet<<endl;
+  report<<"$OBS_yield_region"<<endl;
+  report<<OBS_yield_region<<endl;
+  report<<"$OBS_yield_population"<<endl;
+  report<<OBS_yield_population<<endl;
+  report<<"$OBS_yield_total"<<endl;
+  report<<OBS_yield_total<<endl;
+
   report<<"$harvest_rate_region_bio"<<endl;
   report<<harvest_rate_region_bio<<endl;
   report<<"$harvest_rate_population_bio"<<endl;
@@ -3342,12 +3395,25 @@ REPORT_SECTION
   report<<"$SSB_natal_overlap"<<endl;
   report<<SSB_natal_overlap<<endl;
 
+  report<<"$yield_region_fleet_overlap"<<endl;
+  report<<yield_region_fleet_overlap<<endl;
   report<<"$yield_region_overlap"<<endl;
   report<<yield_region_overlap<<endl;
   report<<"$yield_population_overlap"<<endl;
   report<<yield_population_overlap<<endl;
   report<<"$yield_natal_overlap"<<endl;
   report<<yield_natal_overlap<<endl;
+
+  report<<"$OBS_yield_region_fleet_overlap"<<endl;
+  report<<OBS_yield_region_fleet_overlap<<endl;
+  report<<"$OBS_yield_region_overlap"<<endl;
+  report<<OBS_yield_region_overlap<<endl;
+  report<<"$OBS_yield_population_overlap"<<endl;
+  report<<OBS_yield_population_overlap<<endl;
+  report<<"$OBS_yield_natal_overlap"<<endl;
+  report<<OBS_yield_natal_overlap<<endl;
+  report<<"$OBS_yield_total_overlap"<<endl;
+  report<<OBS_yield_total_overlap<<endl;
 
   report<<"$biomass_AM_overlap_region"<<endl;
   report<<biomass_AM_overlap_region<<endl;
