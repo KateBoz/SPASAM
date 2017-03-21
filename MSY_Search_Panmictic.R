@@ -1,28 +1,19 @@
 ######################################################
 # Another attempt to run the MSY search on the panmictic population
 # Created by Katelyn Bosley
-# Date: 2/15/2017
+# Date: 3/21/2017
 ###################################################
 #need to reset the working directory in for run
-
 
 # remove previous objects from workspace
 rm(list = ls())
 
-# set the working directory
-#wd<-getwd()
-
-#
-
-wd<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Panmictic"
-
-#wd<-"C:\\Users\\Katelyn.bosley\\Desktop\\SPASAM CODING\\MS_1_CODE\\Hake\\Panmictic"
-#wd<-"C:\\Users\\katelyn.bosley\\Desktop\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Panmictic"
-setwd(wd)
-wd<<-wd
-
+WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Panmictic"
+setwd(WD)
+#wd<<-wd
 
 #install libraries
+load_libraries<-function() {
 suppressWarnings(suppressMessages(require(PBSmodelling)))
 suppressWarnings(suppressMessages(require(matrixStats)))
 suppressWarnings(suppressMessages(require(TeachingDemos)))
@@ -35,33 +26,55 @@ suppressWarnings(suppressMessages(library(data.table)))
 suppressWarnings(suppressMessages(library(gtools)))
 suppressWarnings(suppressMessages(library(spatstat)))
 suppressWarnings(suppressMessages(library(alphahull)))
+}
+load_libraries()
 
 
 #Setting up the F values to iterate over
 F.name<-"input_F"
-F.start<-0.05
+F.start<-0.025
 F.end<-0.8
-it<-0.05
+it<-0.025
 
-F.test<-seq(F.start,F.end,it) #F values to cycle through
-ntrial<-length(F.test) # count of total number of trials
+F.Test<-seq(F.start,F.end,it) #F values to cycle through
+Ntrial<-length(F.Test) # count of total number of trials
 
-
-# if using lots of different structures
-#F.region1<-matrix(perm[ntrial,],ncol=nfleets,nrow=sum(nregions),byrow=T)  ####NEEDS TO BE GENERALIZED FOR UNEVEN FLEETS BY REGION (i.e. ncol)
-#F.region<-apply(matrix(as.character(perm[ntrial,]),ncol=nfleets,nrow=sum(nregions),byrow=T),1,paste0,sep=" ",collapse="")
-
+#read original .dat
+update=readLines("Spatial_BRP_panmictic.dat",n=-1)
+#pull important values - for generalized version  - crossover from previous
+nyrs<-as.numeric(update[(grep("nyrs",update)+1)])
+nstocks<-as.numeric(update[(grep("npopulations",update)+1)])
+nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)+nstocks)])
+nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
 
 #setting up the files to run through
-dir.create(paste0(wd,"\\MSY Results",sep=""))
-dir.create(paste0(wd,"\\MSY Results\\Figures",sep=""))
-dir.create(paste0(wd,"\\MSY Results\\Report Files",sep=""))
+dir.create(paste0(WD,"\\MSY Results",sep=""))
+dir.create(paste0(WD,"\\MSY Results\\Figures",sep=""))
+dir.create(paste0(WD,"\\MSY Results\\Report Files",sep=""))
 
+
+###########################################
+# THE SEARCH FUNCTION
+##########################################
 
 #MSY search function
-MSY_search<-function() {
+MSY_search<-function(wd=WD,F.test=F.Test,ntrial=Ntrial) {
+  
+#do parallel processing
+no_cores <- detectCores() - 1
+cl<-makeCluster(no_cores)
+registerDoSNOW(cl)
+  
+#set up text progress bar
+pb <- txtProgressBar(max = ntrial , style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
+  
+
 #set up the files for doing the iterations
-for(i in 1:ntrial){
+ls<-foreach(i=1:ntrial,.options.snow = opts) %dopar% {
+
+#for(i in 1:ntrial){
   dir.create(paste0(wd,"\\MSY Results\\Run",i,sep="")) #create the results directory in the WD with run number
   
   invisible(file.copy(from=paste0(wd,"\\Spatial_BRP_panmictic.exe",sep=""),to=paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP_panmictic.exe",sep="")))
@@ -72,14 +85,6 @@ for(i in 1:ntrial){
   #set new directory for running the model
   setwd(paste0(wd,"\\MSY Results\\Run",i,sep="")) # now set the working direcctory as the run# file
   update=readLines("Spatial_BRP_panmictic.dat",n=-1)
-  
-  
-  #pull important values - for generalized version 
-  nyrs<-as.numeric(update[(grep("nyrs",update)+1)])
-  nstocks<-as.numeric(update[(grep("nstocks",update)+1)])
-  nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)+nstocks)])
-  nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
-  
   update[grep("input_F",update)+1]<-F.test[i]
   
   
@@ -95,20 +100,14 @@ for(i in 1:ntrial){
   invisible(file.copy(from=paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP_panmictic.rep",sep=""),to=paste0(wd,"\\MSY Results\\Report Files\\Report",i,".rep",sep="")))
   
   
-  } #end of code for MSY search
-  
-}
+   } #end of code for MSY search
 
-#run the function
-MSY_search()
-
+stopCluster(cl)  #end parallel
 
 
 #setting up the values from the runs to plot
-
 #picking out only the values I want.
 msy_results<-data.frame(matrix(NA,nrow = ntrial,ncol=8))
-
 names(msy_results)<-c("trial","F","biomass_total","yield_total","harvest_rate_total_bio","depletion_total","SSB_total","Bratio_total")
 
 
@@ -156,7 +155,6 @@ invisible(file.copy(from=paste0(wd_results,"\\Report",t,".rep",sep=""),to=paste0
 get_msy()
 
 
-
 ############################################
 #plotting code
 ############################################
@@ -195,10 +193,11 @@ MSY_plots()
 dev.off()
 
 
+} #end panmictic search functikon
 
+MSY_search()
 
-
-
+########################################################
 
 
 
