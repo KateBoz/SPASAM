@@ -1,26 +1,23 @@
-######################################################
-# Another attempt to run the MSY search on the panmictic population
+###############################################################
+# Conducting the MSY Search using the Spatial_BRP model for 
+# the "one population/multiple areas" spatial structure
 # Created by Katelyn Bosley
 # Date: 2/15/2017
-###################################################
-#need to reset the working directory in for run and run the run_MSY function
+##############################################################
 
+#need to reset the working directory in for run and run the run_MSY function
 
 # remove previous objects from workspace
 rm(list = ls())
 
 # set the working directory
-
 #DIRECTORIES
 
 #HAKE runs
-
 #SABLEFISH runs
 WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Base_model"
-
 #MENHADEN runs
 
-#
 setwd(WD)
 WD<<-WD
 
@@ -113,7 +110,6 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
 } #end of code for MSY search
 
 stopCluster(cl) #end the cluster for parallel processing
-
 
 
 #########################################################
@@ -249,9 +245,6 @@ dev.off()
 } #end MSY_search function
 
 MSY_search()
-
-
-
 
 
 
