@@ -11,58 +11,51 @@ rm(list = ls())
 
 # set the working directory
 
-
 #DIRECTORIES
-#
+
 #HAKE runs
-#wd<-"C:\\Users\\Katelyn.bosley\\Desktop\\SPASAM CODING\\MS_1_CODE\\Hake\\Maturity_mismatch"
-#wd<-"C:\\Users\\Katelyn.bosley\\Desktop\\SPASAM CODING\\MS_1_CODE\\Hake\\Panmictic"
-wd<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Maturity_mismatch"
 
 #SABLEFISH runs
-#wd<-"C:\\Users\\katelyn.bosley\\Desktop\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Match_selectivity"
-#wd<-"E:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Match_selectivity"
-#wd<-"E:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Recruit_alt_with_match_select"
-#wd<-"E:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Vary_select_only"
-#wd<-"E:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Match_select&mat"
-#wd<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Match_selectivity"
+WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Base_model"
+
+#MENHADEN runs
 
 #
-setwd(wd)
-wd<<-wd
+setwd(WD)
+WD<<-WD
 
 #install libraries - don't need all these but carry over
-suppressWarnings(suppressMessages(require(PBSmodelling)))
-suppressWarnings(suppressMessages(require(matrixStats)))
-suppressWarnings(suppressMessages(require(TeachingDemos)))
-suppressWarnings(suppressMessages(require(snowfall)))
-suppressWarnings(suppressMessages(library(parallel)))
-suppressWarnings(suppressMessages(library(snow)))
-suppressWarnings(suppressMessages(library(foreach)))
-suppressWarnings(suppressMessages(library(doSNOW)))
-suppressWarnings(suppressMessages(library(data.table)))
-suppressWarnings(suppressMessages(library(gtools)))
-suppressWarnings(suppressMessages(library(spatstat)))
-suppressWarnings(suppressMessages(library(alphahull)))
-suppressWarnings(suppressMessages(library(doParallel)))
-
+load_libraries<-function() {
+  suppressWarnings(suppressMessages(require(PBSmodelling)))
+  suppressWarnings(suppressMessages(require(matrixStats)))
+  suppressWarnings(suppressMessages(require(TeachingDemos)))
+  suppressWarnings(suppressMessages(require(snowfall)))
+  suppressWarnings(suppressMessages(library(parallel)))
+  suppressWarnings(suppressMessages(library(snow)))
+  suppressWarnings(suppressMessages(library(foreach)))
+  suppressWarnings(suppressMessages(library(doSNOW)))
+  suppressWarnings(suppressMessages(library(data.table)))
+  suppressWarnings(suppressMessages(library(gtools)))
+  suppressWarnings(suppressMessages(library(spatstat)))
+  suppressWarnings(suppressMessages(library(alphahull)))
+}
+load_libraries()
 
 
 #Setting up the F values to iterate over
 F.name<-"input_F"
-F.start<-0.05
+F.start<-0.1
 F.end<-0.8
-it<-0.05
-
+it<-0.1
 
 # the function  - run the below function to make things easier for completing runs. Still working out the kinks
-#MSY_search<-function() {
+MSY_search<-function(wd=WD) {
 
-#read in .dat file to get values for setting up the runs 
+#read in .dat file to get values for setting up the runs-carryover from DG code
 update=readLines("Spatial_BRP.dat",n=-1)
 
 nyrs<-as.numeric(update[(grep("nyrs",update)+1)])
-nstocks<-as.numeric(update[(grep("nstocks",update)+1)])
+nstocks<-as.numeric(update[(grep("npopulations",update)+1)])
 nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)+nstocks)])
 nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
 
@@ -100,7 +93,8 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
   
   
   #set new directory for running the model
-  setwd(paste0(wd,"\\MSY Results\\Run",i,sep="")) # now set the working direcctory as the run# file
+  setwd(paste0(wd,"\\MSY Results\\Run",i,sep="")) # now set the working directory as the run# file
+  
   update=readLines("Spatial_BRP.dat",n=-1)
   
   
@@ -119,6 +113,7 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
 } #end of code for MSY search
 
 stopCluster(cl) #end the cluster for parallel processing
+
 
 
 #########################################################
@@ -224,10 +219,6 @@ invisible(file.copy(from=paste0(wd_results,"\\Report",t,".rep",sep=""),to=paste0
 ############################################
 
 
-##############
-#MSY PLOTS
-
-
 #plotting function
 MSY_plots<-function() {
   msy_results<-read.csv("MSY_results.csv") #read in the data again if there were changes above
@@ -255,9 +246,17 @@ pdf("spatial_1_plots.pdf")
 MSY_plots()
 dev.off()
 
-#} #end MSY_search function
+} #end MSY_search function
 
-#MSY_search()
+MSY_search()
+
+
+
+
+
+
+########## FOR THE FUTURE!!######################
+
 
 
 
