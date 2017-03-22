@@ -15,28 +15,48 @@
 1
 #model_type_switch
   #==0 do not use TAC to set F
-  #==1 use TAC to set F
+  #==1 use TAC to set F, USE THIS IF calc_TAC_from_uMSY==1
   #==2 use uMSY to set F
 0
 # parse_TAC
   #==0 do not alter the input TAC or harvest rate
   #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
 1
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////// USING calc_TAC_from_uMSY==1 IS PROBABLY ONLY CORRECT WAY TO PARSE u /////////////////////////////////////////////////
+#/////////////// IF PARSE input_u directly, then sum(u) unlikely to equal input_u because of differences in population sizes/////////
+#/////////////// ie applying less than the full uMSY to each area/region ////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# calc_TAC_from_uMSY
+###########################################################################################################################
+  #MUST HAVE MODEL_TYPE==1, even though uses input u (harvest rate)
+##############################################################################################################################
+  #==0 don't use
+  #==1 calculate a yearly TAC from uMSY(input)*biomass_total(y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+1
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #parse_TAC_source
   #==0 recruitment index_BM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
   #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
   #==2 survey biomass
-  #==3 historical catch (NEEDS WORK)
-0
-#init_number TAC_survey_parse_timelag_switch
+  #==3 equal apportionment across all fleets in a given area
+2
+#TAC_survey_parse_timelag_switch
  # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
   #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in  years where y<timelag
-0
+1
+#TAC_survey_parse_timelag
+ # //whole number value to implement a time lag in year that use survey apportionment from
+1
+
 #tsurvey in proportion of year (0-1)
 0
-0
-#init_number TAC_survey_parse_timelag
- # //whole number value to implement a time lag in year that use survey apportionment from
 0
 #larval_move_switch
   #==0 no movement
