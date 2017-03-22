@@ -23,14 +23,17 @@
   #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
 1
 #parse_TAC_source
-  #==0 recruitment index_BM
-  #==1 recruitment index_AM
+  #==0 recruitment index_BM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
   #==2 survey biomass
   #==3 historical catch (NEEDS WORK)
 0
 #init_number TAC_survey_parse_timelag_switch
- # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0)
-  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in first year
+ # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
+  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in  years where y<timelag
+0
+#tsurvey in proportion of year (0-1)
+0
 0
 #init_number TAC_survey_parse_timelag
  # //whole number value to implement a time lag in year that use survey apportionment from
@@ -117,9 +120,7 @@
 1
 #tspawn in proportion of year (0-1)
 0
-#tsurvey in proportion of year (0-1)
-0
-0
+
 #steep
 0.814
 #R_ave
@@ -258,12 +259,19 @@
 
 #input_TAC
  #TAC that are matching if model_type_switch==1
+################################################################################################################
+################################################################################################################
+################################################################################################################
+### IF PARSE TAC OR U USING OBS DATA THEN MAKE SURE THAT FULL TAC OR U FOR THAT AREA IS INPUT FOR EACH FLEET IN THAT AREA ###
+########################################################################################################
 1
 1 
-  
-#input_u //needed to repeat the row 3 times to get the 3 x 4 matrix fixed
+#input_u 
 .0491
 .0491
+################################################################################################################
+################################################################################################################
+################################################################################################################
 
 #max_Fnew
 5
