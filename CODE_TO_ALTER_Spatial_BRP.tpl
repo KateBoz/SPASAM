@@ -934,7 +934,7 @@ FUNCTION get_vitals
         }
        }
      }
- EOUT(Rec_Prop);
+
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
