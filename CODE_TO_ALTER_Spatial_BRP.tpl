@@ -260,7 +260,7 @@ DATA_SECTION
   int x
   int u
   int d
-
+  
  !! cout << "debug = " << debug << endl;
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
@@ -905,24 +905,12 @@ FUNCTION get_vitals
                if(apportionment_type==3)//completely random apportionment
                 {
                 Rec_prop_temp(j,y,r)=randu(myrand4);//generate a positive random number bw 0-1
-                Rec_prop_temp2(j,y)=sum(Rec_prop_temp(j,y));
-                
-                for (int r=1;r<=nregions(j);r++){   
-                Rec_Prop(j,r,y)=Rec_prop_temp(j,y,r)/Rec_prop_temp2(j,y);
-                }
-                } 
-               if(apportionment_type==4)
+                }                 
+               if(apportionment_type==4) //add input obersvation error to input recruit proportions following Schnute and Richards 1995 (as implemented in Cox and Kronlund 2008)
                 {
                  Rec_prop_temp(j,y,r)=input_Rec_prop(j,r);
-                 Rec_prop_temp1(j,y,r)=(Rec_prop_temp(j,y,r)+(mfexp(randn(myrand4)*sigma_rec_prop(j)-.5*square(sigma_rec_prop(j)))))-1;//applying the additive error
-                  if(Rec_prop_temp1(j,y,r)<0) {Rec_prop_temp1(j,y,r)=0;}//need to reset negative values to 0
-
-                 Rec_prop_temp2(j,y)=sum(Rec_prop_temp1(j,y));
-                
-                 for (int r=1;r<=nregions(j);r++){   
-                 Rec_Prop(j,r,y)=Rec_prop_temp1(j,y,r)/Rec_prop_temp2(j,y);
-                    }
-                   }
+                 Rec_prop_temp1(j,y,r)=log(Rec_prop_temp(j,y,r))+ sigma_rec_prop(j) * randn(myrand4);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
+                }
 
                //if(apportionment_type==5)
 
@@ -932,6 +920,15 @@ FUNCTION get_vitals
                }   
              }
            }         
+         }
+          if(apportionment_type==3) { //need to standardize year by region matrix to ensure new proportions sum to one
+          Rec_Prop(j,y)=Rec_prop_temp(j,y)/sum(Rec_prop_temp(j,y));
+          }
+          if(apportionment_type==4){
+          for (int y=1;y<=nyrs;y++) { //need to run through region by year matrix to calculate second half of Schnute and Richards 1995 random mult equations and to standardize randomized apportioments to total one
+          Rec_prop_temp2(j,y)=Rec_prop_temp1(j,y)-(sum(Rec_prop_temp1(j,y))/nregions); //finish equation T1.21 in Cox and Kronlund Table 1 (note that here nregions is the same as A (number of ages) in Table 1 paper
+          Rec_Prop(j,y)=mfexp(Rec_prop_temp1(j,y))/sum(mfexp(Rec_prop_temp1(j,y))); // back-transform and standardize
+          }
          }
        }
      }
