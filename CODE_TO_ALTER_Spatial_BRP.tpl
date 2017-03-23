@@ -293,7 +293,6 @@ PARAMETER_SECTION
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
  3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity
  matrix ave_mat(1,nps,1,nag) //to calc average maturity
- 3darray Rec_Prop(1,nps,1,nr,1,nyr)
  matrix SPR_N(1,nps,1,nag)
  matrix SPR_SSB(1,nps,1,nag)
  vector SPR(1,nps)
@@ -304,9 +303,9 @@ PARAMETER_SECTION
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr)
  3darray recruits_AM(1,nps,1,nr,1,nyr)
- 3darray Rec_prop_temp(1,nps,1,nyr,1,nr)
+ 3darray Rec_Prop(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
- matrix Rec_prop_temp2(1,nps,1,nyr)
+ 3darray Rec_prop_temp2(1,nps,1,nyr,1,nr)
 
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
  3darray rec_index_prop_BM(1,nps,1,nr,1,nyr)
@@ -904,39 +903,40 @@ FUNCTION get_vitals
                 }
                if(apportionment_type==3)//completely random apportionment
                 {
-                Rec_prop_temp(j,y,r)=randu(myrand4);//generate a positive random number bw 0-1
+                Rec_prop_temp1(j,y,r)=randu(myrand4);//generate a positive random number bw 0-1
                 }                 
                if(apportionment_type==4) //add input obersvation error to input recruit proportions following Schnute and Richards 1995 (as implemented in Cox and Kronlund 2008)
                 {
-                 Rec_prop_temp(j,y,r)=input_Rec_prop(j,r);
-                 Rec_prop_temp1(j,y,r)=log(Rec_prop_temp(j,y,r))+ sigma_rec_prop(j) * randn(myrand4);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
+                 Rec_prop_temp1(j,y,r)=log(input_Rec_prop(j,r))+sigma_rec_prop(j)*randn(myrand4);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
                 }
 
-               //if(apportionment_type==5)
+               //if(apportionment_type==5)    /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
 
-
-
-                /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
                }   
              }
            }         
          }
-          if(apportionment_type==3) { //need to standardize year by region matrix to ensure new proportions sum to one
-          Rec_Prop(j,y)=Rec_prop_temp(j,y)/sum(Rec_prop_temp(j,y));
-          }
-          if(apportionment_type==4){
-          for (int y=1;y<=nyrs;y++) { //need to run through region by year matrix to calculate second half of Schnute and Richards 1995 random mult equations and to standardize randomized apportioments to total one
-          Rec_prop_temp2(j,y)=Rec_prop_temp1(j,y)-(sum(Rec_prop_temp1(j,y))/nregions); //finish equation T1.21 in Cox and Kronlund Table 1 (note that here nregions is the same as A (number of ages) in Table 1 paper
-          Rec_Prop(j,y)=mfexp(Rec_prop_temp1(j,y))/sum(mfexp(Rec_prop_temp1(j,y))); // back-transform and standardize
-          }
+
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int y=1;y<=nyrs;y++)
+         {
+          if(apportionment_type==3)
+           { //need to standardize year by region matrix to ensure new proportions sum to one
+            Rec_Prop(j,r,y)=Rec_prop_temp1(j,y,r)/sum(Rec_prop_temp1(j,y));
+           }
+          if(apportionment_type==4)
+           { //need to run through region by year matrix to calculate second half of Schnute and Richards 1995 random mult equations and to standardize randomized apportioments to total one
+            Rec_prop_temp2(j,y,r)=Rec_prop_temp1(j,y,r)-(sum(Rec_prop_temp1(j,y))/nregions(j)); //finish equation T1.21 in Cox and Kronlund Table 1 (note that here nregions is the same as A (number of ages) in Table 1 paper
+            Rec_Prop(j,r,y)=mfexp(Rec_prop_temp2(j,y,r))/sum(mfexp(Rec_prop_temp2(j,y))); // back-transform and standardize
+           }
          }
+        }
        }
      }
- 
 
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
-
 FUNCTION get_SPR
   if(Rec_type=2) //BH recruitment
    {
