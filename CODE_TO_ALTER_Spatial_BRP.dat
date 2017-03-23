@@ -120,9 +120,9 @@
   #==1 input apportionment
   #==2 recruits are apportioned equally to each region within a stock
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
-  #==4 recruits are apportioned stochastically with error surrounding the input proportions
+  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-1
+4
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
