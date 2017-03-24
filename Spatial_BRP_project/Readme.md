@@ -1,1 +1,1 @@
-###This file holds the code for the spatial reference point manuscript
+This folder contains the operating model code for the SPASAM project spatial reference points paper. R scripts are carryout the MSY search function to determine MSY given the population parameters and specificed model structure.  
