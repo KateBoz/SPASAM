@@ -10,18 +10,8 @@
 # remove previous objects from workspace
 rm(list = ls())
 
-# set the working directory
-#DIRECTORIES
 
-#HAKE runs
-#SABLEFISH runs
-WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Base_model"
-#MENHADEN runs
-
-setwd(WD)
-WD<<-WD
-
-#install libraries - don't need all these but carry over
+# load libraries function
 load_libraries<-function() {
   suppressWarnings(suppressMessages(require(PBSmodelling)))
   suppressWarnings(suppressMessages(require(matrixStats)))
@@ -39,11 +29,33 @@ load_libraries<-function() {
 load_libraries()
 
 
-#Setting up the F values to iterate over
+#Setting up the F values to iterate over for all the runs
 F.name<-"input_F"
-F.start<-0.1
+F.start<-0.2
 F.end<-0.8
 it<-0.1
+
+
+# set the working directory to location where the folders are to iterate through
+
+#HAKE runs
+folder<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Model_runs"
+
+#create a list of working directorys to iterate over
+runs<-vector("list",4)
+
+for(i in 1:4) {
+  runs[[i]]<-paste0(folder,"\\",i,sep="")
+}
+
+
+#loop over the folders for each run
+for(i in 1:4) {
+   
+   WD<-runs[[i]] #setting the new WD
+   setwd(WD)
+   WD<<-WD
+
 
 # the function  - run the below function to make things easier for completing runs. Still working out the kinks
 MSY_search<-function(wd=WD) {
@@ -119,8 +131,8 @@ stopCluster(cl) #end the cluster for parallel processing
 #need to generalize this port for plotting results
 #par_names<-names(out)
 
-N_par_reg<-5 # number of parameters with regional values # need to fix this up..
-N_par_pop<-7 # number of parameters for stock
+N_par_reg<-6 # number of parameters with regional values # need to fix this up..
+N_par_pop<-9 # number of parameters for stock
 
 #picking out only the values I want.
 msy_results<-data.frame(matrix(NA,nrow = nrow(permutation),ncol=((N_par_reg*nregions)+N_par_pop))) # number of parameters with multiple regions+number of total pop values
@@ -134,19 +146,22 @@ names(msy_results)[1]<-c("perm")
 for(i in 1:nregions) 
   {
   names(msy_results)[1+i]<-paste0("F.",i)
-  names(msy_results)[2+nregions]<-"biomass_total"
-  names(msy_results)[2+nregions+i]<-paste("yield_region.",i,sep = "")
-  names(msy_results)[3+nregions*2]<-"yield_total"
-  names(msy_results)[3+nregions*2+i]<-paste("u_region.",i,sep = "")
-  names(msy_results)[4+nregions*3]<-"u_region_total"
-  names(msy_results)[4+(nregions*3)+i]<-paste("depletion_region",i,sep="")
-  names(msy_results)[5+(nregions*4)]<-"depletion_total"
-  names(msy_results)[5+(nregions*4)+i]<-paste("SSB_region",i,sep="")
-  names(msy_results)[6+nregions*5]<-"SSB_total"
-  names(msy_results)[7+nregions*5]<-"Bratio_total"
+  names(msy_results)[2+nregions]<-"biomass_total_start"
+  names(msy_results)[3+nregions]<-"biomass_total_end"
+  names(msy_results)[3+nregions+i]<-paste("yield_region.",i,sep = "")
+  names(msy_results)[4+nregions*2]<-"yield_total"
+  names(msy_results)[4+nregions*2+i]<-paste("u_region.",i,sep = "")
+  names(msy_results)[5+nregions*3]<-"u_region_total"
+  names(msy_results)[5+(nregions*3)+i]<-paste("depletion_region.",i,sep="")
+  names(msy_results)[6+(nregions*4)]<-"depletion_total"
+  names(msy_results)[6+(nregions*4)+i]<-paste("SSB_start_region.",i,sep="")
+  names(msy_results)[7+nregions*5]<-"SSB_total_start"
+  names(msy_results)[7+(nregions*5)+i]<-paste("SSB_end_region.",i,sep="")
+  names(msy_results)[8+nregions*6]<-"SSB_total_end"
+  names(msy_results)[9+nregions*6]<-"Bratio_total"
 }
 
-#names(msy_results)
+names(msy_results)
 
 #set wd to report files
 wd_results<-paste0(wd,"\\MSY Results\\Report Files",sep="")
@@ -170,6 +185,7 @@ out=readList(paste0("Report",i,".rep",sep=""))
 #store results to a full spreadsheet add them in slowly for easy changes- check to see if it matches the .csv made above
 
 temp<-c(i,permutation[i,],
+        out$biomass_total[1],
         out$biomass_total[nyrs],
         out$yield_region[,nyrs],
         out$yield_total[nyrs],
@@ -177,9 +193,12 @@ temp<-c(i,permutation[i,],
         out$harvest_rate_total_bio[nyrs],
         out$depletion_region[,nyrs],
         out$depletion_total[nyrs],
+        out$SSB_region[,1],
+        out$SSB_total[1],
         out$SSB_region[,nyrs],
         out$SSB_total[nyrs], 
         out$Bratio_total[nyrs])
+
 
 msy_results[i,]<-temp
 
@@ -229,10 +248,10 @@ plot(msy_results$Bratio_total,msy_results$yield_total, type = 'p',ylab='Yield',x
 plot(msy_results$u_region_total,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Harvest Rate", lwd = 2)
 
 #Equilibruim Biomass vs Yield
-plot(msy_results$biomass_total,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
+plot(msy_results$biomass_total_end,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
 
 #Harvest rate vs biomass
-plot(msy_results$biomass_total,msy_results$u_region_total, type = 'p',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
+plot(msy_results$biomass_total_end,msy_results$u_region_total, type = 'p',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
 
 }
 
@@ -245,6 +264,11 @@ dev.off()
 } #end MSY_search function
 
 MSY_search()
+
+}
+
+
+
 
 
 
