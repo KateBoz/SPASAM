@@ -31,10 +31,10 @@ DATA_SECTION
 //////////////////////////////////////////////////////
   init_ivector nregions(1,np) //number of regions within a population - for metamictic regions = areas, populations = 1
   !! ivector nreg=nregions;
-  init_imatrix nfleets(1,np,1,nreg) //number of fleets in each region by each population
-  !! imatrix nf=nfleets;
-  init_imatrix nfleets_survey(1,np,1,nreg) //number of fleets in each region by each population
-  !! imatrix nfs=nfleets_survey;
+  init_ivector nfleets(1,np) //number of fleets in each region by each population
+  !! ivector nf=nfleets;
+  init_ivector nfleets_survey(1,np) //number of fleets in each region by each population
+  !! ivector nfs=nfleets_survey;
   
 ////////////////////////////////////////////////////////////////////////////////////
 //////////////SWITCHES//////////////////////////////////////////////////////////////
@@ -274,8 +274,8 @@ PARAMETER_SECTION
   !! int nps=npops;
   !! int nyr=nyrs;
   !! int nag=nages;
-  !! imatrix nfl=nfleets;
-  !! imatrix nfls=nfleets_survey;  
+  !! ivector nfl=nfleets;
+  !! ivector nfls=nfleets_survey;  
    
  init_matrix F_est(1,nps,1,nr,phase_F)
  
@@ -703,7 +703,7 @@ FUNCTION get_selectivity
         {
          for (int a=1;a<=nages;a++)
            {
-            for (int z=1;z<=nfleets(j,r);z++)
+            for (int z=1;z<=nfleets(j);z++)
               {
                if(select_switch==2) //4 parameter double logistic selectivity
                 {
@@ -733,7 +733,7 @@ FUNCTION get_selectivity
          {
           for (int a=1;a<=nages;a++)
             {
-             for (int z=1;z<=nfleets_survey(j,r);z++)
+             for (int z=1;z<=nfleets_survey(j);z++)
                {
                 survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
               }
@@ -760,7 +760,7 @@ FUNCTION get_F_age
        {
         for (int a=1;a<=nages;a++)
          {
-          for (int z=1;z<=nfleets(j,r);z++)
+          for (int z=1;z<=nfleets(j);z++)
            { 
              if(F_switch==1) //input F directly
               {
@@ -835,7 +835,7 @@ FUNCTION get_vitals
          {
           for (int a=1;a<=nages;a++)
            {
-            for (int z=1;z<=nfleets(j,r);z++)
+            for (int z=1;z<=nfleets(j);z++)
              {
               weight_population(j,r,y,a)=input_weight(j,r,a);
               weight_catch(j,r,y,a)=input_catch_weight(j,r,a);
@@ -1020,7 +1020,7 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                 for (int z=1;z<=nfleets(j,r);z++)
+                 for (int z=1;z<=nfleets(j);z++)
                   {
                   if(p==j)
                    {
@@ -1164,7 +1164,7 @@ FUNCTION get_abundance
     
           } //end fleets loop
 
-             for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+             for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
@@ -1225,7 +1225,7 @@ FUNCTION get_abundance
                      {
                       for (int a=1;a<=nages;a++)
                        {
-                         for(int x=1;x<=nfleets(j,r);x++)
+                         for(int x=1;x<=nfleets(j);x++)
                            {
                              if(model_type_switch==1)
                                 {
@@ -1243,22 +1243,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -1268,22 +1268,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -1295,28 +1295,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -1327,28 +1327,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -1358,11 +1358,11 @@ FUNCTION get_abundance
                                                   {
                                                   if(calc_TAC_from_uMSY==0)
                                                    {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                    }
                                                   }
                                                  }
@@ -1413,22 +1413,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -1438,22 +1438,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -1465,28 +1465,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -1497,28 +1497,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -1528,11 +1528,11 @@ FUNCTION get_abundance
                                                   {
                                                   if(calc_TAC_from_uMSY==0)
                                                    {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                    }
                                                   }
                                                  }
@@ -1585,22 +1585,22 @@ FUNCTION get_abundance
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                   }
                                                  if(parse_TAC_source==1)
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                    }
                                                  if(parse_TAC_source==2)
@@ -1609,35 +1609,35 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
                                                     }
                                                  if(parse_TAC_source==3)
                                                   {
-                                                   u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                   }
                                                  }
                                      if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
@@ -1685,22 +1685,22 @@ FUNCTION get_abundance
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                   }
                                                  if(parse_TAC_source==1)
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                    }
                                                  if(parse_TAC_source==2)
@@ -1709,35 +1709,35 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
                                                     }
                                                  if(parse_TAC_source==3)
                                                   {
-                                                   u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                   }
                                                  }
                                      if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
@@ -1791,7 +1791,7 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                 for (int z=1;z<=nfleets(j,r);z++)
+                 for (int z=1;z<=nfleets(j);z++)
                   {
                 abundance_spawn_overlap(p,j,r,y,a)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(p));
                 SSB_region_temp_overlap(p,j,r,y,a)=abundance_spawn_overlap(p,j,r,y,a)*wt_mat_mult_reg(p,r,y,a); //changed mat by region
@@ -1938,7 +1938,7 @@ FUNCTION get_abundance
                 apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
 
           } //end fleets loop
-             for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+             for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)>0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
@@ -2005,7 +2005,7 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                 for (int z=1;z<=nfleets(j,r);z++)
+                 for (int z=1;z<=nfleets(j);z++)
                   {
                if(a==1)
                 {
@@ -2673,7 +2673,7 @@ FUNCTION get_abundance
         } //end nages if statement
 
           } //end fleets loop
-             for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+             for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
@@ -2736,7 +2736,7 @@ FUNCTION get_abundance
                      {
                       for (int a=1;a<=nages;a++)
                        {
-                         for(int x=1;x<=nfleets(j,r);x++)
+                         for(int x=1;x<=nfleets(j);x++)
                            {
                              if(model_type_switch==1)
                                 {
@@ -2754,22 +2754,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -2779,22 +2779,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -2806,28 +2806,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -2838,28 +2838,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -2869,11 +2869,11 @@ FUNCTION get_abundance
                                                   {
                                                   if(calc_TAC_from_uMSY==0)
                                                    {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                    }
                                                   }
                                                  }
@@ -2924,22 +2924,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -2949,22 +2949,22 @@ FUNCTION get_abundance
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j)); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
                                                    if(y==1)
                                                     {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets); //partition evenly by total fleets in area
+                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
                                                     }
                                                    if(y>1) //assume rec index occurs at time of spawning so never have available in current year
                                                     {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r); //partition regional quota evenly by fleets in region
+                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
                                                     }
                                                    }
                                                   }
@@ -2976,28 +2976,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -3008,28 +3008,28 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_total(y)/nfleets(j,r);
+                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
                                                         }
                                                        }
                                                      }
@@ -3039,11 +3039,11 @@ FUNCTION get_abundance
                                                   {
                                                   if(calc_TAC_from_uMSY==0)
                                                    {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/sum(nfleets(j));
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
                                                    }
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_total(y)/sum(nfleets);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
                                                    }
                                                   }
                                                  }
@@ -3096,22 +3096,22 @@ FUNCTION get_abundance
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                   }
                                                  if(parse_TAC_source==1)
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                    }
                                                  if(parse_TAC_source==2)
@@ -3120,35 +3120,35 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
                                                     }
                                                  if(parse_TAC_source==3)
                                                   {
-                                                   u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                   }
                                                  }
                                      if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
@@ -3196,22 +3196,22 @@ FUNCTION get_abundance
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                   }
                                                  if(parse_TAC_source==1)
                                                   {
                                                    if(y==1)
                                                     {
-                                                     u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                     }
                                                    if(y>1)
                                                     {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                     }
                                                    }
                                                  if(parse_TAC_source==2)
@@ -3220,35 +3220,35 @@ FUNCTION get_abundance
                                                     {
                                                        if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>TAC_survey_parse_timelag)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
                                                         }
                                                      }
                                                   if(TAC_survey_parse_timelag_switch==0) //no timelag
                                                     {
                                                      if(tsurvey(j,r)==0)
                                                       {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j,r);
+                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
                                                       }
                                                      if(tsurvey(j,r)>0)
                                                       {
                                                        if(y==1) //first year apportion TAC equally among fleets
                                                         {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                         }
                                                        if(y>1)
                                                         {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j,r);
+                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
                                                         }
                                                        }
                                                      }
                                                     }
                                                  if(parse_TAC_source==3)
                                                   {
-                                                   u(j,r,x)=input_u(j,r,x)/sum(nfleets(j));
+                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
                                                   }
                                                  }
                                      if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
@@ -3305,7 +3305,7 @@ FUNCTION get_abundance
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                 for (int z=1;z<=nfleets(j,r);z++)
+                 for (int z=1;z<=nfleets(j);z++)
                   {
           if(a==1)
             {
@@ -3668,7 +3668,7 @@ FUNCTION get_abundance
                 apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
 
           } //end fleets loop
-             for (int z=1;z<=nfleets_survey(j,r);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+             for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)>0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
@@ -3780,7 +3780,7 @@ FUNCTION get_rand_CAA_prop
        {
         for (int y=1;y<=nyrs;y++)
          {
-          for (int z=1;z<=nfleets(j,r);z++)
+          for (int z=1;z<=nfleets(j);z++)
              {
            for (int a=1;a<=nages;a++)
                {
@@ -3837,7 +3837,7 @@ FUNCTION evaluate_the_objective_function
               {
                for (int r=1;r<=nregions(j);r++)
                 {
-                 for (int z=1;z<=nfleets(j,r);z++)
+                 for (int z=1;z<=nfleets(j);z++)
                   {
                     res_TAC(j,r,z,y)=input_TAC(j,r,z)-yield_fleet(j,r,y,z);
                   }
