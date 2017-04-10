@@ -308,7 +308,6 @@ PARAMETER_SECTION
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
  3darray Rec_prop_temp2(1,nps,1,nyr,1,nr)
- matrix Rec_prop_temp3(1,nps,1,nyr)
 
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
  3darray rec_index_prop_BM(1,nps,1,nr,1,nyr)
@@ -738,11 +737,6 @@ FUNCTION get_selectivity
           }
         }
 
- //cout<<selectivity<<endl;
- //cout<<survey_selectivity<<endl;
- //exit(43);
-
-
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
@@ -913,7 +907,7 @@ FUNCTION get_vitals
            }         
          }
 
-      for (int r=1;r<=nregions(j);r++)
+  for (int r=1;r<=nregions(j);r++)
        {
         for (int y=1;y<=nyrs;y++)
          {
@@ -924,23 +918,12 @@ FUNCTION get_vitals
           if(apportionment_type==4)
            { //need to run through region by year matrix to calculate second half of Schnute and Richards 1995 random mult equations and to standardize randomized apportioments to total one
             Rec_prop_temp2(j,y,r)=Rec_prop_temp1(j,y,r)-(sum(Rec_prop_temp1(j,y))/nregions(j)); //finish equation T1.21 in Cox and Kronlund Table 1 (note that here nregions is the same as A (number of ages) in Table 1 paper
-            Rec_prop_temp3(j,y)=sum(mfexp(Rec_prop_temp2(j,y)));
-            
-           for (int r=1;r<=nregions(j);r++){
-           Rec_Prop(j,r,y)=mfexp(Rec_prop_temp2(j,y,r))/Rec_prop_temp3(j,y);} // back-transform and standardize
+            Rec_Prop(j,r,y)=mfexp(Rec_prop_temp2(j,y,r))/sum(mfexp(Rec_prop_temp2(j,y))); // back-transform and standardize
            }
          }
         }
        }
      }
-
-
-  //cout<<Rec_prop_temp2<<endl;
-  //cout<<Rec_prop_temp3<<endl;
-  //cout<<Rec_Prop<<endl;
-  //exit(43);
-
-
 
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
@@ -1908,7 +1891,7 @@ FUNCTION get_abundance
                {
                if(p==j)
                {
-                SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);  //if natal homing only account for SSB that is in its natal populationp area, don't sum across natal populationp
+                SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);  //if natal homing only account for SSB that is in its natal populations area, don't sum across natal populations
                }
               }
               if(natal_homing_switch==0)
@@ -3767,11 +3750,6 @@ FUNCTION get_abundance
                 }
                }
                
- //cout<<recruits_BM<<endl;
- //cout<<SSB_region<<endl;
- //cout<<SSB_population_overlap<<endl;
- //exit(43);
- 
 
 FUNCTION get_rand_CAA_prop
  ///NEED TO CHECK THESE
