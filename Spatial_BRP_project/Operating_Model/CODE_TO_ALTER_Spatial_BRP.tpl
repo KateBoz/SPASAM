@@ -1223,7 +1223,14 @@ FUNCTION get_abundance
                                    {
                                                if(parse_TAC==0) //use input TAC
                                                 {
-                                                 TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                  if(calc_TAC_from_uMSY==0)
+                                                   {
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                   }
+                                                   if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                   }
                                                 }
                                              if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
                                                 {
@@ -1391,9 +1398,16 @@ FUNCTION get_abundance
                                        }
                                  if(natal_homing_switch==0)
                                    {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                               if(parse_TAC==0) //use input TAC
                                                 {
-                                                 TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                  if(calc_TAC_from_uMSY==0)
+                                                   {
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                   }
+                                                   if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                   }
                                                 }
                                                if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
                                                 {
@@ -2731,9 +2745,16 @@ FUNCTION get_abundance
                                 {
                                  if(natal_homing_switch>0)
                                    {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                               if(parse_TAC==0) //use input TAC
                                                 {
-                                                 TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                  if(calc_TAC_from_uMSY==0)
+                                                   {
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                   }
+                                                   if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                   }
                                                 }
                                              if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
                                                 {
@@ -2901,9 +2922,16 @@ FUNCTION get_abundance
                                        }
                                  if(natal_homing_switch==0)
                                    {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
+                                               if(parse_TAC==0) //use input TAC
                                                 {
-                                                 TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                  if(calc_TAC_from_uMSY==0)
+                                                   {
+                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
+                                                   }
+                                                   if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                   }
                                                 }
                                              if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
                                                 {
