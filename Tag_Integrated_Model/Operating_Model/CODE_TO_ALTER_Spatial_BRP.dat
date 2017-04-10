@@ -4,15 +4,12 @@
 #nyrs
 200
 #npopulations
-2
+1
 #nregions
-1
-1
+2
 #nfleets
 1
-1
 #nfleets_survey
-1
 1
 #model_type_switch
   #==0 do not use TAC to set F
@@ -59,6 +56,7 @@
 #tsurvey in proportion of year (0-1)
 0
 0
+
 #larval_move_switch
   #==0 no movement
   #==1 input movement
@@ -75,7 +73,7 @@
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
   #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
-0
+1
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
   #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
@@ -110,7 +108,7 @@
   #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
   #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
   #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
-0
+1
 #SSB_type
   #==1 fecundity based SSB
   #==2 weight based SSB
@@ -121,9 +119,9 @@
   #==1 input apportionment
   #==2 recruits are apportioned equally to each region within a stock
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
-  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, Fisheries Research)
+  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-1
+4
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -133,9 +131,7 @@
 4
 #return_probability- probability of returning for move_switch==6
 1
-1
 #spawn_return_prob - probability of returning for spawning if overlap_switch==2
-1
 1
 #phase_F - must be turned on (==1) if F_type==3
 -1
@@ -143,82 +139,45 @@
 1
 #tspawn in proportion of year (0-1)
 0
-0
 #steep
 0.814
-0.814
 #R_ave
-31250
-281250
+3125000
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
-0.2
 0.2
 #freq - period of ossilation for recruitment variation. Use when Rec_type ==3
 15
-15
 #input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
-0.95
-0.05
-0.95
-0.05
-0.8
-0.2
-0.8
-0.2
-0.5
-0.5
-0.2
-0.8
-0.2
-0.8
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-0.1
-0.9
-
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-0.05
-0.95
-
+0.95	0.05
+0.95	0.05
+0.8	0.2
+0.8	0.2
+0.5	0.5
+0.2	0.8
+0.2	0.8
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.1	0.9
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
+0.05	0.95
 #input_residency_larval
 1
 1
@@ -238,67 +197,12 @@
 20
 20   
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
-0
-0.12
-0.54
-0.66
-0.81
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-0
-0.12
-0.54
-0.66
-0.81
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
+0	0.12	0.54	0.66	0.81	1	1	1	1	1	1	1	1	1	1
+0	0.12	0.54	0.66	0.81	1	1	1	1	1	1	1	1	1	1
+
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
-0
-0.35
-0.61
-0.54
-0.66
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-0
-0.35
-0.61
-0.54
-0.66
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
+0	0.35	0.61	0.54	0.66	1	1	1	1	1	1	1	1	1	1
+0	0.35	0.61	0.54	0.66	1	1	1	1	1	1	1	1	1	1
 #q_survey(by population, area and fleet)
 1
 1
@@ -309,13 +213,11 @@
 0.5
 #input_M
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
-0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 #sigma_recruit
-1.4
 1.4
 #sigma_rec_prop #error around recruit appotionment
 0.2
-0.2
+
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################
@@ -345,11 +247,13 @@
 0.5
 0.5
 #input_Rec_prop
-1
-1
+0.1
+0.9
+
 #Equil_ssb_apportion
 .2612
 .7388
+
 #init_abund
 1562500	1246434.534	994303.3902	793173.8129	632729.1083	504739.4632	402639.8064	321193.062	256221.5197	204392.5443	163047.6324	130066.0478	103756.0408	82768.07187	66025.58917
 1562500	1246434.534	994303.3902	793173.8129	632729.1083	504739.4632	402639.8064	321193.062	256221.5197	204392.5443	163047.6324	130066.0478	103756.0408	82768.07187	66025.58917

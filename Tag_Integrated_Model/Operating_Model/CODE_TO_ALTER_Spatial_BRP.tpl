@@ -154,7 +154,9 @@ DATA_SECTION
   //==0 apportionment to each region is based on relative SSB in region compared to population SSB
   //==1 input apportionment
   //==2 recruits are apportioned equally to each region within a population
-  //==3 recruits are approtioned randomly to each region within a population
+  //==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
+  //==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
+  //==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
   
   init_number Rec_type
   //==1 stock-recruit relationship assumes an average value based on R_ave
@@ -265,7 +267,7 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
- //!!cout << caa_sigma_survey << endl;
+ //!!cout << input_Rec_prop << endl;
  //!!exit(43);
 
 PARAMETER_SECTION
@@ -526,14 +528,7 @@ PROCEDURE_SECTION
 
   get_abundance();
   
- 
-  //cout<<apport_region_survey<<endl;
-  //cout<<apport_region_survey_biomass<<endl;
-  //cout<<OBS_survey_biomass_age <<endl;
-  //cout<<OBS_survey_biomass_region <<endl;
-  //exit(43);
-
-  //get_rec_index(); code is still there for function but doesn't run. Calcs are embedded in abuncance calcs
+  //get_rec_index(); code is still there but now calcs are embedded in abuncance calcs
 
   get_rand_CAA_prop();
 
@@ -742,11 +737,6 @@ FUNCTION get_selectivity
           }
         }
 
- //cout<<selectivity<<endl;
- //cout<<survey_selectivity<<endl;
- //exit(43);
-
-
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
@@ -917,7 +907,7 @@ FUNCTION get_vitals
            }         
          }
 
-      for (int r=1;r<=nregions(j);r++)
+  for (int r=1;r<=nregions(j);r++)
        {
         for (int y=1;y<=nyrs;y++)
          {
@@ -1901,7 +1891,7 @@ FUNCTION get_abundance
                {
                if(p==j)
                {
-                SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);  //if natal homing only account for SSB that is in its natal populationp area, don't sum across natal populationp
+                SSB_region(j,r,y)=SSB_region_overlap(p,j,r,y);  //if natal homing only account for SSB that is in its natal populations area, don't sum across natal populations
                }
               }
               if(natal_homing_switch==0)
@@ -2025,7 +2015,7 @@ FUNCTION get_abundance
                     }
                   }
 
- ////////////add recruits_BM with error (recruitment index) - and apportion switch 3
+
  
                  if(Rec_type==2) //BH recruitment
                   {
@@ -2038,8 +2028,7 @@ FUNCTION get_abundance
                      recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1)));
                     }
                   }
-
-//fix this up
+                  
                 if(Rec_type==3) //environmental recruitment
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
@@ -2243,7 +2232,7 @@ FUNCTION get_abundance
               {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                      }
@@ -2254,7 +2243,7 @@ FUNCTION get_abundance
                   }
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                     abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
@@ -2265,7 +2254,7 @@ FUNCTION get_abundance
                   }
                 if(Rec_type==3) //env recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 || apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
@@ -3761,11 +3750,6 @@ FUNCTION get_abundance
                 }
                }
                
- //cout<<recruits_BM<<endl;
- //cout<<SSB_region<<endl;
- //cout<<SSB_population_overlap<<endl;
- //exit(43);
- 
 
 FUNCTION get_rand_CAA_prop
  ///NEED TO CHECK THESE
@@ -4026,8 +4010,8 @@ REPORT_SECTION
 //  report<<"$obs_prop_overlap_reg"<<endl;
 //  report<<obs_prop_overlap_reg<<endl;
 
-//  report<<"$recruits_BM"<<endl;
-//  report<<recruits_BM<<endl;
+ report<<"$recruits_BM"<<endl;
+ report<<recruits_BM<<endl;
 //  report<<"$rec_index_BM"<<endl;
 //  report<<rec_index_BM<<endl;
 
