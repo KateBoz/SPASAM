@@ -225,8 +225,10 @@ DATA_SECTION
   
   init_3darray init_abund(1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
-  init_3darray sigma_survey_index(1,np,1,nreg,1,nfs)
+  init_3darray sigma_survey(1,np,1,nreg,1,nfs)
+  init_4darray sigma_survey_overlap(1,np,1,np,1,nreg,1,nfs)
   init_3darray sigma_catch(1,np,1,nreg,1,nf)
+  init_4darray sigma_catch_overlap(1,np,1,np,1,nreg,1,nf)
   init_3darray SIM_ncatch(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray SIM_ncatch_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_3darray SIM_nsurvey(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
@@ -250,8 +252,14 @@ DATA_SECTION
   init_number NR_dev
   
   init_int debug
-  init_number myseed
-
+  init_number myseed_yield
+  init_number myseed_survey
+  init_number myseed_rec_devs
+  init_number myseed_rec_apport
+  init_number myseed_rec_index
+  init_number myseed_survey_age
+  init_number myseed_catch_age
+  
   //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
@@ -462,8 +470,10 @@ PARAMETER_SECTION
  vector OBS_yield_total(1,nyr)
  3darray apport_yield_region(1,nps,1,nr,1,nyr)
 
- vector rand_SIM_survey_prop_temp(1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- vector rand_SIM_catch_prop_temp(1,2000) //should make function of max(ncatch) but had issues making an index
+ 5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ 6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ 5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
+ 6darray rand_SIM_catch_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
  vector rand_SIM_survey_prop_temp2(1,nages)
  vector rand_SIM_catch_prop_temp2(1,nages)
  5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
@@ -511,7 +521,14 @@ PARAMETER_SECTION
  vector fprimeFlow(1,nag)
  4darray TAC(1,nps,1,nr,1,nfl,1,nyr)
  3darray u(1,nps,1,nr,1,nfl)
- 
+ 4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
+ 5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ 4darray survey_RN(1,nps,1,nr,1,nyr,1,nfl)
+ 5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ matrix rec_devs_RN(1,nps,1,nyr)
+ 3darray Rec_apport_RN(1,nps,1,nyr,1,nr)
+ 3darray rec_index_RN(1,nps,1,nr,1,nyr)
+
  init_number dummy(phase_dummy)
 
   objective_function_value f
@@ -525,6 +542,8 @@ INITIALIZATION_SECTION  //set initial values
   dummy 1;
 
 PROCEDURE_SECTION
+
+  get_random_numbers();
 
   get_movement();
 
@@ -545,6 +564,46 @@ PROCEDURE_SECTION
   get_rand_CAA_prop();
 
   evaluate_the_objective_function();
+
+FUNCTION get_random_numbers
+   random_number_generator myrand_yield(myseed_yield);
+   random_number_generator myrand_survey(myseed_survey);
+   random_number_generator myrand_rec_devs(myseed_rec_devs);
+   random_number_generator myrand_rec_apport(myseed_rec_apport);
+   random_number_generator myrand_rec_index(myseed_rec_index);
+   
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {  
+      for (int r=1;r<=nregions(j);r++)   
+       {       
+        for (int y=1;y<=nyrs;y++)
+         {
+          for (int z=1;z<=nfleets(j);z++)
+           {
+            for (int x=1;x<=nfleets_survey(j);x++)
+             {
+              yield_RN(j,r,y,z)=randn(myrand_yield);
+              yield_RN_overlap(p,j,r,y,z)=randn(myrand_yield);
+              survey_RN(j,r,y,x)=randn(myrand_survey);
+              survey_RN_overlap(p,j,r,y,x)=randn(myrand_survey);
+              rec_devs_RN(j,y)=randn(myrand_rec_devs);
+               if(apportionment_type==3)//completely random apportionment
+                {
+                 Rec_apport_RN(j,y,r)=randu(myrand_rec_apport);//generate a positive random number bw 0-1
+                }
+               if(apportionment_type==4)//completely random apportionment
+                {
+                 Rec_apport_RN(j,y,r)=randn(myrand_rec_apport);//generate a positive random number bw 0-1
+               }
+              rec_index_RN(j,r,y)=randn(myrand_rec_index);
+             }
+           }
+         }
+       }
+     }
+    }
 
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
@@ -751,7 +810,7 @@ FUNCTION get_selectivity
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
-   random_number_generator myrand7(myseed+4534);
+  // random_number_generator myrand7(myseed+4534);
 
   for (int j=1;j<=npops;j++)
    {
@@ -822,10 +881,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
- 
-  random_number_generator myrand3(myseed+4120); //recruitment devs
-  random_number_generator myrand4(myseed+123); //recruitment apportionment devs
-  
+
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -878,7 +934,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                 rec_devs(j,y)=mfexp(randn(myrand3)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
+                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
@@ -902,11 +958,11 @@ FUNCTION get_vitals
                 }
                if(apportionment_type==3)//completely random apportionment
                 {
-                Rec_prop_temp1(j,y,r)=randu(myrand4);//generate a positive random number bw 0-1
+                Rec_prop_temp1(j,y,r)=Rec_apport_RN(j,y,r);//generate a positive random number bw 0-1
                 }                 
                if(apportionment_type==4) //add input obersvation error to input recruit proportions following Schnute and Richards 1995 (as implemented in Cox and Kronlund 2008)
                 {
-                 Rec_prop_temp1(j,y,r)=log(input_Rec_prop(j,r))+sigma_rec_prop(j)*randn(myrand4);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
+                 Rec_prop_temp1(j,y,r)=log(input_Rec_prop(j,r))+sigma_rec_prop(j)*Rec_apport_RN(j,y,r);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
                 }
 
                //if(apportionment_type==5)    /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
@@ -990,10 +1046,6 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
        }
 
 FUNCTION get_abundance
-  random_number_generator myrand(myseed); //survey biomass observation erro
-  random_number_generator myrand2(myseed+3201); // yield observation error
-  random_number_generator myrand5(myseed+13); // recruit index observation error
-
        for (int y=1;y<=nyrs;y++)
         {
 
@@ -1103,7 +1155,7 @@ FUNCTION get_abundance
                 recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
  ///get year one recruitment index
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
@@ -1146,7 +1198,7 @@ FUNCTION get_abundance
 
                 recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
                 
-                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                 rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                 rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -1167,7 +1219,7 @@ FUNCTION get_abundance
                   true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
                   true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
                   true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
                   OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
@@ -1175,7 +1227,7 @@ FUNCTION get_abundance
                   true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
                   true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
                  }
                 if(natal_homing_switch==1)
                  {
@@ -1926,11 +1978,11 @@ FUNCTION get_abundance
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
 
                 //YIELD observation error
-                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(yield_RN_overlap(p,j,r,y,z)*sigma_catch_overlap(p,j,r,z)-.5*square(sigma_catch_overlap(p,j,r,z)));
                 OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
                if(natal_homing_switch==0)
                 {
-                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(yield_RN(j,r,y,z)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
                 }
                if(natal_homing_switch==1)
                 {
@@ -1955,7 +2007,7 @@ FUNCTION get_abundance
                   true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
                   true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
                   true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
                   OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
@@ -1963,7 +2015,7 @@ FUNCTION get_abundance
                   true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
                   true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
                  }
                 if(natal_homing_switch==1)
                  {
@@ -2099,7 +2151,7 @@ FUNCTION get_abundance
                    }
                  }
                  }
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y)=recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
@@ -2306,7 +2358,7 @@ FUNCTION get_abundance
                    }
 
                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
-               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(randn(myrand5)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -2689,7 +2741,7 @@ FUNCTION get_abundance
                   true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
                   true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
                   true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
                   OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
@@ -2697,7 +2749,7 @@ FUNCTION get_abundance
                   true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
                   true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
                  }
                 if(natal_homing_switch==1)
                  {
@@ -3669,11 +3721,11 @@ FUNCTION get_abundance
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
 
                 //YIELD observation error
-                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(yield_RN_overlap(p,j,r,y,z)*sigma_catch_overlap(p,j,r,z)-.5*square(sigma_catch_overlap(p,j,r,z)));
                 OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
                if(natal_homing_switch==0)
                 {
-                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(randn(myrand2)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
+                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(yield_RN(j,r,y,z)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
                 }
                if(natal_homing_switch==1)
                 {
@@ -3698,7 +3750,7 @@ FUNCTION get_abundance
                   true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
                   true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
                   true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
                   OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
@@ -3706,7 +3758,7 @@ FUNCTION get_abundance
                   true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
                   true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(randn(myrand)*sigma_survey_index(j,r,z)-.5*square(sigma_survey_index(j,r,z)));
+                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
                  }
                 if(natal_homing_switch==1)
                  {
@@ -3784,7 +3836,7 @@ FUNCTION get_abundance
                }
                
 FUNCTION get_rand_survey_CAA_prop
- random_number_generator myrand7(myseed+16);
+ random_number_generator myrand_survey_age(myseed_survey_age);
  
   for (int p=1;p<=npops;p++)
    {
@@ -3817,25 +3869,44 @@ FUNCTION get_rand_survey_CAA_prop
          {
           for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
            {
-             rand_SIM_survey_prop_temp=0;
-             rand_SIM_survey_prop_temp2=0;
-
             if(use_stock_comp_info_survey==0)
              {
-              rand_SIM_survey_prop_temp.fill_multinomial(myrand7,value(survey_at_age_fleet_prop(j,r,y,z)));
+              rand_SIM_survey_prop_temp(j,r,y,z).fill_multinomial(myrand_survey_age,value(survey_at_age_fleet_prop(j,r,y,z)));
+             }
+            if(use_stock_comp_info_survey==1)
+             {
+              rand_SIM_survey_prop_temp_overlap(p,j,r,y,z).fill_multinomial(myrand_survey_age,value(survey_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
+             }
+           }
+         }
+       }
+     }
+   }
+
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets_survey(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+             rand_SIM_survey_prop_temp2=0;
+            if(use_stock_comp_info_survey==0)
+             {
                for(int n=1;n<=SIM_nsurvey(j,r,z);n++) 
                 {
-                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp(n)))+= 1.0;
+                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp(j,r,y,z,n)))+= 1.0;
                 }
                SIM_survey_prop(j,r,z,y)=rand_SIM_survey_prop_temp2;
              }
             if(use_stock_comp_info_survey==1)
-             {
-              rand_SIM_survey_prop_temp.fill_multinomial(myrand7,value(survey_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
-              
+             {              
                for(int n=1;n<=SIM_nsurvey_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
                 {
-                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp(n)))+= 1.0;
+                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp_overlap(p,j,r,y,z,n)))+= 1.0;
                 }
                SIM_survey_prop_overlap(p,j,r,z,y)=rand_SIM_survey_prop_temp2;
              }
@@ -3858,7 +3929,7 @@ FUNCTION get_rand_survey_CAA_prop
    }
 
 FUNCTION get_rand_CAA_prop
- random_number_generator myrand6(myseed+64532);
+ random_number_generator myrand_catch_age(myseed_catch_age);
  
   for (int p=1;p<=npops;p++)
    {
@@ -3888,7 +3959,7 @@ FUNCTION get_rand_CAA_prop
           }
          }
         }
-
+        
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -3899,25 +3970,45 @@ FUNCTION get_rand_CAA_prop
          {
           for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
            {
-             rand_SIM_catch_prop_temp=0;
+            if(use_stock_comp_info_catch==0)
+             {
+              rand_SIM_catch_prop_temp(j,r,y,z).fill_multinomial(myrand_catch_age,value(catch_at_age_fleet_prop(j,r,y,z)));
+             }
+            if(use_stock_comp_info_catch==1)
+             {
+              rand_SIM_catch_prop_temp_overlap(p,j,r,y,z).fill_multinomial(myrand_catch_age,value(catch_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
+             }
+           }
+         }
+       }
+     }
+   }
+            
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
              rand_SIM_catch_prop_temp2=0;
 
             if(use_stock_comp_info_catch==0)
              {
-              rand_SIM_catch_prop_temp.fill_multinomial(myrand6,value(catch_at_age_fleet_prop(j,r,y,z)));
                for(int n=1;n<=SIM_ncatch(j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
                 {
-                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp(n)))+= 1.0;
+                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp(j,r,y,z,n)))+= 1.0;
                 }
                SIM_catch_prop(j,r,z,y)=rand_SIM_catch_prop_temp2;
              }
             if(use_stock_comp_info_catch==1)
-             {
-              rand_SIM_catch_prop_temp.fill_multinomial(myrand6,value(catch_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
-              
+             {              
                for(int n=1;n<=SIM_ncatch_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
                 {
-                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp(n)))+= 1.0;
+                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp_overlap(p,j,r,y,z,n)))+= 1.0;
                 }
                SIM_catch_prop_overlap(p,j,r,z,y)=rand_SIM_catch_prop_temp2;
              }
@@ -3938,6 +4029,7 @@ FUNCTION get_rand_CAA_prop
      }
     }
    }
+
 FUNCTION evaluate_the_objective_function
    f=0.0;
 
@@ -3958,12 +4050,13 @@ FUNCTION evaluate_the_objective_function
 
 
 REPORT_SECTION
+
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
   report<<"$res_u"<<endl;
   report<<res_u<<endl;
-  report<<"$myseed"<<endl;
-  report<<myseed<<endl;
+  //report<<"$myseed"<<endl;
+  //report<<myseed<<endl;
   report<<"$nages"<<endl;
   report<<nages<<endl;
   report<<"$nyrs"<<endl;
