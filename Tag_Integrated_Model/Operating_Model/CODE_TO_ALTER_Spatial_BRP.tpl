@@ -163,6 +163,16 @@ DATA_SECTION
   //==2 Beverton-Holt population-recruit functions based on population-specific input steepness, R0 (R_ave), M, and weight
   //==3 environmental recruitment - sine fucntion based on amplitude and frequency
 
+  init_number use_stock_comp_info_survey
+  //Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+  //==0 calc OBS survey age comps by area (summed across natal population)
+  //==1 calc OBS survey age comps by natal population within each area
+
+  init_number use_stock_comp_info_catch
+  //Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+  //==0 calc OBS catch age comps by area (summed across natal population)
+  //==1 calc OBS catch age comps by natal population within each area
+  
 ///////////////////////////////////////////////////////////////////////////////
 //////// ADDITIONAL PARAMETERS FROM DAT FILE //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -217,11 +227,10 @@ DATA_SECTION
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_3darray sigma_survey_index(1,np,1,nreg,1,nfs)
   init_3darray sigma_catch(1,np,1,nreg,1,nf)
-  init_vector caa_sigma(1,na)
-  init_vector caa_sigma_survey(1,na)
-  
-  init_number ESS //effective sample size for observed caa (ie. number of hauls)//for multinomial obs CAA
-  init_number N //samples per haul for observed caa
+  init_3darray SIM_ncatch(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_4darray SIM_ncatch_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_3darray SIM_nsurvey(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_4darray SIM_nsurvey_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
 
 //################################################################################################################
 //################################################################################################################
@@ -267,9 +276,6 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
- //!!cout << input_Rec_prop << endl;
- //!!exit(43);
-
 PARAMETER_SECTION
 
   !! ivector nr=nregions;
@@ -278,7 +284,7 @@ PARAMETER_SECTION
   !! int nag=nages;
   !! ivector nfl=nfleets;
   !! ivector nfls=nfleets_survey;  
-   
+
  init_matrix F_est(1,nps,1,nr,phase_F)
  
  // vitals
@@ -338,6 +344,9 @@ PARAMETER_SECTION
  //survey index
  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)
  6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
  4darray true_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
@@ -345,6 +354,9 @@ PARAMETER_SECTION
  matrix true_survey_natal_bio_overlap(1,nyr,1,nps)
  vector true_survey_total_bio_overlap(1,nyr)
  5darray true_survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
  5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  4darray true_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
  3darray true_survey_region_bio(1,nps,1,nyr,1,nr)
@@ -361,15 +373,17 @@ PARAMETER_SECTION
  vector OBS_survey_total_bio(1,nyr)
  3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)
 
- 5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
- 5darray true_survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
-
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+ 5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
+ 5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
  4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
+ 4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
  3darray yield_region(1,nps,1,nr,1,nyr)
  3darray catch_at_age_population(1,nps,1,nyr,1,nag)
+ 3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
  matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr)
  matrix SSB_population(1,nps,1,nyr)
@@ -379,6 +393,7 @@ PARAMETER_SECTION
  matrix biomass_population(1,nps,1,nyr)
  vector biomass_total(1,nyr)
  matrix catch_at_age_total(1,nyr,1,nag)
+ matrix catch_at_age_total_prop(1,nyr,1,nag)
  vector yield_total(1,nyr)
  4darray harvest_rate_region_num(1,nps,1,nr,1,nyr,1,nag)
  3darray harvest_rate_population_num(1,nps,1,nyr,1,nag)
@@ -399,26 +414,16 @@ PARAMETER_SECTION
  3darray SSB_population_overlap(1,nps,1,nps,1,nyr)
  matrix SSB_natal_overlap(1,nps,1,nyr)
 
- 4darray true_caa_fleet_total(1,nps,1,nr,1,nyr,1,nfl)
- 4darray true_caa_overlap_reg_total(1,nps,1,nps,1,nr,1,nyr)
- 5darray true_caa_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 5darray true_caa_overlap_reg_temp(1,nps,1,nps,1,nr,1,nyr,1,nag)
- 5darray CAA_prop_fleet(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 5darray CAA_prop_overlap(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- vector CAA_temp(1,N)
- vector CAA_temp2(1,nag)
- 5darray obs_caa_fleet(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 4darray obs_caa_fleet_total(1,nps,1,nr,1,nyr,1,nfl)
- 5darray obs_prop_fleet(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 5darray obs_caa_overlap_reg(1,nps,1,nps,1,nr,1,nyr,1,nag)
- 4darray obs_caa_overlap_reg_total(1,nps,1,nps,1,nr,1,nyr)
- 5darray obs_prop_overlap_reg(1,nps,1,nps,1,nr,1,nyr,1,nag)
-
  6darray catch_at_age_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 6darray catch_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 6darray SIM_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 6darray OBS_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray catch_at_age_region_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
+ 5darray catch_at_age_region_overlap_prop(1,nps,1,nps,1,nr,1,nyr,1,nag)
  5darray yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
  4darray yield_region_overlap(1,nps,1,nps,1,nr,1,nyr)
  4darray catch_at_age_population_overlap(1,nps,1,nps,1,nyr,1,nag)
+ 4darray catch_at_age_population_overlap_prop(1,nps,1,nps,1,nyr,1,nag)
  3darray yield_population_overlap(1,nps,1,nps,1,nyr)
  3darray abundance_natal_overlap(1,nps,1,nyr,1,nag)
  5darray biomass_BM_age_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
@@ -431,6 +436,7 @@ PARAMETER_SECTION
  3darray biomass_population_overlap(1,nps,1,nps,1,nyr)
  matrix biomass_natal_overlap(1,nps,1,nyr)
  3darray catch_at_age_natal_overlap(1,nps,1,nyr,1,nag)
+ 3darray catch_at_age_natal_overlap_prop(1,nps,1,nyr,1,nag)
  matrix yield_natal_overlap(1,nps,1,nyr)
  5darray harvest_rate_region_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
  4darray harvest_rate_region_bio_overlap(1,nps,1,nps,1,nr,1,nyr)
@@ -444,6 +450,25 @@ PARAMETER_SECTION
  matrix Bratio_population(1,nps,1,nyr)
  vector Bratio_total(1,nyr)
 
+ //Observed Yield
+ 5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ 4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
+ 3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
+ matrix OBS_yield_natal_overlap(1,nyr,1,nps)
+ vector OBS_yield_total_overlap(1,nyr)
+ 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
+ 3darray OBS_yield_region(1,nps,1,nyr,1,nr)
+ matrix OBS_yield_population(1,nyr,1,nps)
+ vector OBS_yield_total(1,nyr)
+ 3darray apport_yield_region(1,nps,1,nr,1,nyr)
+
+ vector rand_SIM_survey_prop_temp(1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ vector rand_SIM_catch_prop_temp(1,2000) //should make function of max(ncatch) but had issues making an index
+ vector rand_SIM_survey_prop_temp2(1,nages)
+ vector rand_SIM_catch_prop_temp2(1,nages)
+ 5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
+ 5darray true_survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
+ 5darray catch_at_age_fleet_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
  5darray yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
@@ -460,19 +485,6 @@ PARAMETER_SECTION
  4darray catch_at_age_population_temp(1,nps,1,nyr,1,nag,1,nr)
  5darray SSB_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  matrix abundance_move_overlap_temp(1,nps,1,nr)
-
- //Observed Yield
- 5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- 4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
- 3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
- matrix OBS_yield_natal_overlap(1,nyr,1,nps)
- vector OBS_yield_total_overlap(1,nyr)
- 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
- 3darray OBS_yield_region(1,nps,1,nyr,1,nr)
- matrix OBS_yield_population(1,nyr,1,nps)
- vector OBS_yield_total(1,nyr)
- 3darray apport_yield_region(1,nps,1,nr,1,nyr)
-
  5darray OBS_yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nps)
  6darray yield_region_fleet_temp_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray yield_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
@@ -527,13 +539,12 @@ PROCEDURE_SECTION
   get_env_Rec();
 
   get_abundance();
-  
-  //get_rec_index(); code is still there but now calcs are embedded in abuncance calcs
+
+  get_rand_survey_CAA_prop();
 
   get_rand_CAA_prop();
 
   evaluate_the_objective_function();
-
 
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
@@ -867,8 +878,6 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-////// CHECK THIS CALCULATION MAKE SURE USING NEW RANDN every time through loop
-////// rand_rec.fill_randn(myrand);
                  rec_devs(j,y)=mfexp(randn(myrand3)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
                 }
                if(SSB_type==1) //fecundity based SSB
@@ -979,10 +988,6 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
          }
 
        }
-
- //cout<<env_rec<<endl;
- // exit(43);
-
 
 FUNCTION get_abundance
   random_number_generator myrand(myseed); //survey biomass observation erro
@@ -3778,11 +3783,8 @@ FUNCTION get_abundance
                 }
                }
                
-
-FUNCTION get_rand_CAA_prop
- ///NEED TO CHECK THESE
- random_number_generator myrand6(myseed+64532);
- //calculate the total CAA for each population/area/region/fleet for non-natal and natal calcs
+FUNCTION get_rand_survey_CAA_prop
+ random_number_generator myrand7(myseed+16);
  
   for (int p=1;p<=npops;p++)
    {
@@ -3790,56 +3792,152 @@ FUNCTION get_rand_CAA_prop
      {
       for (int r=1;r<=nregions(j);r++)
        {
-        for (int y=1;y<=nyrs;y++)
+        for (int z=1;z<=nfleets_survey(j);z++)
          {
-          for (int z=1;z<=nfleets(j);z++)
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+            for (int a=1;a<=nages;a++)
              {
-           for (int a=1;a<=nages;a++)
-               {
-               
-            if(natal_homing_switch==0)//for non-natal homing -
-              {
-               true_caa_fleet_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z); //summing catch across age
-               true_caa_fleet_total(j,r,y,z) = sum(true_caa_fleet_temp(j,r,y,z));
-               //calc random catches assuming true are meanp with log-normal age-specific error
-               obs_caa_fleet(j,r,y,z,a)= true_caa_fleet_temp(j,r,y,z,a)*mfexp(randn(myrand6)*caa_sigma(a)-0.5*square(caa_sigma(a)));
-               obs_caa_fleet_total(j,r,y,z) = sum(obs_caa_fleet(j,r,y,z));
-               
-             for (int a=1;a<=nages;a++)
-               {
-               CAA_prop_fleet(j,r,y,z,a) =  true_caa_fleet_temp(j,r,y,z,a)/true_caa_fleet_total(j,r,y,z);
-               //observed age comp
-               obs_prop_fleet(j,r,y,z,a) = obs_caa_fleet(j,r,y,z,a)/obs_caa_fleet_total(j,r,y,z);
-               }
-              }
-               
-            if(natal_homing_switch>0)//for natal-homing...havent really tested this
-              {
-               true_caa_overlap_reg_temp(p,j,r,y,a) = catch_at_age_region_overlap(p,j,r,y,a);
-               true_caa_overlap_reg_total(p,j,r,y) = sum(true_caa_overlap_reg_temp(p,j,r,y));
-               //calc random catches assuming true are meanp with log-normal age-specific error
-               obs_caa_overlap_reg(p,j,r,y,a)= true_caa_overlap_reg_temp(p,j,r,y,a)*mfexp(randn(myrand6)*caa_sigma(a)-0.5*square(caa_sigma(a)));
-               obs_caa_overlap_reg_total(p,j,r,y) = sum(obs_caa_overlap_reg(p,j,r,y));
-
-
-              for (int a=1;a<=nages;a++)
-               {
-               CAA_prop_overlap(p,j,r,y,a) = true_caa_overlap_reg_temp(p,j,r,y,a)/true_caa_overlap_reg_total(p,j,r,y);
-               //observed age comp
-               obs_prop_overlap_reg(p,j,r,y,a)= obs_caa_overlap_reg(p,j,r,y,a)/obs_caa_overlap_reg_total(p,j,r,y);
-               }
-              }
+              survey_at_age_region_fleet_overlap_prop(p,j,r,z,y,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)/sum(true_survey_fleet_overlap_age(p,j,r,y,z));              
+              survey_at_age_fleet_prop(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)/sum(true_survey_fleet_age(j,r,y,z));
              }
             }
-          }  
+           }
+          }
+         }
         }
+
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets_survey(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+             rand_SIM_survey_prop_temp=0;
+             rand_SIM_survey_prop_temp2=0;
+
+            if(use_stock_comp_info_survey==0)
+             {
+              rand_SIM_survey_prop_temp.fill_multinomial(myrand7,value(survey_at_age_fleet_prop(j,r,y,z)));
+               for(int n=1;n<=SIM_nsurvey(j,r,z);n++) 
+                {
+                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp(n)))+= 1.0;
+                }
+               SIM_survey_prop(j,r,z,y)=rand_SIM_survey_prop_temp2;
+             }
+            if(use_stock_comp_info_survey==1)
+             {
+              rand_SIM_survey_prop_temp.fill_multinomial(myrand7,value(survey_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
+              
+               for(int n=1;n<=SIM_nsurvey_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
+                {
+                 rand_SIM_survey_prop_temp2(value(rand_SIM_survey_prop_temp(n)))+= 1.0;
+                }
+               SIM_survey_prop_overlap(p,j,r,z,y)=rand_SIM_survey_prop_temp2;
+             }
+             
+        for(int a=1;a<=nages;a++)
+         {
+          if(use_stock_comp_info_survey==0)
+           {
+            OBS_survey_prop(j,r,z,y,a)=SIM_survey_prop(j,r,z,y,a)/SIM_nsurvey(j,r,z);
+           }
+          if(use_stock_comp_info_survey==1)
+           {
+            OBS_survey_prop_overlap(p,j,r,z,y,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
+           }
+         }
+       }
       }
+     }
     }
+   }
 
+FUNCTION get_rand_CAA_prop
+ random_number_generator myrand6(myseed+64532);
+ 
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+            for (int a=1;a<=nages;a++)
+             {
+                 catch_at_age_region_fleet_overlap_prop(p,j,r,z,y,a)=catch_at_age_region_fleet_overlap(p,j,r,z,y,a)/sum(catch_at_age_region_fleet_overlap(p,j,r,z,y));              
+                 catch_at_age_region_overlap_prop(p,j,r,y,a)=catch_at_age_region_overlap(p,j,r,y,a)/sum(catch_at_age_region_overlap(p,j,r,y));
+                 catch_at_age_population_overlap_prop(p,j,y,a)=catch_at_age_population_overlap(p,j,y,a)/sum(catch_at_age_population_overlap(p,j,y));
+                 catch_at_age_natal_overlap_prop(p,y,a)=catch_at_age_natal_overlap(p,y,a)/sum(catch_at_age_natal_overlap(p,y));
 
+                 catch_at_age_fleet_prop_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z);
+                 catch_at_age_fleet_prop(j,r,y,z,a)=catch_at_age_fleet_prop_temp(j,r,y,z,a)/sum(catch_at_age_fleet_prop_temp(j,r,y,z));
+                 catch_at_age_region_prop(j,r,y,a)=catch_at_age_region(j,r,y,a)/sum(catch_at_age_region(j,r,y));
+                 catch_at_age_population_prop(j,y,a)=catch_at_age_population(j,y,a)/sum(catch_at_age_population(j,y));
+                 catch_at_age_total_prop(y,a)=catch_at_age_total(y,a)/sum(catch_at_age_total(y));
+              }
+            }
+           }
+          }
+         }
+        }
 
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+             rand_SIM_catch_prop_temp=0;
+             rand_SIM_catch_prop_temp2=0;
 
-
+            if(use_stock_comp_info_catch==0)
+             {
+              rand_SIM_catch_prop_temp.fill_multinomial(myrand6,value(catch_at_age_fleet_prop(j,r,y,z)));
+               for(int n=1;n<=SIM_ncatch(j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
+                {
+                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp(n)))+= 1.0;
+                }
+               SIM_catch_prop(j,r,z,y)=rand_SIM_catch_prop_temp2;
+             }
+            if(use_stock_comp_info_catch==1)
+             {
+              rand_SIM_catch_prop_temp.fill_multinomial(myrand6,value(catch_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
+              
+               for(int n=1;n<=SIM_ncatch_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
+                {
+                 rand_SIM_catch_prop_temp2(value(rand_SIM_catch_prop_temp(n)))+= 1.0;
+                }
+               SIM_catch_prop_overlap(p,j,r,z,y)=rand_SIM_catch_prop_temp2;
+             }
+             
+        for(int a=1;a<=nages;a++)
+         {
+          if(use_stock_comp_info_catch==0)
+           {
+            OBS_catch_prop(j,r,z,y,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
+           }
+          if(use_stock_comp_info_catch==1)
+           {
+            OBS_catch_prop_overlap(p,j,r,z,y,a)=SIM_catch_prop_overlap(p,j,r,z,y,a)/SIM_ncatch_overlap(p,j,r,z);
+           }
+         }
+       }
+      }
+     }
+    }
+   }
 FUNCTION evaluate_the_objective_function
    f=0.0;
 
