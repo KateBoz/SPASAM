@@ -73,7 +73,15 @@
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
   #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+  #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
+  #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
+  #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  #//uses use_input_Bstar switch 
 1
+#use_input_Bstar
+  #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+  #==1 use input_Bstar
+0
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
   #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
@@ -136,7 +144,23 @@
  #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
  #==0 calc OBS catch age comps by area (summed across natal population)
  #==1 calc OBS catch age comps by natal population within each area
-0  
+0
+
+#input_Bstar(1,np,1,nreg)
+  #used with move_switch==8
+  #carrying capacity biomass term
+10000000
+10000000
+#SSB_zero_appor(1,np,1,nreg)
+  #used with move_switch==8
+  #determines apportionment of SSB0 when multiple regions and use_input_Bstar==0
+0.5
+0.5
+#A
+  #used with move_switch==8
+  #logistic parameter
+9
+9
 #return_age - age of return migration for move_switch==6
 4
 #return_probability- probability of returning for move_switch==6
@@ -192,8 +216,8 @@
 1
 1
 #input_residency
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1     
-1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75    
+0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5
 #sel_beta1
 0.8
 0.8 

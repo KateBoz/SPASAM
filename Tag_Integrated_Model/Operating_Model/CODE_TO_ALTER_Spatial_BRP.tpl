@@ -94,7 +94,6 @@ DATA_SECTION
 
   init_number move_switch
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
-////// ADD MOVEMENT SWITCHES DENSITY-DEPENDENT, possibly for metamictic with ontogenetic movement
   //==0 no movement
   //==1 input movement
   //==2 movement within population only based on input residency (symmetric off diagnol)
@@ -104,7 +103,10 @@ DATA_SECTION
   //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal population eg ontogenetic migration)
   //==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
-//////////////////////////////////////////////////////
+  //==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions 
+  init_number use_input_Bstar
+  //==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+  //==1 use input_Bstar
 
 ////// Population Structure switches
   init_number natal_homing_switch
@@ -176,6 +178,9 @@ DATA_SECTION
 ///////////////////////////////////////////////////////////////////////////////
 //////// ADDITIONAL PARAMETERS FROM DAT FILE //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+  init_matrix input_Bstar(1,np,1,nreg) //used with move_switch==8
+  init_matrix SSB_zero_appor(1,np,1,nreg) //used with move_switch==8
+  init_matrix A(1,np,1,nreg) //used with move_switch==8
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
   init_vector spawn_return_prob(1,np) // used if natal_homing_swith==2
@@ -224,7 +229,7 @@ DATA_SECTION
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_matrix equil_ssb_apport(1,np,1,nreg)
   
-  init_3darray init_abund(1,np,1,nreg,1,na)
+  init_4darray init_abund(1,np,1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_3darray sigma_survey(1,np,1,nreg,1,nfs)
   init_4darray sigma_survey_overlap(1,np,1,np,1,nreg,1,nfs)
@@ -299,6 +304,10 @@ PARAMETER_SECTION
  
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
+ 6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
+ matrix Bstar(1,nps,1,nr)
+ matrix c(1,nps,1,nr)
+ 4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag)
  5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
@@ -472,6 +481,10 @@ PARAMETER_SECTION
  vector OBS_yield_total(1,nyr)
  3darray apport_yield_region(1,nps,1,nr,1,nyr)
 
+ matrix biomass_BM_temp(1,nps,1,nr)
+ number biomass_BM_temp2
+ 5darray biomass_BM_overlap_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
+ 4darray init_abund_temp(1,nps,1,nr,1,nag,1,nps)
  5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
  6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
  5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
@@ -559,6 +572,8 @@ PROCEDURE_SECTION
   get_SPR();
 
   get_env_Rec();
+
+  get_DD_move_parameters();
 
   get_abundance();
 
@@ -757,7 +772,6 @@ FUNCTION get_movement
     }
    }
   }
-
 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
@@ -1007,26 +1021,57 @@ FUNCTION get_SPR
     }
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
-
-   for (int y=1;y<=nyrs;y++)
+       for (int p=1;p<=npops;p++)
+        {
+        for (int j=1;j<=npops;j++)
          {
-         for (int j=1;j<=npops;j++)
+         for (int r=1;r<=nregions(j);r++)
+          {
+          for (int y=1;y<=nyrs;y++)
+           {
+           if(y==1)
              {
-            for (int r=1;r<=nregions(j);r++)
-               {
-          if(y==1)
-             {
-             env_rec(y)=init_abund(j,r,1);
-             }
-             
-          if(y>1)
+              env_rec(y)=init_abund(p,j,r,1);
+             }           
+           if(y>1)
             {
-            env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*PI)/freq)*years(y)+freq);
-             }
+             env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*PI)/freq)*years(y)+freq);
+            }
            }
          }
-
+        }
        }
+FUNCTION get_DD_move_parameters
+ //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ ///////////////////////DD Movement///////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there           
+      if(move_switch==8)
+       {
+        for (int s=1;s<=npops;s++)
+         {
+          for (int n=1;n<=nregions(s);n++)
+           {       
+            if(use_input_Bstar==0 && Rec_type==2) //set Bstar==SSB0
+             {
+              if(nregions(s)==1)
+               {
+                Bstar(s,n)=SSB_zero(s);
+               }
+              if(nregions(s)>1)
+               {
+                Bstar(s,n)=SSB_zero(s)*SSB_zero_appor(s,n);
+               }
+             }
+            if(use_input_Bstar==1 || Rec_type!=2)
+             {
+              Bstar(s,n)=input_Bstar(s,n);
+             }
+           c(s,n)=-log(A(s,n))/Bstar(s,n);  ///Bstar is the point of inflection in T
+          }
+         }
+        }
 
 FUNCTION get_abundance
        for (int y=1;y<=nyrs;y++)
@@ -1052,68 +1097,165 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-                  if(p==j)
-                   {
-         /// ADD NATAL HOMING SPECIFIC ABUNDANCE CAN BE DISTRIBUTED ACROSS AREA (ie start in non-natal area)
-         
-                    abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(j,r,a);
+                    abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
-                   }
-                  if(p!=j)
+                    biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                    biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
+
+//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+///////////////NON-NATAL Homing calcs /////////////////////////////////////////////////////////////// //////////////////////////////////////////////////////////////////////////////    
+                   init_abund_temp(j,r,a,p)=init_abund(p,j,r,a);
+                   abundance_at_age_BM(j,r,y,a)=sum(init_abund_temp(j,r,a));
+                   recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
+////////////////////////////////////////////////////////////////////////////////
+
+                  if(natal_homing_switch==0)
                    {
-                    abundance_at_age_BM_overlap_region(p,j,y,a,r)=0;
-                    abundance_at_age_BM_overlap_population(p,j,y,a)=0;
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                    }
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                    biomass_BM_overlap_temp(j,r,y,a,p)=biomass_BM_age_overlap(p,j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=sum(biomass_BM_overlap_temp(j,r,y,a));
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                   
+ ///get year one recruitment index
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
+               rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
+              }
+             }
+            }
+           }
+          } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+         for (int a=1;a<=nages;a++)
+          {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+                    if(move_switch==8)
+                     {
+                      Fract_Move_DD(j,r,y,a)=(1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a)));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+                  
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
                  {
                   for (int n=1;n<=nregions(k);n++)
-                   {
-                  
-                    if(move_switch!=6  || a==1)  //if movement is not type=6 or a==1 (and movement type 6)
+                   {              
+                    if(move_switch!=6 || move_switch!=7 || a==1)  //if movement is not type=6 or a==1 (and movement type 6)
                      {
-                      if(p==k)
+                       abundance_move_overlap_temp(k,n)=init_abund(p,k,n,a)*T(p,n,y,a,j,r); //with overlap always use natal population movement rates  (i.e., use p inpsead of k)
+                     }
+                    if(move_switch==6 && a>1)
+                     {
+                      if(a==return_age && p==j && p==k && j==k)
                       {
-                       abundance_move_overlap_temp(k,n)=init_abund(k,n,a)*T(p,n,y,a,j,r); //with overlap always use natal population movement rates  (i.e., use p inpsead of k)
+                       abundance_move_overlap_temp(k,n)=0; //with overlap always use natal population movement rates
+                      }
+                      if(a==return_age && p==j && j!=k)
+                      {
+                       abundance_move_overlap_temp(k,n)=init_abund(p,k,n,a)*return_probability(p); //with overlap always use natal population movement rates
                       }
                      }
                    }
                   }
-
- 
-                  if(move_switch!=6 || move_switch!=7  || a==1) //if movement is not type=6,7 or a==1 (and movement type 6)
+                    if(move_switch!=6 || move_switch!=7  || a==1)
                      {
-                      abundance_at_age_AM_overlap_region(p,j,y,a,r)=sum(abundance_move_overlap_temp);
+                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=sum(abundance_move_overlap_temp);
+                     }
+                    if(move_switch==7)  //all fish stay where they were (i.e., no return migration)
+                     {
+                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                      }
                     if(move_switch==6 && a>1)
                      {
-                      if(p==j)
+                      if(a<return_age || a>return_age)
                        {
-                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(j,r,a);                    
+                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a); //with overlap always use natal population movement rates                     
+                       }
+                      if(a==return_age && p==j)
+                       {
+                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a)+(sum(abundance_move_overlap_temp)/nregions(p));
+                       }
+                      if(a==return_age && p!=j)
+                       {
+                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=(1-return_probability(p))*init_abund(p,j,r,a);
                        }
                       }
-                    if(move_switch==7  && a!=1)
-                     {
-                      if(p==j)
-                      {
-                        abundance_at_age_AM_overlap_region(p,j,y,a,r)=init_abund(j,r,a);
-                      }
-                     }
- ////////DO FOLLOWING CALCS FOR BM AS WELL                
+                      
                 abundance_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r);
                 biomass_AM_overlap_region_all_natal_temp(j,r,y,a,p)=abundance_at_age_AM_overlap_region(p,j,y,a,r)*weight_population(p,r,y,a);
                 abundance_AM_overlap_region_all_natal(j,r,y,a)=sum(abundance_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
-/////////////////////////////////////////////////////////////
-
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
-
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                 biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
@@ -1128,20 +1270,10 @@ FUNCTION get_abundance
               //  bio_res(j,r,y,a)=bio_move_temp(j,r);
               //  bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,y,a)-bio_res(j,r,y,a);
                 
-
-
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance/////////////////////////////////////////////////////////////// //////////////////////////////////////////////////////////////////////////////
     
-                abundance_at_age_BM(j,r,y,a)=init_abund(j,r,a);
-                recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
-
- ///get year one recruitment index
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
-               rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
-               rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
-
                 abundance_move_temp=0;
                 bio_move_temp=0;
 
@@ -1149,24 +1281,19 @@ FUNCTION get_abundance
                  {
                   for (int n=1;n<=nregions(k);n++)
                    {
-                     abundance_move_temp(k,n)=init_abund(k,n,a)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=abundance_at_age_BM(k,k,y,a)*T(k,n,y,a,j,r);
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);                   
                    }
                   }
                   if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
                    {
-
- //// ADD IN BM CALCS TO ENSURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
-/////////////////////////////
                    }
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
                     biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
-                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
                    
@@ -1179,8 +1306,7 @@ FUNCTION get_abundance
                 biomass_total_temp(y,j)=biomass_population(j,y);
                 biomass_total(y)=sum(biomass_total_temp(y));
 
-                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
-                
+                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);                
                 rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
                 rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                 rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
@@ -2051,8 +2177,8 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-               if(a==1)
-                {
+                   if(a==1)
+                   {
                  if(natal_homing_switch>0)
                  {
                  if(p==j)
@@ -2069,8 +2195,6 @@ FUNCTION get_abundance
                     }
                   }
 
-
- 
                  if(Rec_type==2) //BH recruitment
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
@@ -2152,10 +2276,107 @@ FUNCTION get_abundance
                  {
                    abundance_at_age_BM_overlap_region(p,j,y,a,r)=0;
                  }
-                 
                 abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
-                abundance_move_overlap_temp=0;
 
+                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
+                
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////// metapop calcs /////////////////////////////////////////////////////////////////////////
+
+                 abundance_at_age_BM(j,r,y,a)=recruits_BM(j,r,y);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                  if(natal_homing_switch==0)
+                   {
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                    biomass_BM_overlap_temp(j,r,y,a,p)=biomass_BM_age_overlap(p,j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=sum(biomass_BM_overlap_temp(j,r,y,a));
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                   }
+              }
+             }
+            }
+           }
+          } //close loops so have full biomass vectors filled in at start of DD movement calcs
+        if(a==1)
+         {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+                    if(move_switch==8)
+                     {
+                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                abundance_move_overlap_temp=0;
+               
                 for (int k=1;k<=npops;k++)
                  {
                   for (int n=1;n<=nregions(k);n++)
@@ -2254,34 +2475,26 @@ FUNCTION get_abundance
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
-
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                 biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
                 biomass_natal_temp_overlap(p,y,j)=biomass_population_overlap(p,j,y);
                 biomass_natal_overlap(p,y)=sum(biomass_natal_temp_overlap(p,y));
-
-                
-
+              
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////y>1, A==1 METAPOP TYPE CALCS (MOVEMENT)//////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   
-                 abundance_at_age_BM(j,r,y,a)=recruits_BM(j,r,y);
 
                     abundance_move_temp=0;
                     bio_move_temp=0;
 
-                for (int k=1;k<=npops;k++)
-                 {
-                  for (int n=1;n<=nregions(k);n++)
-                   {
-
-
+        for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
              if(natal_homing_switch==0)
               {
                  if(Rec_type==1) //average recruitment
@@ -2319,25 +2532,19 @@ FUNCTION get_abundance
                   }
                 }
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
-                   }
-                  }
+              }
+             }
                   
                   if(natal_homing_switch>0)
-                   {
-  //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
-                  
+                   {                  
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
-                    biomass_AM(j,r,y)=biomass_AM_overlap_region_all_natal(j,r,y);
-                    
+                    biomass_AM(j,r,y)=biomass_AM_overlap_region_all_natal(j,r,y);                   
                    }
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
                     biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
-                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
-
                    }
 
                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
@@ -2356,14 +2563,115 @@ FUNCTION get_abundance
                bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                bio_res(j,r,y,a)=bio_move_temp(j,r);
                bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
-
-            } //end a==1 if statement
+           }
+          }
+         }
+        }
+       } //end a==1 if statement
 
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                if(a==2) //account for partial year mortality during spawning year
-                 {
+       if(a==2) //account for partial year mortality during spawning year
+        {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
                   abundance_at_age_BM_overlap_region(p,j,y,a,r)=abundance_at_age_AM_overlap_region(p,j,y-1,a-1,r)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1))*(1-tspawn(p)));
                   abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
+                  biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                  biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
+
+/////////////////////////metapop/////////////////////////////////////////////////////////
+            abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1))*(1-tspawn(j))); //account for time of spawning (i.e., if born midway only experience a half year of mortality from age-1 to age-2)
+/////////////////////////////////////////////////////////////////////////////////////////
+
+                  if(natal_homing_switch==0)
+                   {
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                    biomass_BM_overlap_temp(j,r,y,a,p)=biomass_BM_age_overlap(p,j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=sum(biomass_BM_overlap_temp(j,r,y,a));
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+              }
+             }
+            }
+           }
+          } //close loops so have full biomass vectors filled in at start of DD movement calcs
+         if(a==2)
+          { 
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+                    if(move_switch==8)
+                     {
+                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
 
@@ -2417,10 +2725,7 @@ FUNCTION get_abundance
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
-
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                 biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
@@ -2432,7 +2737,6 @@ FUNCTION get_abundance
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
     
-            abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1))*(1-tspawn(j))); //account for time of spawning (i.e., if born midway only experience a half year of mortality from age-1 to age-2)
 
                     abundance_move_temp=0;
                      bio_move_temp=0;
@@ -2447,21 +2751,15 @@ FUNCTION get_abundance
                   }
 
                   if(natal_homing_switch>0)
-                   {
-  //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
-                  
+                   {                  
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
-                    biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
-                  
+                    biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);                  
                    }
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
                     biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
-                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
-
                    }
 
                 biomass_population_temp(j,y,r)=biomass_AM(j,r,y);
@@ -2469,22 +2767,122 @@ FUNCTION get_abundance
                 biomass_total_temp(y,j)=biomass_population(j,y);
                 biomass_total(y)=sum(biomass_total_temp(y));
 
-
                    abundance_in(j,r,y,a)=sum(abundance_move_temp)-abundance_move_temp(j,r);
                    abundance_res(j,r,y,a)=abundance_move_temp(j,r);
                    abundance_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)-abundance_res(j,r,y,a);
                    bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                    bio_res(j,r,y,a)=bio_move_temp(j,r);
                    bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
-
-             } //end a==2 if statement
+             }
+            }
+           }
+          }
+         }//end a==2 if statement
 
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                if(a>2 && a<nages)
-                 {
+       if(a>2 && a<nages)
+        {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
                   abundance_at_age_BM_overlap_region(p,j,y,a,r)=abundance_at_age_AM_overlap_region(p,j,y-1,a-1,r)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)));
                   abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
-                  
+                  biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                  biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
+
+/////////////////////////metapop/////////////////////////////////////////////////////////
+                 abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)));
+/////////////////////////////////////////////////////////////////////////////////////////
+
+                  if(natal_homing_switch==0)
+                   {
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                    biomass_BM_overlap_temp(j,r,y,a,p)=biomass_BM_age_overlap(p,j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=sum(biomass_BM_overlap_temp(j,r,y,a));
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+              }
+             }
+            }
+           }
+          } //close loops so have full biomass vectors filled in at start of DD movement calcs
+       if(a>2 && a<nages)
+        {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+                    if(move_switch==8)
+                     {
+                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
@@ -2537,10 +2935,7 @@ FUNCTION get_abundance
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
-
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                 biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
@@ -2552,7 +2947,6 @@ FUNCTION get_abundance
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
     
-                  abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)));
 
                    abundance_move_temp=0;
                    bio_move_temp=0;
@@ -2568,19 +2962,13 @@ FUNCTION get_abundance
                   
                   if(natal_homing_switch>0)
                    {
-
-  //// ADD IN BM CALCS TO ENSURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
-
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
-
                    }
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
                     biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
-                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
                     biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
 
@@ -2595,15 +2983,116 @@ FUNCTION get_abundance
                 bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                 bio_res(j,r,y,a)=bio_move_temp(j,r);
                 bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
-
-          } //end a>2 <nages if statement
+           }
+          }
+         }
+        }
+       }//end a>2 <nages if statement
 
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                if(a==nages) //account for fish already in plus group
-                 {
+       if(a==nages) //account for fish already in plus group
+        {
+          for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
                   abundance_at_age_BM_overlap_region(p,j,y,a,r)=abundance_at_age_AM_overlap_region(p,j,y-1,a-1,r)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)))+abundance_at_age_AM_overlap_region(p,j,y-1,a,r)*mfexp(-(M(j,r,y-1,a)+F(j,r,y-1,a)));
                   abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
-                  
+                  biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
+                  biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
+                
+/////////////////////////metapop/////////////////////////////////////////////////////////
+               abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)))+abundance_at_age_AM(j,r,y-1,a)*mfexp(-(M(j,r,y-1,a)+F(j,r,y-1,a)));
+/////////////////////////////////////////////////////////////////////////////////////////
+
+                  if(natal_homing_switch==0)
+                   {
+                    biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+                  if(natal_homing_switch>0) //if natal homing put abundance summed across natal population by region into abundance at age AM
+                   {
+                    biomass_BM_overlap_temp(j,r,y,a,p)=biomass_BM_age_overlap(p,j,r,y,a);
+                    biomass_BM_age(j,r,y,a)=sum(biomass_BM_overlap_temp(j,r,y,a));
+                    biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
+                   }
+              }
+             }
+            }
+           }
+          } //close loops so have full biomass vectors filled in at start of DD movement calcs
+       if(a==nages) //account for fish already in plus group
+        {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 for (int z=1;z<=nfleets(j);z++)
+                  {
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
+            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+                    if(move_switch==8)
+                     {
+                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
@@ -2656,10 +3145,7 @@ FUNCTION get_abundance
                 biomass_AM_overlap_age_region_all_natal(j,r,y,a)=sum(biomass_AM_overlap_region_all_natal_temp(j,r,y,a));
                 biomass_AM_overlap_region_all_natal(j,r,y)=sum(biomass_AM_overlap_age_region_all_natal(j,r,y));
                 abundance_at_age_AM_overlap_population(p,j,y,a)=sum(abundance_at_age_AM_overlap_region(p,j,y,a));
-
-                biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                 biomass_AM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_AM_overlap_region(p,j,y,a,r);
-                biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
                 biomass_AM_overlap_region(p,j,r,y)=sum(biomass_AM_age_overlap(p,j,r,y));
                 biomass_population_temp_overlap(p,j,y,r)=biomass_AM_overlap_region(p,j,r,y);
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
@@ -2671,7 +3157,6 @@ FUNCTION get_abundance
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
     
-               abundance_at_age_BM(j,r,y,a)=abundance_at_age_AM(j,r,y-1,a-1)*mfexp(-(M(j,r,y-1,a-1)+F(j,r,y-1,a-1)))+abundance_at_age_AM(j,r,y-1,a)*mfexp(-(M(j,r,y-1,a)+F(j,r,y-1,a)));
                   
                    abundance_move_temp=0;
                    bio_move_temp=0;
@@ -2686,19 +3171,14 @@ FUNCTION get_abundance
                   }
                   if(natal_homing_switch>0)
                    {
-  //// ADD IN BM CALCS TO EnpURE USING RIGHT VALUES FOR NATAL HOMING SCENARIOS
-
                     abundance_at_age_AM(j,r,y,a)=abundance_AM_overlap_region_all_natal(j,r,y,a);
                     biomass_AM(j,r,y)= biomass_AM_overlap_region_all_natal(j,r,y);
-
                    }
                   if(natal_homing_switch==0)
                    {
                     abundance_at_age_AM(j,r,y,a)=sum(abundance_move_temp);
-                biomass_BM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_BM(j,r,y,a);
-                biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
-                biomass_BM(j,r,y)=sum(biomass_BM_age(j,r,y));
-                biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
+                    biomass_AM_age(j,r,y,a)=weight_population(j,r,y,a)*abundance_at_age_AM(j,r,y,a);
+                    biomass_AM(j,r,y)=sum(biomass_AM_age(j,r,y));
                    }
 
                 biomass_population_temp(j,y,r)=biomass_AM(j,r,y);
@@ -2712,14 +3192,22 @@ FUNCTION get_abundance
                    bio_in(j,r,y,a)=sum(bio_move_temp)-bio_move_temp(j,r);
                    bio_res(j,r,y,a)=bio_move_temp(j,r);
                    bio_leave(j,r,y,a)=abundance_at_age_BM(j,r,y,a)*weight_population(j,r,y,a)-bio_res(j,r,y,a);
-
+            }
+           }
+          }
+         }
         } //end nages if statement
 
-          } //end fleets loop
-             for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
               {
-               if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
+               for (int r=1;r<=nregions(j);r++)
                 {
+                 for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
+                  {
+                   if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
+                   {
                   true_survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*q_survey(j,r,z);
                   true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
                   true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
@@ -4033,6 +4521,14 @@ FUNCTION evaluate_the_objective_function
 
 
 REPORT_SECTION
+ // report<<"$biomass_BM_age"<<endl;
+ // report<<biomass_BM_age<<endl;
+ // report<<"$Fract_Move_DD"<<endl;
+ // report<<Fract_Move_DD<<endl;
+ // report<<"$T"<<endl;
+ // report<<T<<endl;
+ // report<<"$rel_bio"<<endl;
+ // report<<rel_bio<<endl;
 
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
