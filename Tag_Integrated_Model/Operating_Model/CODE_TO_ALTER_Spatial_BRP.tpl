@@ -202,6 +202,7 @@ DATA_SECTION
   init_matrix input_M(1,np,1,na)
   init_vector sigma_recruit(1,np)
   init_vector sigma_rec_prop(1,np) //error around recruit apportionment
+  init_3darray sigma_F(1,np,1,nreg,1,nf)
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -254,6 +255,7 @@ DATA_SECTION
   init_int debug
   init_number myseed_yield
   init_number myseed_survey
+  init_number myseed_F
   init_number myseed_rec_devs
   init_number myseed_rec_apport
   init_number myseed_rec_index
@@ -470,8 +472,8 @@ PARAMETER_SECTION
  vector OBS_yield_total(1,nyr)
  3darray apport_yield_region(1,nps,1,nr,1,nyr)
 
- 5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- 6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ 5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ 6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
  5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
  6darray rand_SIM_catch_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
  vector rand_SIM_survey_prop_temp2(1,nages)
@@ -523,8 +525,9 @@ PARAMETER_SECTION
  3darray u(1,nps,1,nr,1,nfl)
  4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
  5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- 4darray survey_RN(1,nps,1,nr,1,nyr,1,nfl)
- 5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ 4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
+ 5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
+ 4darray F_RN(1,nps,1,nr,1,nyr,1,nfl)
  matrix rec_devs_RN(1,nps,1,nyr)
  3darray Rec_apport_RN(1,nps,1,nyr,1,nr)
  3darray rec_index_RN(1,nps,1,nr,1,nyr)
@@ -568,6 +571,7 @@ PROCEDURE_SECTION
 FUNCTION get_random_numbers
    random_number_generator myrand_yield(myseed_yield);
    random_number_generator myrand_survey(myseed_survey);
+   random_number_generator myrand_F(myseed_F);
    random_number_generator myrand_rec_devs(myseed_rec_devs);
    random_number_generator myrand_rec_apport(myseed_rec_apport);
    random_number_generator myrand_rec_index(myseed_rec_index);
@@ -588,6 +592,7 @@ FUNCTION get_random_numbers
               yield_RN_overlap(p,j,r,y,z)=randn(myrand_yield);
               survey_RN(j,r,y,x)=randn(myrand_survey);
               survey_RN_overlap(p,j,r,y,x)=randn(myrand_survey);
+              F_RN(j,r,y,z)=randn(myrand_F);
               rec_devs_RN(j,y)=randn(myrand_rec_devs);
                if(apportionment_type==3)//completely random apportionment
                 {
@@ -810,7 +815,6 @@ FUNCTION get_selectivity
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
-  // random_number_generator myrand7(myseed+4534);
 
   for (int j=1;j<=npops;j++)
    {
@@ -846,10 +850,10 @@ FUNCTION get_F_age
               {
                F_year(j,r,y,z)=input_F_MSY/sum(nfleets);
               }
-         //  if(F_switch==7) //random walk in F
-         //   {
-         //    F_year(j,r,y,z)=F_est(j,r,z);
-         //   }
+             if(F_switch==7) //random walk in F
+              {
+               F_year(j,r,y,z)=input_F(j,r,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+              }
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
              F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
              M(j,r,y,a)=input_M(j,a);
@@ -858,24 +862,6 @@ FUNCTION get_F_age
          }
         }
        }
-
- /// GOING TO NEED TIME-VARYING F
- // Year component to input F
- // Random variation/noise (e.g., TAC model) around an average value (or around input F values)
- //  rand_F.fill_randn(myrand7);
- //  for (int n=1;n<=nyrs_F_pre_TAC;n++) //prior to TAC fishery is assumed to fluctuate around scalar*FMSY if scalar=1.0 then fluctuates around FMSY otherwise can fluctuate around some hi or low F value to increase/decrease population size relative to BMSY
- //  {
- //   SIM_F_devs(n)=mfexp(rand_F(n)*sigma_F-0.5*square(sigma_F));
- //   if(SIM_Fmsy_switch==1) //set F=input F for all years
- //   {
- //    SIM_F_pre_TAC(n)=Fmsy;
- //   }
- //   if(SIM_Fmsy_switch==0) //set F=scalar*Fmsy
- //   {    
- //    SIM_F_pre_TAC(n)=Fmsy_scalar*Fmsy*SIM_F_devs(n);
- //   }
- //  }
- // random walk
 
 FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
@@ -926,8 +912,7 @@ FUNCTION get_vitals
                   ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
                   wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
                 }
-               }
-                         
+               }                        
                if(recruit_devs_switch==0)  //use population recruit relationship directly
                 {
                  rec_devs(j,y)=1;
@@ -964,9 +949,7 @@ FUNCTION get_vitals
                 {
                  Rec_prop_temp1(j,y,r)=log(input_Rec_prop(j,r))+sigma_rec_prop(j)*Rec_apport_RN(j,y,r);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
                 }
-
                //if(apportionment_type==5)    /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
-
                }   
              }
            }         

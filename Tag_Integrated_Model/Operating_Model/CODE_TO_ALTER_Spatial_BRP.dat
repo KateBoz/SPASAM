@@ -95,7 +95,7 @@
   #==4 overall F is split evenly among stocks (each fleet uses stock F)
   #==5 overall F is is split evenly among all regions (each fleet uses region F)
   #==6 overall F is split evenly among fleets
-  #==7 random walk in F (NOT YET IMPLEMENTED)
+  #==7 F devs about input F based on sigma_F
 1
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
@@ -227,7 +227,9 @@
 1.4
 #sigma_rec_prop #error around recruit appotionment
 0.2
-
+#sigma_F
+0.5
+0.5
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################
@@ -298,11 +300,6 @@
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 50
 50
-#ESS
-200
-#N
-100
-
 #input_TAC
  #TAC that are matching if model_type_switch==1
 ################################################################################################################
@@ -336,13 +333,15 @@
 1
 #myseed_survey
 100000
-#myseed_rec_devs
+#myseed_F
 200000
-#myseed_rec_apport
+#myseed_rec_devs
 300000
-#myseed_rec_index
+#myseed_rec_apport
 400000
-#myseed_survey_age
+#myseed_rec_index
 500000
-#myseed_catch_age
+#myseed_survey_age
 600000
+#myseed_catch_age
+700000
