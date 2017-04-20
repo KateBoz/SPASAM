@@ -1572,7 +1572,7 @@ FUNCTION get_abundance
                                                    }
                                                    if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
                                                    }
                                                 }
                                                if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
@@ -3458,7 +3458,7 @@ FUNCTION get_abundance
                                                    }
                                                    if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
                                                    }
                                                 }
                                              if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
