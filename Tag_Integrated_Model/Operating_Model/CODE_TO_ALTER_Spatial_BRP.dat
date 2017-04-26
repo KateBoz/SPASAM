@@ -104,6 +104,7 @@
   #==5 overall F is is split evenly among all regions (each fleet uses region F)
   #==6 overall F is split evenly among fleets
   #==7 F devs about input F based on sigma_F
+  #==8 random walk in F
 1
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
@@ -243,6 +244,9 @@
 #input_F
 0.2
 0.2
+#F_rho (degree of autocorrelation in F random walk
+1
+1
 #F_MSY
 0.5
 #input_M
