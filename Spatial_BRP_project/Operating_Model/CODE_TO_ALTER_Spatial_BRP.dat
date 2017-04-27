@@ -33,7 +33,8 @@
   #MUST HAVE MODEL_TYPE==1, even though uses input u (harvest rate)
 ##############################################################################################################################
   #==0 don't use
-  #==1 calculate a yearly TAC from uMSY(input)*biomass_total(y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+  #==1 calculate a yearly TAC from uMSY(input)*biomass_population(j,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+  #==2 calculate a yearly TAC from uMSY(input)*biomass_region(j,r,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
 0
 #/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
