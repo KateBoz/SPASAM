@@ -133,7 +133,8 @@ DATA_SECTION
   //==4 overall F (FMSY) is split evenly among populations (each fleet uses population F)
   //==5 overall F (FMSY) is is split evenly among all regions (each fleet uses region F)
   //==6 overall F (FMSY) is split evenly among fleets
-  //==7 random walk in F (NOT YET IMPLEMENTED)
+  //==7 F devs about input F based on sigma_F
+  //==8 random walk in F
   
   init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly
@@ -204,6 +205,7 @@ DATA_SECTION
   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
+  init_3darray F_rho(1,np,1,nreg,1,nf) //degree of autocorrelation (0-1) if F switch = 8; random walk in F
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
   init_vector sigma_recruit(1,np)
@@ -865,9 +867,13 @@ FUNCTION get_F_age
               {
                F_year(j,r,y,z)=input_F_MSY/sum(nfleets);
               }
-             if(F_switch==7) //random walk in F
+             if(F_switch==7) //F devs about input F based on sigma_F
               {
                F_year(j,r,y,z)=input_F(j,r,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+              }
+             if(F_switch==8) //random walk in F
+              {
+               F_year(j,r,y,z)=F_rho(j,r,z)*F_year(j,r,y-1,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
               }
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
              F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
