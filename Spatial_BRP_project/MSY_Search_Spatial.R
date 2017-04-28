@@ -2,10 +2,10 @@
 # Conducting the MSY Search using the Spatial_BRP model for 
 # the "one population/multiple areas" spatial structure
 # Created by Katelyn Bosley
-# Date: 2/15/2017
+# Date: 3/27/2017
 ##############################################################
 
-#need to reset the working directory in for run and run the run_MSY function
+#need to reset the working directory to the folder with the MSY__search files
 
 # remove previous objects from workspace
 rm(list = ls())
@@ -31,33 +31,46 @@ load_libraries()
 
 #Setting up the F values to iterate over for all the runs
 F.name<-"input_F"
-F.start<-0.2
-F.end<-0.8
-it<-0.1
+F.start<-0
+F.end<-3
+it<-0.5
 
 
+############################################################################
 # set the working directory to location where the folders are to iterate through
 
 #HAKE runs
-folder<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Model_runs"
+#folder<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SABLEFISH\\test"
 
 #create a list of working directorys to iterate over
-runs<-vector("list",4)
+#runs<-vector("list",1)
 
-for(i in 1:4) {
-  runs[[i]]<-paste0(folder,"\\",i,sep="")
-}
+#for(i in 1:length(runs)) {
+#  runs[[i]]<-paste0(folder,"\\",i,sep="")
+#}
 
 
 #loop over the folders for each run
-for(i in 1:4) {
+#for(i in 1:length(runs)) {
+#   
+#   WD<-runs[[i]] #setting the new WD
+#   setwd(WD)
+#   WD<<-WD
    
-   WD<-runs[[i]] #setting the new WD
-   setwd(WD)
-   WD<<-WD
+   
+   
+####################################################################
+#if not looping over the different folders
+#WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Model_runs\\4"
+   
+WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MENHADEN\\Base"
+setwd(WD)
+WD<<-WD  
+###################################################################   
+  
 
-
-# the function  - run the below function to make things easier for completing runs. Still working out the kinks
+# the search function  - run the below function to make things easier for completing runs. Still working out the kinks
+   
 MSY_search<-function(wd=WD) {
 
 #read in .dat file to get values for setting up the runs-carryover from DG code
@@ -66,7 +79,13 @@ update=readLines("Spatial_BRP.dat",n=-1)
 nyrs<-as.numeric(update[(grep("nyrs",update)+1)])
 nstocks<-as.numeric(update[(grep("npopulations",update)+1)])
 nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)+nstocks)])
-nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
+
+
+#need to adjust by number of populations
+nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nstocks))],ncol=nstocks))
+
+#
+#nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
 
 
 #set up the combinations of permutations per region
@@ -74,7 +93,8 @@ F.test<-seq(F.start,F.end,it) #F values to cycle through
 ntrial<-length(F.test) # count of total number of trials
 
 #set up the permutations of F by pop/fleet/region
-permutation<-permutations(ntrial,sum(nfleets),F.test,repeats.allowed=TRUE)  # determine all permutations of F in each stock
+#had to make adjustment to nregions... not fleets
+permutation<-permutations(ntrial,sum(nregions),F.test,repeats.allowed=TRUE)  # determine all permutations of F in each stock
 n_perm<-nrow(permutation)
 
 #setting up the files to put results
@@ -100,12 +120,10 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
   invisible(file.copy(from=paste0(wd,"\\Spatial_BRP.dat",sep=""),to=paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP.dat",sep="")))
   invisible(file.copy(from=paste0(wd,"\\Spatial_BRP.tpl",sep=""),to=paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP.tpl",sep="")))
   
-  
   #set new directory for running the model
   setwd(paste0(wd,"\\MSY Results\\Run",i,sep="")) # now set the working directory as the run# file
   
   update=readLines("Spatial_BRP.dat",n=-1)
-  
   
   #pull important values - for generalized version 
   update[(grep("input_F",update)+1):(grep("input_F",update)+sum(nregions))]=permutation[i,]
@@ -118,7 +136,7 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
   #clean non-needed files and move to results folder
   invisible(file.remove(paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP.exe",sep="")))
   invisible(file.copy(from=paste0(wd,"\\MSY Results\\Run",i,"\\Spatial_BRP.rep",sep=""),to=paste0(wd,"\\MSY Results\\Report Files\\Report",i,".rep",sep="")))
-  
+
 } #end of code for MSY search
 
 stopCluster(cl) #end the cluster for parallel processing
@@ -170,6 +188,11 @@ wd_figs<-paste0(wd,"\\MSY Results\\Figures",sep="")
 #set to results for grabbing values
 setwd(wd_results)
 
+#set up parellel
+no_cores <- detectCores() - 1
+cl<-makeCluster(no_cores)
+registerDoSNOW(cl)
+
 #progress bar for finding MSY
 pb<- winProgressBar(paste("MSY Search Progress Bar"), label=paste("Grabbing values from 0 of ",n_perm," simulations",sep=""),max=100)
 
@@ -199,15 +222,16 @@ temp<-c(i,permutation[i,],
         out$SSB_total[nyrs], 
         out$Bratio_total[nyrs])
 
-
 msy_results[i,]<-temp
+}
 
 #results
 write.csv(msy_results,"MSY_results.csv")
 
-} #end value grab
+#end value grab
 
 close(pb)
+stopCluster(cl) #end the cluster for parallel processing
 
 
 # Getting the MSY vals
@@ -251,7 +275,7 @@ plot(msy_results$u_region_total,msy_results$yield_total, type = 'p',ylab='Yield'
 plot(msy_results$biomass_total_end,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
 
 #Harvest rate vs biomass
-plot(msy_results$biomass_total_end,msy_results$u_region_total, type = 'p',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
+plot(msy_results$u_region_total, msy_results$biomass_total_end,type = 'p',xlab='Harvest Rate',ylab = "Equilibrium Biomass", lwd = 2)
 
 }
 
@@ -261,155 +285,18 @@ pdf("spatial_1_plots.pdf")
 MSY_plots()
 dev.off()
 
+#remove the old files from run
+for(i in 1:n_perm){
+  unlink(paste0(WD,"\\MSY Results\\","Run",i,sep = ""),recursive = T)
+  unlink(paste0(WD,"\\MSY Results\\Report Files",sep = ""),recursive = T)
+  }
+
 } #end MSY_search function
 
 MSY_search()
 
-}
 
-
-
-
-
-
-########## FOR THE FUTURE!!######################
-
-
-
-
-#################################################################
-# Setting up the function to run the program with u-msy or TAC msy
-#################################################################
-
-#a work in progress! - can set up as a function also
-
-setwd(wd)
-
-#index some other folders
-wd_results<-paste0(wd,"\\MSY Results\\Report Files",sep="")
-wd_figs<-paste0(wd,"\\MSY Results\\Figures",sep="")
-
-
-#create new directory for real run
-dir.create(paste0(wd,"\\ApplyTAC",sep=""))
-dir.create(paste0(wd,"\\ApplyTAC\\TACresults",sep=""))
-
-#move over the files for running the 
-invisible(file.copy(from=paste0(wd,"\\Spatial_BRP.exe",sep=""),to=paste0(wd,"\\ApplyTAC\\TACresults\\Spatial_BRP.exe",sep="")))
-invisible(file.copy(from=paste0(wd,"\\Spatial_BRP.dat",sep=""),to=paste0(wd,"\\ApplyTAC\\TACresults\\Spatial_BRP.dat",sep="")))
-invisible(file.copy(from=paste0(wd,"\\Spatial_BRP.tpl",sep=""),to=paste0(wd,"\\ApplyTAC\\TACresults\\Spatial_BRP.tpl",sep="")))
-
-#
-#set new wd
-wd_TACresults<-paste0(wd,"\\ApplyTAC\\TACresults",sep="")
-setwd(wd_TACresults)
-
-
-#pull in TAC and u values for running model
-#pull in MSY_true from MSY search run
-MSY_rep<-read.csv(paste0(wd_figs,"\\MSY_true.csv",sep=""))
-
-#pull pop_values
-update=readLines("Spatial_BRP.dat",n = -1)
-
-nyrs<-as.numeric(update[(grep("nyrs",update)+1)])
-nstocks<-as.numeric(update[(grep("nstocks",update)+1)])
-nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)+nstocks)])
-nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nregions))],ncol=nregions))
-
-#full in TAC values
-TAC_cols<-rep(NA,nregions)
-TAC<-rep(NA,nregions)
-
-u_cols<-rep(NA,nregions)
-u<-rep(NA,nregions)
-
-for (i in 1:nregions){
-
- TAC_cols[i]<-paste0("yield_region.",i,sep = "")
- u_cols[i]<-paste0("u_region.",i,sep = "")
-}
-
-#filling values
-TAC<-MSY_rep[TAC_cols]
-u<-MSY_rep[u_cols]
-
-
-#set values for changing switches
-model_switch<-2 #1 for TAC 2 for umsy
-
-#updating values in .dat with TAC and model switch
-update[(grep("model_type_swtich",update)+4)]= as.character(model_switch) # there is a misspelling here I need to fix...
-update[(grep("input_TAC",update)+1):(grep("input_TAC",update)+sum(nregions))]=as.character(TAC)
-update[(grep("input_u",update)+1):(grep("input_u",update)+sum(nregions))]=as.character(u)
-
-writeLines(update,"Spatial_BRP.dat")
-
-###############################################################
-
-#run the new model
-
-invisible(shell("Spatial_BRP -nohess",wait=T)) #show.output.on.console=FALSE))  
-
-
-
-##############################################
-# Make some figures
-#############################################
-
-
-#create a directory for making figures
-
-dir.create(paste0(wd_TACresults,"\\TAC_figs",sep=""))
-invisible(file.copy(from=paste0(wd_TACresults,"\\Spatial_BRP.rep",sep=""),to=paste0(wd_TACresults,"\\TAC_figs\\Spatial_BRP.rep",sep="")))
-
-TAC_figs<-paste0(wd_TACresults,"\\TAC_figs",sep = "")
-
-setwd(TAC_figs)
-
-
-######################
-# MODEL PLOTS - for fun
-
-out=readList("Spatial_BRP.rep")
-par_names<-names(out)
-par_names
-
-
-#create a seq of years = super boring!
-#plot
-years<-seq(1,200,1)
-
-#ssb
-plot(years,out$SSB_total, ylim = c(0,300), ylab = "SSB MSY", type = 'l',lwd = 2)
-points(years,out$SSB_region[1,], type = "l", col = "red", lwd = 2)
-points(years,out$SSB_region[2,], type = "l", col = "blue", lwd = 2)
-points(years,out$SSB_region[3,], type = "l", col = "green", lwd = 2)
-text(0,300,"Match Sel, Match M, vary by area", pos = 4)
-
-
-#depletion
-plot(years,out$depletion_total, ylim = c(0,1.2), ylab = "SSB MSY", type = 'l',lwd = 2)
-points(years,out$depletion_region[1,], type = "l", col = "red", lwd = 2)
-points(years,out$depletion_region[2,], type = "l", col = "blue", lwd = 2)
-points(years,out$depletion_region[3,], type = "l", col = "green", lwd = 2)
-text(150,1.2,"Match Sel, Match M, vary by area", pos = 1)
-
-###################################################################
-# There is much more to do!
-####################################################################
-
-
-
-
-
-
-
-
-
-
-
-
+#} #end of full folder loops
 
 
 
