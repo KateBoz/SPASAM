@@ -140,6 +140,10 @@ DATA_SECTION
   //==0 use stock-recruit relationphip directly
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 
+  init_number recruit_randwalk_switch
+  //==0 no random walk recruitment deviations
+  //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
+
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
   //==0 for equal by area or average
@@ -317,6 +321,7 @@ PARAMETER_SECTION
  4darray F(1,nps,1,nr,1,nyr,1,nag)
  4darray M(1,nps,1,nr,1,nyr,1,nag)
  matrix rec_devs(1,nps,1,nyr)
+ matrix rec_devs_randwalk(1,nps,1,nyr)
  4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
@@ -941,6 +946,15 @@ FUNCTION get_vitals
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
                  rec_devs(j,y)=mfexp(rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
+
+                 if(recruit_randwalk_switch==1)
+                 {
+                  rec_devs_randwalk(j,y)=rec_devs(j,y);
+                  if(y!=1)
+                   {
+                    rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y);
+                   }
+                 }
                 }
                if(SSB_type==1) //fecundity based SSB
                 {
@@ -1042,7 +1056,7 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
              }           
            if(y>1)
             {
-             env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*PI)/freq)*years(y)+freq);
+             env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*M_PI)/freq)*years(y)+freq);
             }
            }
          }
@@ -4814,6 +4828,8 @@ REPORT_SECTION
   report<<F_switch<<endl;
   report<<"$recruit_devs_switch"<<endl;
   report<<recruit_devs_switch<<endl;
+  report<<"$recruit_randwalk_switch"<<endl;
+  report<<recruit_randwalk_switch<<endl;
   report<<"$SSB_type"<<endl;
   report<<SSB_type<<endl;
   report<<"$apportionment_type"<<endl;

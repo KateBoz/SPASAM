@@ -111,6 +111,10 @@
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 0
+#recruit_randwalk_switch
+  #==0 no random walk recruitment deviations
+  #==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
+0
 #maturity_switch_equil
   #//==0 for equal by area or average
   #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
