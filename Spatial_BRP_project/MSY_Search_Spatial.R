@@ -13,8 +13,8 @@ rm(list = ls())
 
 # load libraries function
 load_libraries<-function() {
-  suppressWarnings(suppressMessages(require(PBSmodelling)))
-  suppressWarnings(suppressMessages(require(matrixStats)))
+  suppressWarnings(suppressMessages(library(PBSmodelling)))
+  suppressWarnings(suppressMessages(library(matrixStats)))
   suppressWarnings(suppressMessages(require(TeachingDemos)))
   suppressWarnings(suppressMessages(require(snowfall)))
   suppressWarnings(suppressMessages(library(parallel)))
@@ -31,9 +31,9 @@ load_libraries()
 
 #Setting up the F values to iterate over for all the runs
 F.name<-"input_F"
-F.start<-0
-F.end<-3
-it<-0.5
+F.start<-0.005
+F.end<-0.8
+it<-0.05
 
 
 ############################################################################
@@ -63,15 +63,18 @@ it<-0.5
 #if not looping over the different folders
 #WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Model_runs\\4"
    
-WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MENHADEN\\Base"
+WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SABLEFISH\\1"
+#WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Menhaden\\Base"
 setwd(WD)
 WD<<-WD  
 ###################################################################   
   
+#to bypass MSY_search for edting
+wd<-WD
 
 # the search function  - run the below function to make things easier for completing runs. Still working out the kinks
    
-MSY_search<-function(wd=WD) {
+#MSY_search<-function(wd=WD) {
 
 #read in .dat file to get values for setting up the runs-carryover from DG code
 update=readLines("Spatial_BRP.dat",n=-1)
@@ -112,7 +115,13 @@ pb <- txtProgressBar(max = n_perm, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
 
+#actual MSY_Search function
 #do the parallel processing over the loops
+  
+#test if parallel is working
+stime <- system.time({
+  
+#run parallel  
 ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
   dir.create(paste0(wd,"\\MSY Results\\Run",i,sep="")) #create the results directory in the WD with run number
   
@@ -139,6 +148,10 @@ ls<-foreach(i=1:n_perm,.options.snow = opts) %dopar% {
 
 } #end of code for MSY search
 
+})
+
+stime
+
 stopCluster(cl) #end the cluster for parallel processing
 
 
@@ -148,6 +161,11 @@ stopCluster(cl) #end the cluster for parallel processing
 
 #need to generalize this port for plotting results
 #par_names<-names(out)
+
+#set up wd to report files
+wd_results<-paste0(wd,"\\MSY Results\\Report Files",sep="")
+wd_figs<-paste0(wd,"\\MSY Results\\Figures",sep="")
+
 
 N_par_reg<-6 # number of parameters with regional values # need to fix this up..
 N_par_pop<-9 # number of parameters for stock
@@ -179,11 +197,7 @@ for(i in 1:nregions)
   names(msy_results)[9+nregions*6]<-"Bratio_total"
 }
 
-names(msy_results)
-
-#set wd to report files
-wd_results<-paste0(wd,"\\MSY Results\\Report Files",sep="")
-wd_figs<-paste0(wd,"\\MSY Results\\Figures",sep="")
+#names(msy_results)
 
 #set to results for grabbing values
 setwd(wd_results)
@@ -193,17 +207,18 @@ no_cores <- detectCores() - 1
 cl<-makeCluster(no_cores)
 registerDoSNOW(cl)
 
-#progress bar for finding MSY
-pb<- winProgressBar(paste("MSY Search Progress Bar"), label=paste("Grabbing values from 0 of ",n_perm," simulations",sep=""),max=100)
+#setting up another progress bar
+pb <- txtProgressBar(max = n_perm, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
 
+
+stime2 <- system.time({
 #run loop to get all the values into msy_results into a csv for plotting
-for(i in 1:n_perm){
-  
-#start progress  
-setWinProgressBar(pb,(i/n_perm*100),label=paste("Grabbing values from ", i," of ", n_perm," simulations",sep=""))
+grab<-foreach(i=1:n_perm,.options.snow = opts) %dopar% { 
   
 #read report 
-out=readList(paste0("Report",i,".rep",sep=""))
+out=PBSmodelling::readList(paste0("Report",i,".rep",sep=""))
 
 #store results to a full spreadsheet add them in slowly for easy changes- check to see if it matches the .csv made above
 
@@ -221,24 +236,28 @@ temp<-c(i,permutation[i,],
         out$SSB_region[,nyrs],
         out$SSB_total[nyrs], 
         out$Bratio_total[nyrs])
-
-msy_results[i,]<-temp
 }
 
-#results
-write.csv(msy_results,"MSY_results.csv")
 
-#end value grab
+for(i in 1:n_perm){
+msy_results[i,]<-grab[[i]]
+
+}
+}) #end value grab
 
 close(pb)
 stopCluster(cl) #end the cluster for parallel processing
 
+stime2 
+
+#results
+write.csv(msy_results,"MSY_results.csv")
+
 
 # Getting the MSY vals
 t<-which(msy_results$yield_total==max(msy_results$yield_total))
-msy_pan<-msy_results[t,]
-write.csv(msy_pan,"MSY_true.csv")
-
+msy_true<-msy_results[t,]
+write.csv(msy_true,"MSY_true.csv")
 
 
 #move results files to figs folder
@@ -291,10 +310,11 @@ for(i in 1:n_perm){
   unlink(paste0(WD,"\\MSY Results\\Report Files",sep = ""),recursive = T)
   }
 
-} #end MSY_search function
+#} #end MSY_search function
 
-MSY_search()
+#MSY_search()
 
+#system.time(MSY_search)
 
 #} #end of full folder loops
 
