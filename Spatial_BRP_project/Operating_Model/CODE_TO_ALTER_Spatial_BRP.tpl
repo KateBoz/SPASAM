@@ -408,7 +408,7 @@ PARAMETER_SECTION
  3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
  matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr)
- 3darray SSB_region_error(1,nps,1,nr,1,nyr)
+ 3darray SSB_region_error(1,nps,1,nyr,1,nr)
  matrix SSB_population(1,nps,1,nyr)
  vector SSB_total(1,nyr)
  3darray abundance_population(1,nps,1,nyr,1,nag)
@@ -2216,6 +2216,7 @@ FUNCTION get_abundance
               {
                 SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); // changed mat by region
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
+                SSB_region_error(j,y,r)=SSB_region(j,r,y)*mfexp(SSB_region_error_RN(j,r,y)*sigma_SSB_region_error(j,r)-.5*square(sigma_SSB_region_error(j,r)));  //regional SSB index by year using lognormal error 
               }
                 SSB_population_temp(j,y,r)=SSB_region(j,r,y); 
                 SSB_population(j,y)=sum(SSB_population_temp(j,y)); 
@@ -3857,7 +3858,7 @@ FUNCTION get_abundance
                                                   {
                                                   if(calc_TAC_from_uMSY==1)
                                                    {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)*(SSB_region_error(j,r,y-1)/sum(SSB_region_error(j,r,y-1))); //must be lagged y-1 because SSB in y calculated after newton raphson
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)*(SSB_region_error(j,y-1,r)/sum(SSB_region_error(j,y-1))); //must be lagged y-1 because SSB in y calculated after newton raphson
                                                    }
                                                   }
                                                  }
@@ -4449,7 +4450,7 @@ FUNCTION get_abundance
               {
                 SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); 
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
-                SSB_region_error(j,r,y)=SSB_region(j,r,y)*mfexp(SSB_region_error_RN(j,r,y)*sigma_SSB_region_error(j,r)-.5*square(sigma_SSB_region_error(j,r)));  //regional SSB index by year using lognormal error 
+                SSB_region_error(j,y,r)=SSB_region(j,r,y)*mfexp(SSB_region_error_RN(j,r,y)*sigma_SSB_region_error(j,r)-.5*square(sigma_SSB_region_error(j,r)));  //regional SSB index by year using lognormal error 
               }
                 SSB_population_temp(j,y,r)=SSB_region(j,r,y);
                 SSB_population(j,y)=sum(SSB_population_temp(j,y));
