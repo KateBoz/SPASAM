@@ -45,6 +45,7 @@
   #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
   #==2 survey biomass
   #==3 equal apportionment across all fleets in a given area
+  #==4 based on proportion of SSB in each region
 2
 #TAC_survey_parse_timelag_switch
  # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
