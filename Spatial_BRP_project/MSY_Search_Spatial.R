@@ -32,8 +32,8 @@ load_libraries()
 #Setting up the F values to iterate over for all the runs
 F.name<-"input_F"
 F.start<-0.005
-F.end<-0.8
-it<-0.05
+F.end<-5
+it<-0.25
 
 
 ############################################################################
@@ -61,20 +61,17 @@ it<-0.05
    
 ####################################################################
 #if not looping over the different folders
-#WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Hake\\Model_runs\\4"
-   
-WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SABLEFISH\\1"
-#WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Menhaden\\Base"
+WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\HAKE\\BASE_main"
 setwd(WD)
 WD<<-WD  
 ###################################################################   
   
 #to bypass MSY_search for edting
-wd<-WD
+#wd<-WD
 
 # the search function  - run the below function to make things easier for completing runs. Still working out the kinks
    
-#MSY_search<-function(wd=WD) {
+MSY_search<-function(wd=WD) {
 
 #read in .dat file to get values for setting up the runs-carryover from DG code
 update=readLines("Spatial_BRP.dat",n=-1)
@@ -106,7 +103,7 @@ dir.create(paste0(wd,"\\MSY Results\\Figures",sep=""))
 dir.create(paste0(wd,"\\MSY Results\\Report Files",sep=""))
 
 #set up the parallel processing
-no_cores <- detectCores() - 1
+no_cores <- detectCores()
 cl<-makeCluster(no_cores)
 registerDoSNOW(cl)
   
@@ -203,7 +200,7 @@ for(i in 1:nregions)
 setwd(wd_results)
 
 #set up parellel
-no_cores <- detectCores() - 1
+no_cores <- detectCores()
 cl<-makeCluster(no_cores)
 registerDoSNOW(cl)
 
@@ -306,15 +303,13 @@ dev.off()
 
 #remove the old files from run
 for(i in 1:n_perm){
-  unlink(paste0(WD,"\\MSY Results\\","Run",i,sep = ""),recursive = T)
-  unlink(paste0(WD,"\\MSY Results\\Report Files",sep = ""),recursive = T)
+  unlink(paste0(wd,"\\MSY Results\\","Run",i,sep = ""),recursive = T)
+  unlink(paste0(wd,"\\MSY Results\\Report Files",sep = ""),recursive = T)
   }
 
-#} #end MSY_search function
+} #end MSY_search function
 
-#MSY_search()
-
-#system.time(MSY_search)
+MSY_search()
 
 #} #end of full folder loops
 
