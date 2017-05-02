@@ -1830,6 +1830,13 @@ FUNCTION get_abundance
                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
                                                    }
                                                   }
+                                                 if(parse_TAC_source==4) //JJD - parse TAC by region specific SSB
+                                                  {
+                                                  if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //for year one TAC divide evenly among regions and fleets
+                                                   }
+                                                  }
                                                  }
                                      if(TAC(j,r,x,y)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                        {
@@ -3838,6 +3845,13 @@ FUNCTION get_abundance
                                                   if(calc_TAC_from_uMSY==2)
                                                    {
                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
+                                                   }
+                                                  }
+                                                 if(parse_TAC_source==4) //JJD - parse TAC  based on region specific SSB
+                                                  {
+                                                  if(calc_TAC_from_uMSY==1)
+                                                   {
+                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)*(SSB_region_error(j,r,y-1)/sum(SSB_region_error(j,r,y-1))); //must be lagged y-1 because SSB in y calculated after newton raphson
                                                    }
                                                   }
                                                  }
