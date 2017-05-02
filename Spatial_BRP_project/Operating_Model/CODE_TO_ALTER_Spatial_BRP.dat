@@ -303,6 +303,9 @@
 #sigma_survey_overlap
 0.2
 0.2
+#sigma_SSB_region_error
+0.2
+0.2
 #sigma_catch
 0.05
 0.05
@@ -354,6 +357,8 @@
 0.001
 #debug
 1541
+#myseed_SSB
+71203
 #myseed_yield
 1
 #myseed_survey
