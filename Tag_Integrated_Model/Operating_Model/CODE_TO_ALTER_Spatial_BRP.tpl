@@ -1302,7 +1302,7 @@ FUNCTION get_abundance
                  {
                   for (int n=1;n<=nregions(k);n++)
                    {
-                     abundance_move_temp(k,n)=abundance_at_age_BM(k,k,y,a)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=abundance_at_age_BM(k,n,y,a)*T(k,n,y,a,j,r);
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);                   
                    }
                   }
