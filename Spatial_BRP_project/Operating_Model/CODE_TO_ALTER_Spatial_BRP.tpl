@@ -234,6 +234,7 @@ DATA_SECTION
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_3darray sigma_survey(1,np,1,nreg,1,nfs)
   init_4darray sigma_survey_overlap(1,np,1,np,1,nreg,1,nfs)
+  init_matrix sigma_SSB_region_error(1,np,1,nreg)
   init_3darray sigma_catch(1,np,1,nreg,1,nf)
   init_4darray sigma_catch_overlap(1,np,1,np,1,nreg,1,nf)
   init_3darray SIM_ncatch(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
@@ -259,6 +260,7 @@ DATA_SECTION
   init_number NR_dev
   
   init_int debug
+  init_number myseed_SSB
   init_number myseed_yield
   init_number myseed_survey
   init_number myseed_F
@@ -406,6 +408,7 @@ PARAMETER_SECTION
  3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
  matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr)
+ 3darray SSB_region_error(1,nps,1,nr,1,nyr)
  matrix SSB_population(1,nps,1,nyr)
  vector SSB_total(1,nyr)
  3darray abundance_population(1,nps,1,nyr,1,nag)
@@ -537,6 +540,7 @@ PARAMETER_SECTION
  vector fprimeFlow(1,nag)
  4darray TAC(1,nps,1,nr,1,nfl,1,nyr)
  3darray u(1,nps,1,nr,1,nfl)
+ 3darray SSB_region_error_RN(1,nps,1,nr,1,nyr)
  4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
  5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
  4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
@@ -585,6 +589,7 @@ PROCEDURE_SECTION
   evaluate_the_objective_function();
 
 FUNCTION get_random_numbers
+   random_number_generator myrand_SSB(myseed_SSB);
    random_number_generator myrand_yield(myseed_yield);
    random_number_generator myrand_survey(myseed_survey);
    random_number_generator myrand_F(myseed_F);
@@ -604,6 +609,7 @@ FUNCTION get_random_numbers
            {
             for (int x=1;x<=nfleets_survey(j);x++)
              {
+              SSB_region_error_RN(j,r,y)=randn(myrand_SSB);
               yield_RN(j,r,y,z)=randn(myrand_yield);
               yield_RN_overlap(p,j,r,y,z)=randn(myrand_yield);
               survey_RN(j,r,y,x)=randn(myrand_survey);
@@ -4429,6 +4435,7 @@ FUNCTION get_abundance
               {
                 SSB_region_temp(j,r,y,a)=abundance_spawn(j,r,y,a)*wt_mat_mult_reg(j,r,y,a); 
                 SSB_region(j,r,y)=sum(SSB_region_temp(j,r,y));
+                SSB_region_error(j,r,y)=SSB_region(j,r,y)*mfexp(SSB_region_error_RN(j,r,y)*sigma_SSB_region_error(j,r)-.5*square(sigma_SSB_region_error(j,r)));  //regional SSB index by year using lognormal error 
               }
                 SSB_population_temp(j,y,r)=SSB_region(j,r,y);
                 SSB_population(j,y)=sum(SSB_population_temp(j,y));
@@ -5101,6 +5108,8 @@ REPORT_SECTION
 
   report<<"$SSB_region"<<endl;
   report<<SSB_region<<endl;
+  report<<"$SSB_region_error"<<endl;
+  report<<SSB_region_error<<endl;
   report<<"$SSB_population"<<endl;
   report<<SSB_population<<endl;
   report<<"$SSB_total"<<endl;
