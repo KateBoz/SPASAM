@@ -2,7 +2,7 @@
 #nages
 15
 #nyrs
-200
+50
 #npopulations
 1
 #nregions
@@ -106,7 +106,8 @@
   #==6 overall F is split evenly among fleets
   #==7 F devs about input F based on sigma_F
   #==8 random walk in F
-1
+  #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
+9
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -249,6 +250,10 @@
 #input_F
 0.2
 0.2
+#start year of fishery (F before this ==0) and min and max F for Dunce Cap F option ==9
+15  #start year
+0.1 #minF
+1.5  #maxF
 #F_rho (degree of autocorrelation in F random walk
 1
 1
@@ -260,9 +265,9 @@
 1.4
 #sigma_rec_prop #error around recruit appotionment
 0.2
-#sigma_F
-0.5
-0.5
+#sigma_F: used for random walk F and random devs around dunce cap F
+0.0
+0.0
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################

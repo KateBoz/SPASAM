@@ -209,6 +209,7 @@ DATA_SECTION
   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
+  init_vector dunce_F(1,3) //min and max F for dunce cap F alternative
   init_3darray F_rho(1,np,1,nreg,1,nf) //degree of autocorrelation (0-1) if F switch = 8; random walk in F
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
@@ -308,6 +309,12 @@ PARAMETER_SECTION
   !! ivector nfls=nfleets_survey;  
 
  init_matrix F_est(1,nps,1,nr,phase_F)
+
+ //For dunce cap F
+ number Fstartyr
+ number minF
+ number maxF
+ number stepF
  
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
@@ -879,6 +886,32 @@ FUNCTION get_F_age
              if(F_switch==8) //random walk in F
               {
                F_year(j,r,y,z)=F_rho(j,r,z)*F_year(j,r,y-1,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+              }
+             if(F_switch==9)  //Dunce cap F
+              {
+               Fstartyr=dunce_F(1);
+               minF=dunce_F(2);
+               maxF=dunce_F(3);
+               stepF=(maxF-minF)/((nyrs-Fstartyr)/2);
+              if(y<Fstartyr)
+               {
+                F_year(j,r,y,z)=0;
+               }
+               if(y>=Fstartyr)
+               {
+               if(y<((nyrs-Fstartyr)/2+Fstartyr))
+                {
+                 F_year(j,r,y,z)=minF+(y-Fstartyr)*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                }
+               }
+               if(y>=((nyrs-Fstartyr)/2+Fstartyr))
+                {
+                 F_year(j,r,y,z)=maxF-((y-Fstartyr)-((nyrs-Fstartyr)/2))*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                  if(F_year(j,r,y,z)<0) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
+                  {
+                  F_year(j,r,y,z)=minF;
+                  }
+                }
               }
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
              F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
@@ -4798,6 +4831,8 @@ REPORT_SECTION
  // report<<T<<endl;
  // report<<"$rel_bio"<<endl;
  // report<<rel_bio<<endl;
+ report<<"$Fyear"<<endl;
+ report<<F_year<<endl;
 
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
