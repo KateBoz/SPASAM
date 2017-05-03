@@ -8,9 +8,11 @@
 # remove previous objects from workspace
 rm(list = ls())
 
-WD<-"G:\\SPASAM CODING\\MS_1_CODE\\Sablefish\\Panmictic"
+#Sablefish
+WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MENHADEN\\Panmictic"
+
 setwd(WD)
-#wd<<-wd
+#wd<-WD
 
 #install libraries
 load_libraries<-function() {
@@ -32,8 +34,8 @@ load_libraries()
 
 #Setting up the F values to iterate over
 F.name<-"input_F"
-F.start<-0.025
-F.end<-0.8
+F.start<-0
+F.end<-5
 it<-0.025
 
 F.Test<-seq(F.start,F.end,it) #F values to cycle through
@@ -61,7 +63,7 @@ dir.create(paste0(WD,"\\MSY Results\\Report Files",sep=""))
 MSY_search<-function(wd=WD,F.test=F.Test,ntrial=Ntrial) {
   
 #do parallel processing
-no_cores <- detectCores() - 1
+no_cores <- detectCores()
 cl<-makeCluster(no_cores)
 registerDoSNOW(cl)
   
@@ -70,9 +72,10 @@ pb <- txtProgressBar(max = ntrial , style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
   
-
-#set up the files for doing the iterations
-ls<-foreach(i=1:ntrial,.options.snow = opts) %dopar% {
+stime <- system.time({
+  
+  #run parallel  
+  ls<-foreach(i=1:ntrial,.options.snow = opts) %dopar% {
 
 #for(i in 1:ntrial){
   dir.create(paste0(wd,"\\MSY Results\\Run",i,sep="")) #create the results directory in the WD with run number
@@ -101,14 +104,16 @@ ls<-foreach(i=1:ntrial,.options.snow = opts) %dopar% {
   
   
    } #end of code for MSY search
+})
 
 stopCluster(cl)  #end parallel
 
+stime 
 
 #setting up the values from the runs to plot
 #picking out only the values I want.
-msy_results<-data.frame(matrix(NA,nrow = ntrial,ncol=8))
-names(msy_results)<-c("trial","F","biomass_total","yield_total","harvest_rate_total_bio","depletion_total","SSB_total","Bratio_total")
+msy_results<-data.frame(matrix(NA,nrow = ntrial,ncol=10))
+names(msy_results)<-c("trial","F","biomass_total_start","biomass_total_end","yield_total","harvest_rate_total_bio","depletion_total","SSB_total_start","SSB_total_end","Bratio_total")
 
 
 #set wd to report files
@@ -126,7 +131,8 @@ for(i in 1:ntrial){
 out=readList(paste0("Report",i,".rep",sep=""))
 
 #store results to a full spreadsheet
-temp<-c(i,F.test[i],out$biomass_total[nyrs],out$yield_total[nyrs],out$harvest_rate_total_bio[nyrs],out$depletion_total[nyrs],out$SSB_total[nyrs], out$Bratio_total[nyrs])
+temp<-c(i,F.test[i],out$biomass_total[1],out$biomass_total[nyrs],out$yield_total[nyrs],out$harvest_rate_total_bio[nyrs],out$depletion_total[nyrs],out$SSB_total[1],out$SSB_total[nyrs], out$Bratio_total[nyrs])
+
 
 msy_results[i,]<-temp
 
@@ -179,10 +185,10 @@ plot(msy_results$Bratio_total,msy_results$yield_total, type = 'b',ylab='Yield',x
 plot(msy_results$harvest_rate_total_bio,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Harvest Rate", lwd = 2)
 
 #Equilibruim Biomass vs Yield
-plot(msy_results$biomass_total,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
+plot(msy_results$biomass_total_end,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
 
 #Harvest rate vs biomass
-plot(msy_results$biomass_total,msy_results$harvest_rate_total_bio, type = 'b',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
+plot(msy_results$biomass_total_end,msy_results$harvest_rate_total_bio, type = 'b',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
 }
 
 
@@ -191,6 +197,13 @@ setwd(wd_figs)
 pdf("panmictic_plots.pdf")
 MSY_plots()
 dev.off()
+
+
+#remove the old files from run
+for(i in 1:ntrial){
+  unlink(paste0(wd,"\\MSY Results\\","Run",i,sep = ""),recursive = T)
+  unlink(paste0(wd,"\\MSY Results\\Report Files",sep = ""),recursive = T)
+}
 
 
 } #end panmictic search functikon
