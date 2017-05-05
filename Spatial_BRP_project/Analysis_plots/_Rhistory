@@ -1,0 +1,280 @@
+wd<-"C:\Users\katelyn.bosley\Desktop\Today\Analysis_plots"
+wd<-"C:\\Users\\katelyn.bosley\\Desktop\\Today\\Analysis_plots"
+setwd(wd)
+hake<-read.csv("HakeParams.csv")
+panderOptions("table.style", "rmarkdown")
+pandoc.table(hake, split.cells=10)
+#setting global options for the analysis log
+library(knitr)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=70),tidy=TRUE, fig.width=6,
+fig.height=5, warning=FALSE, message=FALSE)
+# When tables are made no comments
+options(xtable.comment = FALSE)
+# load.packages
+library(pander)
+library(ggplot2)
+library(tidyr)
+library(reshape2)
+library(maps)
+library(mapdata)
+library(ggmap)
+library(xtable)
+library(data.table)
+library(PBSmodelling)
+wd<-"C:\\Users\\katelyn.bosley\\Desktop\\Today\\Analysis_plots"
+setwd(wd)
+hake<-read.csv("HakeParams.csv")
+panderOptions("table.style", "rmarkdown")
+pandoc.table(hake, split.cells=10)
+#melt data for ggplot
+mat <- melt(hake[,c(1,6,7,8,9)], id="Age")
+ggplot(mat,aes(Age,value, col = variable ))+
+geom_line(lwd = 1)+
+geom_point(size  = 1.8)+
+scale_color_manual(values = c("red","blue","limegreen","grey40"), labels=c("SPASAM-South","SPASAM-North","Panmictic","G&B"))+
+ylab("Maturity")+
+theme_bw()+
+theme(legend.title = element_blank())+
+ggtitle("Maturity by Area")
+sel <- melt(hake[,c(1,10,11,12)], id="Age")
+ggplot(sel,aes(Age,value, col = variable ))+
+geom_line(lwd = 1)+
+geom_point(size  = 1.8)+
+scale_color_manual(values = c("red","blue","grey40"), labels=c("SPASAM Fishery Sel","SPASAM Survey Sel","G&B Fishery Sel"))+
+ylab("Selectivity")+
+theme_bw()+
+theme(legend.title = element_blank())+
+ggtitle("Selectivity by Type")
+results<-read.csv("MSY_True_results.csv")
+print(xtable(results[,1:2]),include.rownames = FALSE)
+#panderOptions("table.style", "rmarkdown")
+#pandoc.table(results[,1:2], split.cells = c(5,500))
+#create a vector of model runs
+model.names<-results[,1]
+runN<-1:length(model.names)
+pan<-grep("panmictic",results[,2])
+#create the plot
+{plot(runN,results$F.1, pch = 21, cex = 1.8, bg = "grey", ylab = "Fishing Mortality", xaxt = "n", xlab = " ", ylim = c(0,1.2),type = "n")
+abline(h = results$F.1[pan], lty = 2, col = "red") # panmictic MSY
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+points(runN,results$F.1, pch = 23, bg = "red",cex = 1.2)
+points(runN,results$F.2, pch = 22, bg = "blue", cex = 1.2)
+points(runN[pan],results$F.1[pan], pch = 16, col = "black", cex = 1.3)
+par(xpd = T)
+legend(26,1.2,legend = c("1","2","P"),bty = 'n', pch = c(23,22,16), pt.bg = c("red","blue","black"),title = "Area")}
+{plot(runN,results$biomass_total_end, pch = 16, cex = 1.8, bg = "grey", ylab = "Equilibrium Biomass", xaxt = "n", xlab = " ",ylim = c(0,3000000),type = "n")
+abline(h = results$biomass_total_end[pan], lty = 2, col = "red")
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+points(runN,results$biomass_total_end, pch = 21, bg = "grey",cex = 1.8)
+points(runN[pan],results$biomass_total_end[pan], pch = 16, col = "black", cex = 1.2)} #panmictic
+options(scipen = 50, digits = 4)
+{plot(runN,results$yield_total, pch = 21, cex = 1.8, bg = "grey", ylab = "Yield", xaxt = "n", xlab = " ", ylim = c(0,600000))
+abline(h = results$yield_total[pan], lty = 2, col = "red") # panmictic MSY
+points(runN,results$yield_total, pch = 21, cex = 1.8, bg = "grey")
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+#add area specific values
+points(runN,results$yield_region.1, pch = 23, bg = "red")
+points(runN,results$yield_region.2, pch = 22, bg = "blue")
+points(runN[pan],results$yield_total[pan], pch = 16, col = "black", cex = 1.2) #panmictic
+#add legend
+par(xpd = T)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+legend(26,600000,legend = c("T","1","2","P"),bty = 'n', pch = c(21,23,22,16), pt.bg = c("grey","red","blue", "black"),title = "Area")}
+options(scipen = 50, digits = 4)
+{plot(runN,results$depletion_total, pch = 21, cex = 1.8, bg = "grey", ylab = "Depletion", xaxt = "n", xlab = " ", ylim = c(0,1))
+abline(h = results$depletion_total[pan], lty = 2, col = "red") # panmictic MSY
+points(runN,results$depletion_total, pch = 21, cex = 1.8, bg = "grey")
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+#add area specific values
+points(runN,results$depletion_region.1, pch = 23, bg = "red")
+points(runN,results$depletion_region.2, pch = 22, bg = "blue")
+points(runN[pan],results$depletion_total[pan], pch = 16, col = "black", cex = 1.2) #panmictic
+#add legend
+par(xpd = T)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+legend(26,1,legend = c("T","1","2","P"),bty = 'n', pch = c(21,23,22,16), pt.bg = c("grey","red","blue", "black"),title = "Area")}
+options(scipen = 50, digits = 4)
+{plot(runN,results$SSB_total_end, pch = 21, cex = 1.8, bg = "grey", ylab = "SSB", xaxt = "n", xlab = " ", ylim = c(0,1200000))
+abline(h = results$SSB_total_end[pan], lty = 2, col = "red") # panmictic MSY
+points(runN,results$SSB_total_end, pch = 21, cex = 1.8, bg = "grey")
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+#add area specific values
+points(runN,results$SSB_end_region.1, pch = 23, bg = "red")
+points(runN,results$SSB_end_region.2, pch = 22, bg = "blue")
+points(runN[pan],results$SSB_total_end[pan], pch = 16, col = "black", cex = 1.2) #panmictic
+#add legend
+par(xpd = T)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+legend(26,1200000,legend = c("T","1","2","P"),bty = 'n', pch = c(21,23,22,16), pt.bg = c("grey","red","blue", "black"),title = "Area")}
+options(scipen = 50, digits = 4)
+{plot(runN,results$u_region_total, pch = 21, cex = 1.8, bg = "grey", ylab = "Harvest Rate", xaxt = "n", xlab = " ", ylim = c(0,0.6))
+abline(h = results$u_region_total[pan], lty = 2, col = "red") # panmictic MSY
+points(runN,results$u_region_total, pch = 21, cex = 1.8, bg = "grey")
+axis(side = 1, at = runN, labels = FALSE, tck = -0.02)
+#add area specific values
+points(runN,results$u_region.1, pch = 23, bg = "red")
+points(runN,results$u_region.2, pch = 22, bg = "blue")
+points(runN[pan],results$u_region_total[pan], pch = 16, col = "black", cex = 1.2) #panmictic
+#add legend
+par(xpd = T)
+text(runN,par("usr")[3]-0.02, labels = model.names, srt = 40, pos = 1, xpd = TRUE)
+legend(26,0.6,legend = c("T","1","2","P"),bty = 'n', pch = c(21,23,22,16), pt.bg = c("grey","red","blue", "black"),title = "Area")}
+options(scipen = 50, digits = 4)
+out<-readList("Hake_stoch_rec.rep")
+#names(stoch.rec)
+biomass.total<-out$biomass_total
+yield.total<-out$yield_total
+years<-seq(1:200)
+#Harvest
+#{par(mfrow=c(2,1))
+plot(years,biomass.total, type = "b", xlab = "Years", ylab = "Biomass", pch = 21, bg = "grey")
+#plot(years,yield.total, type = "b", xlab = "Years", ylab = "Yield")}
+par(mfrow=c(1,2))
+options(scipen = 50, digits = 4)
+{out<-readList("Hake_stoch_apport.rep")
+#names(out)
+recruits.BM.1<-out$recruits_BM[1,]
+recruits.BM.2<-out$recruits_BM[2,]
+yield.total<-out$yield_total
+years<-seq(1:200)
+#{par(mfrow=c(2,1))
+{plot(years,recruits.BM.1, type = "b", xlab = "Years", ylab = "Recruitment", pch = 21, bg = "grey20", ylim =c(0,2900000), main = "Apportionment Deviations")
+points(years,recruits.BM.2, type = "b", ylab = "Recruitment", pch = 21, bg = "grey80")}
+#legend(180,1500000,legend = c("Area 1", "Area 2"),bty = 'n', pch = c(21,21), pt.bg = c("grey20","grey80"))}
+#plot(years,yield.total, type = "b", xlab = "Years", ylab = "Yield")}
+#uniform
+out.u<-readList("Random_apport_uniform.rep")
+#names(out)
+recruits.BM.1<-out.u$recruits_BM[1,]
+recruits.BM.2<-out.u$recruits_BM[2,]
+yield.total<-out.u$yield_total
+years<-seq(1:200)
+#{par(mfrow=c(2,1))
+{plot(years,recruits.BM.1, type = "b", xlab = "Years", ylab = "Recruitment", pch = 21, bg = "grey20", ylim =c(0,2900000), main = "Fully Random")
+points(years,recruits.BM.2, type = "b", ylab = "Recruitment", pch = 21, bg = "grey80") }}
+#legend(180,1500000,legend = c("Area 1", "Area 2"),bty = 'n', pch = c(21,21), pt.bg = c("grey20","grey80"))}
+#plot(years,yield.total, type = "b", xlab = "Years", ylab = "Yield")}
+out.u1<-readList("TAC_Hake_Survey_low.rep")
+out.u2<-readList("TAC_Hake_Survey_high.rep")
+u.true = 0.227376
+#names(out.u1)
+#biomass
+#par(mfrow = c(2,1))
+{plot(years,out.u1$biomass_population, xlab = "Years",ylab = "Biomass", col = "grey50", pch = 16, ylim = c(1000000,6800000))
+points(years,out.u2$biomass_population, col = "blue")
+legend("topright",legend = c("low error", "high error"), col = c("grey50","blue"), pch = c(16,1))}
+#harvest rate comparison
+par(mfrow = c(2,1))
+{plot(years,out.u1$harvest_rate_population_bio, xlab = "Years",ylab = "Harvest Rate (u)", main = "Low Error (SD = 0.2)", ylim = c(0,0.5))
+abline(h = mean(out.u1$harvest_rate_population_bio), col = "red", lty = 2)
+dif.1<-mean(out.u1$harvest_rate_population_bio)-u.true
+text(20,0.5,paste("% dif = ",round(dif.1,5),sep = ""))
+plot(years,out.u2$harvest_rate_population_bio, xlab = "Years",ylab = "Harvest Rate (u)", main = "High Error (SD = 0.5)", ylim = c(0,0.5))
+abline(h = mean(out.u2$harvest_rate_population_bio), col = "red", lty = 2)
+abline(h = u.true)
+dif.2<-mean(out.u2$harvest_rate_population_bio)-u.true
+text(20,0.5,paste("% dif = ",round(dif.2,5),sep = ""))
+}
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep
+}
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+names(run1)
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+plot(years,run1$harvest_rate_region_bio[,1])
+plot(years,run1$harvest_rate_region_bio[1,])
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+plot(years,run1$harvest_rate_region_bio[1,])
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1$yield_population
+run1$harvest_rate_population_bio
+run1$harvest_rate_region_bio
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1$yield_population
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1$yield_population
+run1<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP.rep")
+run1$harvest_rate_region_bio
+run1$harvest_rate_population_bio
+run1$yield_region
+run1$yield_population
+run.corr<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP_corr.rep")
+run.corr<-readList("C:\\Users\\katelyn.bosley\\Desktop\\Today\\HAKE\\Phase2\\Continuity_run1\\Spatial_BRP_correct.rep")
+plot(years,run1$harvest_rate_region_bio[1,])
+plot(years,run1$harvest_rate_region_bio[1,], type = "b")
+plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2)
+plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate")
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate")
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)}
+run1$harvest_rate_region_bio[2,]
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate")
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1))
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1))
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[1,], type = "l", col = "grey20",lwd = 2)}
+points(years,run.corr$harvest_rate_region_bio[2,], type = "l", col = "grey20",lwd = 2,lty = 2)}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1))
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[1,], type = "l", col = "grey20",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[2,], type = "l", col = "grey20",lwd = 2,lty = 2)}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1))
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[1,], type = "l", col = "grey20",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[2,], type = "l", col = "grey20",lwd = 2,lty = 2)
+legend("topright",legend = c("Test Area1","Test Area2","True Area1","True Area2"),lty = c(1,1,1,2), col =c ("red","blue","grey20","grey20"))}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1))
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[1,], type = "l", col = "grey20",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[2,], type = "l", col = "grey20",lwd = 2,lty = 2)
+legend("topright",legend = c("Test Area1","Test Area2","True Area1","True Area2"),lty = c(1,1,1,2), col =c ("red","blue","grey20","grey20"), lwd = c(2,2,2,2), bty = "n")}
+{plot(years,run1$harvest_rate_region_bio[1,], type = "l", col = "red", lwd = 2, ylab = "Harvest Rate", ylim = c(0,1), xlab = "Years")
+points(years,run1$harvest_rate_region_bio[2,], type = "l", col = "blue",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[1,], type = "l", col = "grey20",lwd = 2)
+points(years,run.corr$harvest_rate_region_bio[2,], type = "l", col = "grey20",lwd = 2,lty = 2)
+legend("topright",legend = c("Test Area1","Test Area2","True Area1","True Area2"),lty = c(1,1,1,2), col =c ("red","blue","grey20","grey20"), lwd = c(2,2,2,2), bty = "n")}
