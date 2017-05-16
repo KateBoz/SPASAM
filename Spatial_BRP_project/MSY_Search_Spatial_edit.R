@@ -29,7 +29,7 @@ load_libraries()
 #need to reset the working directory to the folder with the MSY__search files
 ####################################################################
 #if not looping over the different folders
-WD<-"C:\\Users\\katelyn.bosley\\Desktop\\Menhaden_runs\\Base_threeArea_move"
+WD<-"C:\\Users\\katelyn.bosley\\Desktop\\Hake_runs\\_Bridge4_update_movement_G&B_apport"
 setwd(WD)
 WD<<-WD  
 
@@ -41,8 +41,8 @@ wd<-WD
 #Setting up the F values to iterate over for all the runs
 F.name<-"input_F"
 F.start<-0
-F.end<-14
-it<-1
+F.end<-2.6
+it<-0.025
 
 # select the population type
 # 1 - panmictic
@@ -345,6 +345,10 @@ stime <- system.time({
 
 } # end if statement for pop.type>1
 
+
+#stime
+close(pb)
+stopCluster(cl) #end the cluster for parallel processing
 
 #save results
 setwd(wd_figs)
