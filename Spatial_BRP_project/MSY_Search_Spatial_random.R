@@ -40,13 +40,17 @@ it<-0.025
 pop.type<-2
 
 #numbner of stochastic runs to complete
-n.runs<-20
+#n.runs<-20
+
+#use this for breaking up the runs across computers
+run.index<-seq(6,8,1)
+n.runs<-length(run.index)
 
 ############################################################################
 # set the working directory to location where the folders are to iterate through
 
 #HAKE runs
-folder<-"F:\\SPASAM CODING\\MS_1_CODE\\Hake\\Stoch_test\\Stochastic_rec"
+folder<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\HAKE\\Stoch_test\\Stochastic_rec"
 #create a list of working directorys to iterate over
 
 
@@ -56,7 +60,7 @@ folder<-"F:\\SPASAM CODING\\MS_1_CODE\\Hake\\Stoch_test\\Stochastic_rec"
 pop.type = pop.type
   
 #set up the folders to loop over
-for( i in 1:n.runs) {
+for(i in run.index) {
 dir.create(paste0(folder,"\\",i, sep = ""))
 invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.exe",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.exe",sep="")))
 invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.dat",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.dat",sep="")))
@@ -162,12 +166,11 @@ if(pop.type==3) {
  #end of setting up value save
 
 
-
 #setting up the loop
 runs<-vector("list",n.runs)
 
 for(j in 1:length(runs)) {
-  runs[[j]]<-paste0(folder,"\\",j,sep="")
+  runs[[j]]<-paste0(folder,"\\",run.index[j],sep="")
 }
 
 #for troubleshooting
@@ -180,14 +183,14 @@ for(k in 1:n.runs) {
   WD<<-WD
   
 # for troubleshooting
- wd<-WD
+  wd<-WD
 
  
 #MSY_search<-function(wd=WD) { 
   
 #update myseed
   new.rand<-readLines("Spatial_BRP.dat", n=-1)
-  new.rand[(grep("myseed",new.rand)+1)]<-k
+  new.rand[(grep("myseed",new.rand)+1)]<-run.index[k]
   writeLines(new.rand, "Spatial_BRP.dat")
   
     
