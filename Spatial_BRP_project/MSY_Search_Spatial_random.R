@@ -39,18 +39,23 @@ it<-0.025
 # 4 - natal homing
 pop.type<-2
 
-#numbner of stochastic runs to complete
-#n.runs<-20
 
+# select what myseed to vary
+# 1 - myseed_rec_devs
+# 2 - myseed_rec_apport
+
+rand.myseed<-1
+
+#set up the range of values/runs
 #use this for breaking up the runs across computers
-run.index<-seq(6,8,1)
+run.index<-seq(1,2,1)
 n.runs<-length(run.index)
 
 ############################################################################
 # set the working directory to location where the folders are to iterate through
 
 #HAKE runs
-folder<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\HAKE\\Stoch_test\\Stochastic_rec"
+folder<-"C:\\Users\\katelyn.bosley\\Desktop\\SPASAM_MS1_runs\\Hake_runs\\Stochastic_rec1"
 #create a list of working directorys to iterate over
 
 
@@ -125,9 +130,6 @@ if(pop.type==2){
 }
 
 
-
-
-
 #metapopulation
 if(pop.type==3) {
   
@@ -189,9 +191,18 @@ for(k in 1:n.runs) {
 #MSY_search<-function(wd=WD) { 
   
 #update myseed
+  
+
+  if(rand.myseed == 1){
   new.rand<-readLines("Spatial_BRP.dat", n=-1)
-  new.rand[(grep("myseed",new.rand)+1)]<-run.index[k]
-  writeLines(new.rand, "Spatial_BRP.dat")
+  new.rand[(grep("myseed_rec_devs",new.rand)+1)]<-run.index[k]
+  writeLines(new.rand, "Spatial_BRP.dat")}
+  
+  if(rand.myseed == 2){
+    new.rand<-readLines("Spatial_BRP.dat", n=-1)
+    new.rand[(grep("myseed_rec_apport",new.rand)+1)]<-run.index[k]
+    writeLines(new.rand, "Spatial_BRP.dat")}
+  
   
     
     #set up the combinations of permutations per region
@@ -219,7 +230,9 @@ for(k in 1:n.runs) {
     if(pop.type==1){
       #picking out only the values I want.
       msy_results<-data.frame(matrix(NA,nrow = ntrial,ncol=10))
-      names(msy_results)<-c("trial","F","biomass_total_start","biomass_total_end","yield_total","harvest_rate_total_bio","depletion_total","SSB_total_start","SSB_total_end","Bratio_total")
+      names(msy_results)<-c("trial","F","biomass_total_start","biomass_total_end",
+                            "yield_total","harvest_rate_total_bio","depletion_total",
+                            "SSB_total_start","SSB_total_end","Bratio_total")
     }
     
     
@@ -309,7 +322,6 @@ for(k in 1:n.runs) {
     pb <- txtProgressBar(max = n_perm, style = 3)
     progress <- function(n) setTxtProgressBar(pb, n)
     opts <- list(progress = progress)
-    
     
     
     #########################################################################
