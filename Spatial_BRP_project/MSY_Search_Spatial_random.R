@@ -26,6 +26,15 @@ load_libraries<-function() {
 load_libraries()
 
 
+############################################################################
+# set the working directory to location where the folders are to iterate through
+
+#change working directory here if needed..
+#HAKE runs
+folder<-"C:\\Users\\katelyn.bosley\\Desktop\\SPASAM_MS1_runs\\Hake_runs\\Stochastic_rec1"
+
+
+
 #Setting up the MSY F values for model
 F.name<-"input_F"
 F.start<-0.0
@@ -48,32 +57,12 @@ rand.myseed<-1
 
 #set up the range of values/runs
 #use this for breaking up the runs across computers
-run.index<-seq(1,2,1)
+run.index<-seq(1,20,1)
 n.runs<-length(run.index)
 
-############################################################################
-# set the working directory to location where the folders are to iterate through
 
-#HAKE runs
-folder<-"C:\\Users\\katelyn.bosley\\Desktop\\SPASAM_MS1_runs\\Hake_runs\\Stochastic_rec1"
-#create a list of working directorys to iterate over
+#########################################################################
 
-
-
-{ #run whole code together
-  
-pop.type = pop.type
-  
-#set up the folders to loop over
-for(i in run.index) {
-dir.create(paste0(folder,"\\",i, sep = ""))
-invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.exe",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.exe",sep="")))
-invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.dat",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.dat",sep="")))
-invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.tpl",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.tpl",sep="")))
-}
-
-
-  
 #reading in inital params for building the value grab
 setwd(folder)
 #read in .dat file to get values for setting up the runs-carryover from DG code
@@ -86,7 +75,31 @@ nregions<-as.numeric(update[(grep("nregions",update)+1):(grep("nregions",update)
 #need to adjust by number of populations
 nfleets<-matrix(as.numeric(update[(grep("nfleets",update)+1):(grep("nfleets",update)+sum(nstocks))],ncol=nstocks))
   
+
+#set up the combinations of permutations per region
+F.test<-seq(F.start,F.end,it) #F values to cycle through
+ntrial<-length(F.test) # count of total number of trials
+
+#set up the permutations of F by pop/fleet/region
+#had to make adjustment to nregions... not fleets
+permutation<-permutations(ntrial,sum(nregions),F.test,repeats.allowed=TRUE)  # determine all   permutations of F in each stock
+n_perm<-nrow(permutation)
+
+###########################################################################
+
+{ #run whole search code together
   
+  pop.type = pop.type
+  
+  #set up the folders to loop over
+  for(i in run.index) {
+    dir.create(paste0(folder,"\\",i, sep = ""))
+    invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.exe",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.exe",sep="")))
+    invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.dat",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.dat",sep="")))
+    invisible(file.copy(from=paste0(folder,"\\Spatial_BRP.tpl",sep=""),to=paste0(folder,"\\",i,"\\Spatial_BRP.tpl",sep="")))
+  }
+  
+
 # setting up a data frame to hold the MSY_values for all the runs
 ######################################################################################
 #panmictic
@@ -166,9 +179,12 @@ if(pop.type==3) {
 }
 
  #end of setting up value save
-
-
-#setting up the loop
+  
+  
+#############################################################################################
+#setting up the loop for search and running search
+#############################################################################################
+  
 runs<-vector("list",n.runs)
 
 for(j in 1:length(runs)) {
@@ -191,8 +207,6 @@ for(k in 1:n.runs) {
 #MSY_search<-function(wd=WD) { 
   
 #update myseed
-  
-
   if(rand.myseed == 1){
   new.rand<-readLines("Spatial_BRP.dat", n=-1)
   new.rand[(grep("myseed_rec_devs",new.rand)+1)]<-run.index[k]
@@ -204,16 +218,6 @@ for(k in 1:n.runs) {
     writeLines(new.rand, "Spatial_BRP.dat")}
   
   
-    
-    #set up the combinations of permutations per region
-    F.test<-seq(F.start,F.end,it) #F values to cycle through
-    ntrial<-length(F.test) # count of total number of trials
-    
-    #set up the permutations of F by pop/fleet/region
-    #had to make adjustment to nregions... not fleets
-    permutation<-permutations(ntrial,sum(nregions),F.test,repeats.allowed=TRUE)  # determine all   permutations of F in each stock
-    n_perm<-nrow(permutation)
-    
     #setting up the files to put results
     dir.create(paste0(wd,"\\MSY Results",sep=""))
     dir.create(paste0(wd,"\\MSY Results\\Figures",sep=""))
