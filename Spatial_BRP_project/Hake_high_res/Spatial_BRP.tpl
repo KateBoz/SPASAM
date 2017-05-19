@@ -303,8 +303,9 @@ PARAMETER_SECTION
   !! ivector nfl=nfleets;
   !! ivector nfls=nfleets_survey;  
 
- init_matrix F_est(1,nps,1,nr,phase_F)
- 
+// init_matrix F_est(1,nps,1,nr,phase_F)
+ init_bounded_matrix log_F_est(1,nps,1,nr,-20,2,phase_F)
+ matrix F_est(1,nps,1,nr)
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
  6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
@@ -557,11 +558,11 @@ PARAMETER_SECTION
 
 INITIALIZATION_SECTION  //set initial values
      
-  F_est .2;
+  log_F_est -2;
   dummy 1;
 
 PROCEDURE_SECTION
-
+  F_est=mfexp(log_F_est);
   get_random_numbers();
 
   get_movement();

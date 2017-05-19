@@ -1,4 +1,4 @@
- index   name   value      std.dev1
-     1   F_est 6.4132e-001 3.4114e-003
-     2   F_est 1.1982e+000 1.2945e-002
-     3   dummy 1.0000e+000 1.0000e+010
+ index   name       value      std.dev
+     1   log_F_est -4.4423e-001 5.3193e-003
+     2   log_F_est 1.8080e-001 1.0804e-002
+     3   dummy     1.0000e+000 1.0000e+010

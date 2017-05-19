@@ -121,7 +121,11 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
  int nag=nages;
  ivector nfl=nfleets;
  ivector nfls=nfleets_survey;  
-  F_est.allocate(1,nps,1,nr,phase_F,"F_est");
+  log_F_est.allocate(1,nps,1,nr,-20,2,phase_F,"log_F_est");
+  F_est.allocate(1,nps,1,nr,"F_est");
+  #ifndef NO_AD_INITIALIZE
+    F_est.initialize();
+  #endif
   T.allocate(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr,"T");
   #ifndef NO_AD_INITIALIZE
     T.initialize();
@@ -1031,13 +1035,14 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 
 void model_parameters::initializationfunction(void)
 {
-  F_est.set_initial_value(.2);
+  log_F_est.set_initial_value(-2);
   dummy.set_initial_value(1);
 }
 
 void model_parameters::userfunction(void)
 {
   f =0.0;
+  F_est=mfexp(log_F_est);
   get_random_numbers();
   get_movement();
   get_selectivity();

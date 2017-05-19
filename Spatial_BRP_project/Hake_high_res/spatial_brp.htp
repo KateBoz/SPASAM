@@ -147,7 +147,8 @@ public:
 private:
   ivector integer_control_flags;
   dvector double_control_flags;
-  param_init_matrix F_est;
+  param_init_bounded_matrix log_F_est;
+  param_matrix F_est;
   param_6array T;
   param_6array rel_bio;
   param_matrix Bstar;
