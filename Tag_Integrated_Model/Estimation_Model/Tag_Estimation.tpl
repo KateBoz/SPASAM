@@ -979,9 +979,7 @@ FUNCTION get_vitals
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
-  if(Rec_type=2) //BH recruitment
-   {
-    for (int k=1;k<=npops;k++)
+      for (int k=1;k<=npops;k++)
      {
       for (int n=1;n<=nages;n++)
        {
@@ -1003,10 +1001,12 @@ FUNCTION get_SPR
        }
      SPR(k)=sum(SPR_SSB(k))/1000;
      SSB_zero(k)=SPR(k)*R_ave(k);
-     //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
-     alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
-     beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
-     }
+      if(Rec_type==2) //BH recruitment
+      {
+      //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
+      alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
+      beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
+      }
     }
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude

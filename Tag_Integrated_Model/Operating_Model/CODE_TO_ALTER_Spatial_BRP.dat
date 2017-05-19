@@ -230,7 +230,7 @@
 #steep
 0.814
 0.814
-#R_ave
+#R_ave or R0 for bev-holt
 3125000
 3125000
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
