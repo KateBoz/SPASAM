@@ -177,7 +177,7 @@
 0
 #steep
 0.814
-#R_ave
+#R_ave or R0 for BH
 3125000
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
 0.2
