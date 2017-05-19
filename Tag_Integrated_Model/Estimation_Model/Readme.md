@@ -1,2 +1,1 @@
-
-Spatially-Explicit estimation model code. Currently under developement. This needs some codeing and perhaps a .tpl. Still testing.
+The primoridal stages of an estimation model has begun... Tag_estimation.tpl... Currently Deroba and Hanselman are just committing to the master until a compileable version emerges from the soup.
