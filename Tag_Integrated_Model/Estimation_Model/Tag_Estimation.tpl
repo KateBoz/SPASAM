@@ -1,7 +1,7 @@
 
 /////////////////////////////////////////////////////////
 // Spatial Estimation Model based on Operating Model by Daniel Goethel (NMFS SEFSC)  
-// started by Dana Hanselman (AFSC)
+// started by Dana Hanselman (AFSC) //Further screwed up by Jon Deroba (NEFSC)
 //////////////////////////////////////////////////////////
 
 GLOBALS_SECTION
@@ -79,8 +79,9 @@ DATA_SECTION
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 /////////////////////////////////////////////////////
-// I don't think we are going to experiment with an F switches for estimation model??
- //dhdhdhdhdhdhdhdh//
+// I don't think we are going to experiment with any F switches for estimation model??
+//dhdhdhdhdhdhdhdh//
+//my notes say we'll estimate a fully selected F for each fleet, year, region.  And so no need for F switches.  //JJD
 
  // init_number F_switch
   //==1 input F
@@ -95,6 +96,8 @@ DATA_SECTION
   //dhdhdhdhhdhdhdhdhdhddhdhdh
   //weight based only remove this switch?
   //dhdhdhdhdhdhdhdhd
+  //We are definitely only using weight based, but the OM and EM code still both require an input value for this in some nested if-statements.  Maybe easier just to make sure always ==2 than delete everywhere //JJD
+  //Nothing wrong with keeping some code we're not using now, but somebody might later //JJD
   init_number SSB_type
   //==1 fecundity based SSB
   //==2 weight based SSB
@@ -102,6 +105,7 @@ DATA_SECTION
      //dhdhdhdhdhdhdhdhdhddhdhdhd
   // Likewise, are we doing both recruitment styles?
   //dhdhdhdhdhdhdhdhdhdhdhdhdhdhd
+  //Same reply comment as for SSB_type switch //JJD
 
   init_number Rec_type
   //==1 stock-recruit relationship assumes an average value based on R_ave
@@ -131,6 +135,7 @@ DATA_SECTION
   //dhdhdhdhdhd
   // are these the same in all our models? 
   // dhdhdhhdh
+  //No //JJD
   ////////////////BIOLOGICAL PARAMETERS////////////////
   /////////////////////////////////////////////////////
   init_3darray input_weight(1,np,1,nreg,1,na)  
@@ -143,59 +148,32 @@ DATA_SECTION
 //##########################################################################################################################################
 //#########################################################################################################################################
  //// CATCH DATA //////////////////////
-  
 
-//################################################################################################################
-//################################################################################################################
-//################################################################################################################
-//### IF PARSE TAC OR U USING OBS DATA THEN MAKE SURE THAT FULL TAC OR U FOR THAT AREA IS INPUT FOR EACH FLEET IN THAT AREA ###
-//########################################################################################################
-  init_3darray input_TAC(1,np,1,nreg,1,nf)
-  init_3darray input_u(1,np,1,nreg,1,nf)
-//################################################################################################################
-//################################################################################################################
-//################################################################################################################
-
-//NR parameters
-  init_number max_Fnew //
-  init_number Fnew_start
-  init_number NR_iterationp
-  init_number NR_dev
-  
-  init_int debug
-  init_number myseed_yield
-  init_number myseed_survey
-  init_number myseed_F
-  init_number myseed_rec_devs
-  init_number myseed_rec_apport
-  init_number myseed_rec_index
-  init_number myseed_survey_age
-  init_number myseed_catch_age
-  init_number myseed_tag
-  
-  //fill in a vector of years
+ //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
-  
-    init_imatrix nregions_temp(1,np,1,np) //used to fill tag_recap matrices
 
-  !! for(int j=1;j<=npops;j++) //recap stock
-  !! {
-  !!  for (int r=1;r<=npops;r++) //recap region
-  !!  {
-  !!    if(j<=r)
-  !!     {
-  !!     nregions_temp(j,r)=0;
-  !!     }
-  !!    if(j>r)
-  !!     {
-  !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
-  !!     }
-  !!   }
-  !!  }
-  ivector nreg_temp(1,np)
+ //I don't think we need this because it's used to generate tag recaps, but these will be input for EM.  //JJD
+   // init_imatrix nregions_temp(1,np,1,np) //used to fill tag_recap matrices
 
- int a
+ // !! for(int j=1;j<=npops;j++) //recap stock
+ // !! {
+//  !!  for (int r=1;r<=npops;r++) //recap region
+ // !!  {
+//  !!    if(j<=r)
+ // !!     {
+ // !!     nregions_temp(j,r)=0;
+ // !!     }
+ // !!    if(j>r)
+ // !!     {
+ // !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+ // !!     }
+ // !!   }
+ // !!  }
+ // ivector nreg_temp(1,np)
+
+ //I didn't give any thought to whether all of these are still required; just left them //JJD
+  int a
   int y
   int z
   int k
@@ -229,38 +207,34 @@ DATA_SECTION
   !! int tag_age=max_life_tags;
 
  
- //For dunce cap F
- number Fstartyr
- number minF
- number maxF
- number stepF
+ 
  // vitals
- 6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
- 6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
- matrix Bstar(1,nps,1,nr)
- matrix c(1,nps,1,nr)
- 4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag)
- 5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- 4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
+ 6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
+ 6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
+ matrix Bstar(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
+ matrix c(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
+ 4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag) //maybe needed depending on how movement parameterized? //JJD
+ //5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+ //4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- 4darray F(1,nps,1,nr,1,nyr,1,nag)
+ //4darray F(1,nps,1,nr,1,nyr,1,nag)
  4darray M(1,nps,1,nr,1,nyr,1,nag)
  matrix rec_devs(1,nps,1,nyr)
- matrix rec_devs_randwalk(1,nps,1,nyr)
- 4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
- 4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
+ //matrix rec_devs_randwalk(1,nps,1,nyr)
+ //4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
+ //4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
- 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity
- matrix ave_mat(1,nps,1,nag) //to calc average maturity
- matrix SPR_N(1,nps,1,nag)
- matrix SPR_SSB(1,nps,1,nag)
- vector SPR(1,nps)
- vector SSB_zero(1,nps)
+ 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
+ matrix ave_mat(1,nps,1,nag) //to calc average maturity //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
+ matrix SPR_N(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
+ matrix SPR_SSB(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
+ vector SPR(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
+ vector SSB_zero(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
  vector alpha(1,nps)
  vector beta(1,nps)
 
-
+//JJD stopped here on May 22, 2017
 
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr)
