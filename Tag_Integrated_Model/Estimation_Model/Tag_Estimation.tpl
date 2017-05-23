@@ -106,7 +106,6 @@ DATA_SECTION
   // Likewise, are we doing both recruitment styles?
   //dhdhdhdhdhdhdhdhdhdhdhdhdhdhd
   //Same reply comment as for SSB_type switch //JJD
-
   init_number Rec_type
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt population-recruit functions based on population-specific input steepness, R0 (R_ave), M, and weight
@@ -116,13 +115,23 @@ DATA_SECTION
 ///////////////////////////////////////////////////////////////////////////////
 ////////READ IN THE DATA  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+//Recruit indices
+ 3darray rec_index_BM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_AM(1,nps,1,nr,1,nyr)
 
-/////tagging data parameters
-  init_int nyrs_release //number of years with tag release events
+//Survey data
+  4darray OBS_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)  //total by year, region, fleet I think //JJD
+  5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag) //proportion at age by year and region, fleet; I think //JJD
+
+//tagging data parameters
+  init_int nyrs_release //number of years with tag release events  //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
   !! int ny_rel=nyrs_release;
-  init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases
+  init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
   init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
+//tag data
+  4darray ntags(1,nps,1,nr,1,nyr_rel,1,nag) //releases
+  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -194,7 +203,6 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
-
   !! ivector nr=nregions;
   !! int nps=npops;
   !! int nyr=nyrs;
@@ -204,9 +212,7 @@ DATA_SECTION
   !! int nyr_rel=nyrs_release;
   !! int nt=max_life_tags*sum(nregions)+1;
   !! int nt2=nt-1;
-  !! int tag_age=max_life_tags;
-
- 
+  !! int tag_age=max_life_tags; 
  
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
@@ -234,23 +240,17 @@ DATA_SECTION
  vector alpha(1,nps)
  vector beta(1,nps)
 
-//JJD stopped here on May 22, 2017
-
 //recruitment 
- 3darray recruits_BM(1,nps,1,nr,1,nyr)
+ 3darray recruits_BM(1,nps,1,nr,1,nyr) 
  3darray recruits_AM(1,nps,1,nr,1,nyr)
- 3darray Rec_Prop(1,nps,1,nr,1,nyr)
- 3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
- 3darray Rec_prop_temp2(1,nps,1,nyr,1,nr)
-
- 3darray rec_index_BM(1,nps,1,nr,1,nyr)
- 3darray rec_index_prop_BM(1,nps,1,nr,1,nyr)
- 3darray rec_index_BM_temp(1,nps,1,nyr,1,nr)
- 3darray rec_index_AM(1,nps,1,nr,1,nyr)
- 3darray rec_index_prop_AM(1,nps,1,nr,1,nyr)
- 3darray rec_index_AM_temp(1,nps,1,nyr,1,nr)
-
- vector env_rec(1,nyr)
+ //3darray Rec_Prop(1,nps,1,nr,1,nyr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
+ //3darray Rec_prop_temp1(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
+ //3darray Rec_prop_temp2(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
+ 
+ //3darray rec_index_prop_BM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ //3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ //3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ //3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
 
 //abundance 
  4darray abundance_at_age_BM(1,nps,1,nr,1,nyr,1,nag)
@@ -270,49 +270,48 @@ DATA_SECTION
  4darray bio_leave(1,nps,1,nr,1,nyr,1,nag)
 
  //tagging data
-  vector ntags_total(1,nyr_rel)
-  4darray ntags(1,nps,1,nr,1,nyr_rel,1,nag)
-  7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
-  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
-  4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
-  4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
-  5darray SIM_tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
-  5darray OBS_tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
+ //Don't think any of this should be necessary for EM //JJD
+  //vector ntags_total(1,nyr_rel)  
+  //7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
+  //4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  //4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  //7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
+  //4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  //5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
+  //5darray SIM_tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
+  //5darray OBS_tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
 
  //survey index
- 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)
- 6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
- 4darray true_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
- 3darray true_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
- matrix true_survey_natal_bio_overlap(1,nyr,1,nps)
- vector true_survey_total_bio_overlap(1,nyr)
- 5darray true_survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls) 
+ //6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
+ //6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ //6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ //6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag) 
+ //6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ //5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
+ //4darray true_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
+ //3darray true_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
+ //matrix true_survey_natal_bio_overlap(1,nyr,1,nps)
+ //vector true_survey_total_bio_overlap(1,nyr)
+ //5darray true_survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ //5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag) 
+ //5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  4darray true_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
- 3darray true_survey_region_bio(1,nps,1,nyr,1,nr)
- matrix true_survey_population_bio(1,nyr,1,nps)
- vector true_survey_total_bio(1,nyr)
- 5darray OBS_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
- 4darray OBS_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
- 3darray OBS_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
- matrix OBS_survey_natal_bio_overlap(1,nyr,1,nps)
- vector OBS_survey_total_bio_overlap(1,nyr)
- 4darray OBS_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
- 3darray OBS_survey_region_bio(1,nps,1,nyr,1,nr)
- matrix OBS_survey_population_bio(1,nyr,1,nps)
- vector OBS_survey_total_bio(1,nyr)
- 3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)
+ //3darray OBS_survey_region_bio(1,nps,1,nyr,1,nr)
+ //3darray true_survey_region_bio(1,nps,1,nyr,1,nr)
+ //matrix true_survey_population_bio(1,nyr,1,nps)
+ //vector true_survey_total_bio(1,nyr) 
+ //5darray OBS_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls) 
+ //4darray OBS_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr) 
+ //3darray OBS_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
+ //matrix OBS_survey_natal_bio_overlap(1,nyr,1,nps)
+ //vector OBS_survey_total_bio_overlap(1,nyr)
+ //matrix OBS_survey_population_bio(1,nyr,1,nps)
+ //vector OBS_survey_total_bio(1,nyr)
+ //3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)
+
+ //JJD stopped here on May 23, 2017 //JJD
 
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
