@@ -1,0 +1,467 @@
+##########PARAMETERS FOR HAKE-LIKE###########
+#nages
+31
+#nyrs
+200
+#npopulations
+1
+#nregions
+3
+#nfleets
+1
+#nfleets_survey
+1
+#model_type_switch
+  #==0 do not use TAC to set F
+  #==1 use TAC to set F, USE THIS IF calc_TAC_from_uMSY==1
+  #==2 use uMSY to set F
+0
+# parse_TAC
+  #==0 do not alter the input TAC or harvest rate
+  #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
+0
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////// USING calc_TAC_from_uMSY==1 IS PROBABLY ONLY CORRECT WAY TO PARSE u /////////////////////////////////////////////////
+#/////////////// IF PARSE input_u directly, then sum(u) unlikely to equal input_u because of differences in population sizes/////////
+#/////////////// ie applying less than the full uMSY to each area/region ////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# calc_TAC_from_uMSY
+###########################################################################################################################
+  #MUST HAVE MODEL_TYPE==1, even though uses input u (harvest rate)
+##############################################################################################################################
+  #==0 don't use
+  #==1 calculate a yearly TAC from uMSY(input)*biomass_total(y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+1
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#parse_TAC_source
+  #==0 recruitment index_BM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==2 survey biomass
+  #==3 equal apportionment across all fleets in a given area
+2
+#TAC_survey_parse_timelag_switch
+ # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
+  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in  years where y<timelag
+0
+#TAC_survey_parse_timelag
+ # //whole number value to implement a time lag in year that use survey apportionment from
+1
+
+#tsurvey in proportion of year (0-1)
+0.5
+0.5
+0.5
+
+#larval_move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+0
+#move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+  #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
+  #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
+  #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  #//uses use_input_Bstar switch
+  
+1
+#use_input_Bstar
+  #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+  #==1 use input_Bstar
+0
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
+0
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+0
+#F_switch
+  #==1 input F
+  #==2 input single overall F (FMSY)
+  #==3 Estimate F that minimizes difference in input and estimated total harvest rate
+  #==4 overall F is split evenly among stocks (each fleet uses stock F)
+  #==5 overall F is is split evenly among all regions (each fleet uses region F)
+  #==6 overall F is split evenly among fleets
+  #==7 F devs about input F based on sigma_F
+3
+#recruit_devs_switch
+  #==0 use stock-recruit relationship directly
+  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+0
+#maturity_switch_equil
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+0
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+  #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
+  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
+  #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
+1
+
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  #==3 cyclical (sine wave type)
+1
+#init_number use_stock_comp_info_survey
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS survey age comps by area (summed across natal population)
+ #==1 calc OBS survey age comps by natal population within each area
+0
+#init_number use_stock_comp_info_catch
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS catch age comps by area (summed across natal population)
+ #==1 calc OBS catch age comps by natal population within each area
+0
+
+#input_Bstar(1,np,1,nreg)
+  #used with move_switch==8
+  #carrying capacity biomass term
+10000000
+10000000
+10000000
+#SSB_zero_appor(1,np,1,nreg)
+  #used with move_switch==8
+  #determines apportionment of SSB0 when multiple regions and use_input_Bstar==0
+0.5
+0.5
+0.5
+#A
+  #used with move_switch==8
+  #logistic parameter
+9
+9
+9
+#return_age - age of return migration for move_switch==6
+4
+#return_probability- probability of returning for move_switch==6
+1
+#spawn_return_prob - probability of returning for spawning if overlap_switch==2
+1
+#phase_F - must be turned on (==1) if F_type==3
+3
+#phase_dummy - must be turned on (==1) if F_type!=3
+1
+#tspawn in proportion of year (0-1)
+0
+#steep
+0.814
+#R_ave
+15.5427798 
+#amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
+0.2
+#freq - period of ossilation for recruitment variation. Use when Rec_type ==3
+15
+#input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.675326638	0.222713731	0.10195963
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.239021771	0.370600347	0.390377882
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+0.079128779	0.282292939	0.638578281
+#input_residency_larval
+1
+1
+1
+#input_residency
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#sel_beta1
+0.8
+0.8
+0.8
+#sel_beta2
+4
+4
+4
+#sel_beta3
+-0.6
+-0.6
+-0.6
+#sel_beta4
+20
+20
+20
+#input_selectivity (1,ns,1,nreg,1,na,1,nf)
+0	0.00	0.20	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+0	0.01	0.05	0.37	0.84	0.97	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+0	0.01	0.02	0.06	0.61	0.77	0.89	0.96	0.99	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+#input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
+0.00 0.00 0.00	0.23	0.98	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+0.00 0.00 0.00	0.23	0.98	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+0.00 0.00 0.00	0.23	0.98	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00	1.00
+#q_survey(by population, area and fleet)
+8.69616
+8.69616
+8.69616
+#input_F
+0.5
+0.5
+0.5
+#F_MSY
+0.5
+#input_M
+0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1	0.1 0.1 0.1
+#sigma_recruit
+1.2
+#sigma_rec_prop #error around recruit apportionment
+0.2
+#sigma_F
+0.5
+0.5
+0.5
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+######### FOR NATAL HOMING THERE IS NO ACCOUNTING OF REGIONAL DIFFERENCES IN VITAL RATES ACROSS REGIONS WITHIN A POPULATION
+######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
+######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
+#########################################################################################################################################
+#input_weight
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536 
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536 
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536 
+#input_catch_weight
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536
+0.1196	0.462921 0.944267682 1.466866663 1.96493134 2.407225572 2.783549328 3.095124048 3.348480963 3.552000399 3.714122304 3.842521512 3.94380643 4.023484171 4.086049073 4.135118229 4.173575199 4.203703754 4.227304456 4.245792487 4.260277815 4.27162985 4.280529019 4.287507628 4.292982048 4.297277991 4.300650298 4.303298425 4.305378539 4.307012959 4.308297536
+#fecundity
+0 0 0 0	0 0 0 0	0 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1
+0 0 0 0	0 0 0 0	0 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1
+0 0 0 0	0 0 0 0	0 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1 1	1 1 1
+#maturity
+0.04099382	0.05244924	0.06688255	0.08493169	0.10729157	0.13467178	0.16772645	0.20695391	0.25257161	0.30438519	0.36168447	0.42320774	0.48720844	0.55163133	0.61436685	0.67351962	0.72762159	0.77574332	0.81749571	0.85294815	0.88250359	0.90676809	0.92643934	0.94222455	0.95478776	0.9647214	0.97253529	0.97865676	0.98343709	0.98716079	0.99005579
+0.07030182	0.10589635	0.15647946	0.22514032	0.31275801	0.41616045	0.52750871	0.63618582	0.73254018	0.81095849	0.87045093	0.91322415	0.94280292	0.96271103	0.97586726	0.98445667	0.99002018	0.99360524	0.99590776	0.99738341	0.99832784	0.99893175	0.99931771	0.99956428	0.99972177	0.99982234	0.99988657	0.99992757	0.99995376	0.99997048	0.99998115
+0.3055761	0.3540195	0.4056564	0.4594679	0.5142415	0.5686751	0.6214986	0.6715889	0.7180575	0.7602978	0.79799	0.8310722	0.8596893	0.8841344	0.9047923	0.9220916	0.9364683	0.9483407	0.9580937	0.9660713	0.9725737	0.9778584	0.9821436	0.9856116	0.988414	0.9906758	0.9924994	0.9939685	0.9951512	0.996103	0.9968685
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+#prop_fem
+0.5
+0.5
+0.5
+#input_Rec_prop
+0.435897436
+0.301282051
+0.262820513
+#Equil_ssb_apportion
+0.435897436
+0.301282051
+0.262820513
+#init_abund
+#init_abund
+5.1809266	4.687896248	4.241783937	3.838124825	3.472878957	3.142390829	2.843352804	2.57277201	2.327940382	2.106407565	1.905956382	1.724580652	1.560465104	1.411967216	1.27760077	1.156020982	1.046011041	0.946469929	0.856401407	0.774904038	0.701162169	0.634437766	0.574063031	0.51943371	0.470003057	0.425276353	0.384805957	0.348186829	0.315052471	0.285071264	0.257943147
+5.1809266	4.687896248	4.241783937	3.838124825	3.472878957	3.142390829	2.843352804	2.57277201	2.327940382	2.106407565	1.905956382	1.724580652	1.560465104	1.411967216	1.27760077	1.156020982	1.046011041	0.946469929	0.856401407	0.774904038	0.701162169	0.634437766	0.574063031	0.51943371	0.470003057	0.425276353	0.384805957	0.348186829	0.315052471	0.285071264	0.257943147
+5.1809266	4.687896248	4.241783937	3.838124825	3.472878957	3.142390829	2.843352804	2.57277201	2.327940382	2.106407565	1.905956382	1.724580652	1.560465104	1.411967216	1.27760077	1.156020982	1.046011041	0.946469929	0.856401407	0.774904038	0.701162169	0.634437766	0.574063031	0.51943371	0.470003057	0.425276353	0.384805957	0.348186829	0.315052471	0.285071264	0.257943147
+#rec_index_sigma
+0.5
+0.5
+0.5
+#sigma_survey
+0.2
+0.2
+0.2
+#sigma_survey_overlap
+0.2
+0.2
+0.2
+#sigma_catch
+0.05
+0.05
+0.05
+#sigma_catch_overlap
+0.05
+0.05
+0.05
+#SIM_ncatch
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+50
+1000
+200
+#SIM_ncatch_overlap
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+100
+100
+#SIM_nsurvey
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+50
+50
+50
+#SIM_nsurvey_overlap
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+50
+50
+50
+#input_TAC
+ #TAC that are matching if model_type_switch==1
+################################################################################################################
+################################################################################################################
+################################################################################################################
+### IF PARSE TAC OR U USING OBS DATA THEN MAKE SURE THAT FULL TAC OR U FOR THAT AREA IS INPUT FOR EACH FLEET IN THAT AREA ###
+########################################################################################################
+1
+1
+1
+#input_u 
+0.043913
+0.585149
+0.585149
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#max_Fnew
+5
+#Fnew_start
+ #starting value for NR to match TAC
+0.1
+#NR_iterations
+ #NR iterations used to match TAC
+10
+#NR_dev
+ #NR deviations when calculating derivative
+0.001
+#debug
+1541
+#myseed_yield
+1
+#myseed_survey
+100000
+#myseed_F
+200000
+#myseed_rec_devs
+300000
+#myseed_rec_apport
+400000
+#myseed_rec_index
+500000
+#myseed_survey_age
+600000
+#myseed_catch_age
+700000
