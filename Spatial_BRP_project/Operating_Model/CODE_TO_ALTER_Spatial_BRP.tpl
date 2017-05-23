@@ -1020,7 +1020,7 @@ FUNCTION get_SPR
       alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       //}
-    }
+     }
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
        for (int p=1;p<=npops;p++)
