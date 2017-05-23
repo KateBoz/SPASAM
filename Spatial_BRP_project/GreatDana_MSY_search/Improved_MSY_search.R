@@ -12,7 +12,7 @@ rm(list = ls())
 library(PBSmodelling)
 
 #set wd
-wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\GREATDANA_MSY"
+wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\NEW_SEARCH\\MENHADEN\\ThreeArea_high_residency"
 
 setwd(wd)
 
@@ -128,7 +128,7 @@ invisible(shell("GreatDana_MSY_search -nohess",wait=T))
 
 #invisible(shell("Spatial_BRP",wait=T))
 
-out=PBSmodelling::readList("Spatial_BRP.rep")
+out=PBSmodelling::readList("GreatdDana_MSY_search.rep")
 
 
 
