@@ -47,7 +47,7 @@ rand.myseed<-1
 
 #set up the range of values/runs
 #use this for breaking up the runs across computers
-run.index<-seq(1,3,1)
+run.index<-seq(1,500,1)
 n.runs<-length(run.index)
 
 
