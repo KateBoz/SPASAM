@@ -12,6 +12,15 @@ rm(list = ls())
 # load libraries function
 load_libraries<-function() {
   suppressWarnings(suppressMessages(require(PBSmodelling)))
+  suppressWarnings(suppressMessages(require(matrixStats)))
+  suppressWarnings(suppressMessages(require(TeachingDemos)))
+  suppressWarnings(suppressMessages(require(snowfall)))
+  suppressWarnings(suppressMessages(library(parallel)))
+  suppressWarnings(suppressMessages(library(snow)))
+  suppressWarnings(suppressMessages(library(foreach)))
+  suppressWarnings(suppressMessages(library(doSNOW)))
+  suppressWarnings(suppressMessages(library(data.table)))
+  suppressWarnings(suppressMessages(library(gtools)))
   }
 
 load_libraries()
@@ -38,7 +47,7 @@ rand.myseed<-1
 
 #set up the range of values/runs
 #use this for breaking up the runs across computers
-run.index<-seq(1,500,1)
+run.index<-seq(1,3,1)
 n.runs<-length(run.index)
 
 
@@ -142,23 +151,56 @@ if(pop.type==3) {
 ###############################################################################
 #run the randomization loops
 
-for(i in 1:n.runs){
+#set up folder to hold the results
+dir.create(paste0(wd,"\\MSY_stoch_Results",sep="")) #create the results directory in the WD with run 
+stoch_results<-paste0(wd,"\\MSY_stoch_Results")
+stoch_plots<-paste0(wd,"\\MSY_stoch_plots")
 
-  #update myseed
-  if(rand.myseed == 1){
-    new.rand<-readLines("GreatDana_MSY_search.dat", n=-1)
-    new.rand[(grep("myseed_rec_devs",new.rand)+1)]<-run.index[i]
-    writeLines(new.rand, "GreatDana_MSY_search.dat")}
-  
-  if(rand.myseed == 2){
-    new.rand<-readLines("GreatDana_MSY_search.dat", n=-1)
-    new.rand[(grep("myseed_rec_apport",new.rand)+1)]<-run.index[i]
-    writeLines(new.rand, "GreatDana_MSY_search.dat")}
-  
+#set up parallel 
+no_cores <- detectCores()
+cl<-makeCluster(no_cores)
+registerDoSNOW(cl)
 
-#run the model
-invisible(shell("GreatDana_MSY_search",wait=T))
+#set up text progress bar
+pb <- txtProgressBar(max = n.runs, style = 3)
+progress <- function(n) setTxtProgressBar(pb, n)
+opts <- list(progress = progress)
 
+
+#set up the file
+
+#do the parallel processing over the loops
+#stime <- system.time({
+
+  #run parallel  
+ls=foreach(i=1:n.runs,.options.snow = opts) %dopar% {
+  dir.create(paste0(stoch_results,"\\Run",i,sep="")) #create the results directory in the WD with run number
+
+invisible(file.copy(from=paste0(wd,"\\GreatDana_MSY_search.exe",sep=""),to=paste0(stoch_results,"\\Run",i,"\\GreatDana_MSY_search.exe",sep="")))
+invisible(file.copy(from=paste0(wd,"\\GreatDana_MSY_search.dat",sep=""),to=paste0(stoch_results,"\\Run",i,"\\GreatDana_MSY_search.dat",sep="")))
+invisible(file.copy(from=paste0(wd,"\\GreatDana_MSY_search.tpl",sep=""),to=paste0(stoch_results,"\\Run",i,"\\GreatDana_MSY_search.tpl",sep="")))
+
+
+#set new directory for running the model
+setwd(paste0(stoch_results,"\\Run",i,sep="")) # now set the working directory as the run# file
+
+update=readLines("GreatDana_MSY_search.dat",n=-1)
+
+#update myseed
+if(rand.myseed == 1){
+  new.rand<-readLines("GreatDana_MSY_search.dat", n=-1)
+  new.rand[(grep("myseed_rec_devs",new.rand)+1)]<-run.index[i]
+  writeLines(new.rand, "GreatDana_MSY_search.dat")}
+
+if(rand.myseed == 2){
+  new.rand<-readLines("GreatDana_MSY_search.dat", n=-1)
+  new.rand[(grep("myseed_rec_apport",new.rand)+1)]<-run.index[i]
+  writeLines(new.rand, "GreatDana_MSY_search.dat")}
+
+### Run ADMB with updated F
+invisible(shell("GreatDana_MSY_search -nohess",wait=T))
+
+#read the dat
 out=PBSmodelling::readList("GreatDana_MSY_search.rep")
 
 
@@ -212,15 +254,39 @@ if(pop.type==3) {
           out$Bratio_population[,nyrs],
           out$Bratio_total[nyrs])
   
- }
+}
 
-msy_results[i,]<-temp
+return(temp)
 
 }
 
+ for(i in 1:n.runs){
+    msy_results[i,]<-ls[[i]]
+    #unlink(paste0(wd,"\\MSY Results\\","Run",i,sep = ""),recursive = T)
+  }
+
+  #stime
+  close(pb)
+  stopCluster(cl) #end the cluster for parallel processing
+
+  
 #save the results...the last one is in the folder
+setwd(stoch_results)
 write.csv(msy_results,"stoch_msy_greatdana.csv")
 
-}#end code
+
+#for(i in 1:n.runs){
+  #delete folders
+#  unlink(paste0(stoch_results,"\\Run",i,sep = ""),recursive = T)
+#}
+
+
+#create some plots
+
+
+
+
+} #end of code
+
 
 
