@@ -222,10 +222,10 @@ DATA_SECTION
  4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag) //maybe needed depending on how movement parameterized? //JJD
  //5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  //4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
- 5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+ 5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //param
  //4darray F(1,nps,1,nr,1,nyr,1,nag)
- 4darray M(1,nps,1,nr,1,nyr,1,nag)
- matrix rec_devs(1,nps,1,nyr)
+ 4darray M(1,nps,1,nr,1,nyr,1,nag) //param
+ matrix rec_devs(1,nps,1,nyr) //param
  //matrix rec_devs_randwalk(1,nps,1,nyr)
  //4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  //4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
@@ -236,13 +236,13 @@ DATA_SECTION
  matrix SPR_N(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
  matrix SPR_SSB(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
  vector SPR(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- vector SSB_zero(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- vector alpha(1,nps)
- vector beta(1,nps)
+ vector SSB_zero(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD //param
+ vector alpha(1,nps) //param
+ vector beta(1,nps) //param
 
 //recruitment 
- 3darray recruits_BM(1,nps,1,nr,1,nyr) 
- 3darray recruits_AM(1,nps,1,nr,1,nyr)
+ 3darray recruits_BM(1,nps,1,nr,1,nyr) //param
+ 3darray recruits_AM(1,nps,1,nr,1,nyr) //param
  //3darray Rec_Prop(1,nps,1,nr,1,nyr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
  //3darray Rec_prop_temp1(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
  //3darray Rec_prop_temp2(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
@@ -253,21 +253,21 @@ DATA_SECTION
  //3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
 
 //abundance 
- 4darray abundance_at_age_BM(1,nps,1,nr,1,nyr,1,nag)
- 4darray abundance_at_age_AM(1,nps,1,nr,1,nyr,1,nag)
- 4darray abundance_in(1,nps,1,nr,1,nyr,1,nag)
- 4darray abundance_res(1,nps,1,nr,1,nyr,1,nag)
- 4darray abundance_leave(1,nps,1,nr,1,nyr,1,nag)
- 4darray abundance_spawn(1,nps,1,nr,1,nyr,1,nag)
+ 4darray abundance_at_age_BM(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray abundance_at_age_AM(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray abundance_in(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray abundance_res(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray abundance_leave(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray abundance_spawn(1,nps,1,nr,1,nyr,1,nag) //param
 
 //biomass
- 4darray biomass_BM_age(1,nps,1,nr,1,nyr,1,nag)
- 4darray biomass_AM_age(1,nps,1,nr,1,nyr,1,nag)
- 3darray biomass_BM(1,nps,1,nr,1,nyr)
- 3darray biomass_AM(1,nps,1,nr,1,nyr)
- 4darray bio_in(1,nps,1,nr,1,nyr,1,nag)
- 4darray bio_res(1,nps,1,nr,1,nyr,1,nag)
- 4darray bio_leave(1,nps,1,nr,1,nyr,1,nag)
+ 4darray biomass_BM_age(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray biomass_AM_age(1,nps,1,nr,1,nyr,1,nag) //param
+ 3darray biomass_BM(1,nps,1,nr,1,nyr) //param
+ 3darray biomass_AM(1,nps,1,nr,1,nyr) //param
+ 4darray bio_in(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray bio_res(1,nps,1,nr,1,nyr,1,nag) //param
+ 4darray bio_leave(1,nps,1,nr,1,nyr,1,nag) //param
 
  //tagging data
  //Don't think any of this should be necessary for EM //JJD
@@ -282,7 +282,7 @@ DATA_SECTION
   //5darray OBS_tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
 
  //survey index
- 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls) 
+ 5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
  //6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
  //6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  //6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -311,39 +311,38 @@ DATA_SECTION
  //vector OBS_survey_total_bio(1,nyr)
  //3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)
 
- //JJD stopped here on May 23, 2017 //JJD
-
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- 5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag) //move code to just calculate these proportions from input CAA in DAta section //JJD
+ //5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ //5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
- 4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
- 4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
- 3darray yield_region(1,nps,1,nr,1,nyr)
- 3darray catch_at_age_population(1,nps,1,nyr,1,nag)
- 3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
- matrix yield_population(1,nps,1,nyr)
- 3darray SSB_region(1,nps,1,nr,1,nyr)
- matrix SSB_population(1,nps,1,nyr)
- vector SSB_total(1,nyr)
- 3darray abundance_population(1,nps,1,nyr,1,nag)
- matrix abundance_total(1,nyr,1,nag)
- matrix biomass_population(1,nps,1,nyr)
- vector biomass_total(1,nyr)
- matrix catch_at_age_total(1,nyr,1,nag)
- matrix catch_at_age_total_prop(1,nyr,1,nag)
- vector yield_total(1,nyr)
- 4darray harvest_rate_region_num(1,nps,1,nr,1,nyr,1,nag)
- 3darray harvest_rate_population_num(1,nps,1,nyr,1,nag)
- matrix harvest_rate_total_num(1,nyr,1,nag)
- 3darray harvest_rate_region_bio(1,nps,1,nr,1,nyr)
- matrix harvest_rate_population_bio(1,nps,1,nyr)
- vector harvest_rate_total_bio(1,nyr)
- 3darray depletion_region(1,nps,1,nr,1,nyr)
- matrix depletion_population(1,nps,1,nyr)
- vector depletion_total(1,nyr)
+ //4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
+ //4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
+ //3darray yield_region(1,nps,1,nr,1,nyr)
+ //3darray catch_at_age_population(1,nps,1,nyr,1,nag)
+ //3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
+ //matrix yield_population(1,nps,1,nyr)
+ 3darray SSB_region(1,nps,1,nr,1,nyr) //param
+ matrix SSB_population(1,nps,1,nyr) //param
+ vector SSB_total(1,nyr) //param
+ 3darray abundance_population(1,nps,1,nyr,1,nag) //param
+ matrix abundance_total(1,nyr,1,nag) //param
+ matrix biomass_population(1,nps,1,nyr) //param
+ vector biomass_total(1,nyr) //param
+ matrix catch_at_age_total(1,nyr,1,nag) //move code to calculate in data section //JJD
+ matrix catch_at_age_total_prop(1,nyr,1,nag) //move code to calculate in data section //JJD
+ vector yield_total(1,nyr) //move code to calculate in data section //JJD
+ 4darray harvest_rate_region_num(1,nps,1,nr,1,nyr,1,nag) //move code to calculate in data section //JJD
+ 3darray harvest_rate_population_num(1,nps,1,nyr,1,nag) //move code to calculate in data section //JJD
+ matrix harvest_rate_total_num(1,nyr,1,nag) //move code to calculate in data section //JJD
+ 3darray harvest_rate_region_bio(1,nps,1,nr,1,nyr) //move code to calculate in data section //JJD
+ matrix harvest_rate_population_bio(1,nps,1,nyr) //move code to calculate in data section //JJD
+ vector harvest_rate_total_bio(1,nyr) //move code to calculate in data section //JJD
+ 3darray depletion_region(1,nps,1,nr,1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
+ matrix depletion_population(1,nps,1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
+ vector depletion_total(1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
+ 
  5darray abundance_at_age_BM_overlap_region(1,nps,1,nps,1,nyr,1,nag,1,nr)
  4darray abundance_at_age_BM_overlap_population(1,nps,1,nps,1,nyr,1,nag)
  5darray abundance_at_age_AM_overlap_region(1,nps,1,nps,1,nyr,1,nag,1,nr)
@@ -391,31 +390,34 @@ DATA_SECTION
  vector Bratio_total(1,nyr)
 
  //Observed Yield
- 5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- 4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
- 3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
- matrix OBS_yield_natal_overlap(1,nyr,1,nps)
- vector OBS_yield_total_overlap(1,nyr)
- 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
- 3darray OBS_yield_region(1,nps,1,nyr,1,nr)
- matrix OBS_yield_population(1,nyr,1,nps)
- vector OBS_yield_total(1,nyr)
- 3darray apport_yield_region(1,nps,1,nr,1,nyr)
+ //5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ //4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
+ //3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
+ //matrix OBS_yield_natal_overlap(1,nyr,1,nps)
+ //vector OBS_yield_total_overlap(1,nyr)
+ 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl) //see yield_fleet above.  One of these will be input data and other based on fit ("estimated") //JJD
+ //3darray OBS_yield_region(1,nps,1,nyr,1,nr)
+ //matrix OBS_yield_population(1,nyr,1,nps)
+ vector OBS_yield_total(1,nyr) //see yield_fleet above.  One of these will be input data and other based on fit ("estimated") //JJD
+ //3darray apport_yield_region(1,nps,1,nr,1,nyr)
 
- matrix biomass_BM_temp(1,nps,1,nr)
- number biomass_BM_temp2
+ matrix biomass_BM_temp(1,nps,1,nr) //might need these for DD movement? //JJD
+ number biomass_BM_temp2 //might need these for DD movement? //JJD
  5darray biomass_BM_overlap_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
  4darray init_abund_temp(1,nps,1,nr,1,nag,1,nps)
- 5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- 6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- 5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
- 6darray rand_SIM_catch_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
- vector rand_SIM_survey_prop_temp2(1,nages)
- vector rand_SIM_catch_prop_temp2(1,nages)
- 5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
- 5darray true_survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
- 5darray catch_at_age_fleet_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- matrix abundance_move_temp(1,nps,1,nr)
+ 
+ //5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ //6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
+ //5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
+ //6darray rand_SIM_catch_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
+ //vector rand_SIM_survey_prop_temp2(1,nages)
+ //vector rand_SIM_catch_prop_temp2(1,nages)
+ //5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps) //Don't think we need this.  Just used to reorganize array.  I don't think need for EM (?) //JJD
+ //5darray true_survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
+ //5darray catch_at_age_fleet_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
+ 
+ //not sure //JJD
+matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
  5darray yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  4darray yield_region_temp(1,nps,1,nr,1,nyr,1,nag)
@@ -442,8 +444,10 @@ DATA_SECTION
  3darray yield_natal_temp_overlap(1,nps,1,nyr,1,nps)
  5darray catch_at_age_population_temp_overlap(1,nps,1,nps,1,nyr,1,nag,1,nr)
  3darray SSB_natal_overlap_temp(1,nps,1,nyr,1,nps)
+ 
  matrix SSB_overlap_natal(1,nps,1,nr)
  5darray abundance_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
+
  3darray SSB_population_temp(1,nps,1,nyr,1,nr)
  4darray SSB_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
 
@@ -453,29 +457,42 @@ DATA_SECTION
  matrix tags_avail_temp(1,nps,1,nr)
  3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
  vector tag_prop_temp2(1,nt2)
+   //end not sures above
  
- 4darray res_TAC(1,nps,1,nr,1,nfl,1,nyr)
- 3darray res_u(1,nps,1,nr,1,nyr)
- number Fnew
- number delt
- number fofF
- number fprimeF
- vector fofFvect(1,nag)
- vector fprimeFhigh(1,nag)
- vector fprimeFlow(1,nag)
- 4darray TAC(1,nps,1,nr,1,nfl,1,nyr)
- 3darray u(1,nps,1,nr,1,nfl) // already declared u above as int
- 4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
- 5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- 4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
- 5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
- 4darray F_RN(1,nps,1,nr,1,nyr,1,nfl)
- matrix rec_devs_RN(1,nps,1,nyr)
- 3darray Rec_apport_RN(1,nps,1,nyr,1,nr)
- 3darray rec_index_RN(1,nps,1,nr,1,nyr)
+ //4darray res_TAC(1,nps,1,nr,1,nfl,1,nyr)
+ //3darray res_u(1,nps,1,nr,1,nyr)
+ //number Fnew
+ //number delt
+ //number fofF
+ //number fprimeF
+ //vector fofFvect(1,nag)
+ //vector fprimeFhigh(1,nag)
+ //vector fprimeFlow(1,nag)
+ //4darray TAC(1,nps,1,nr,1,nfl,1,nyr)
+ //3darray u(1,nps,1,nr,1,nfl) // already declared u above as int
+ //4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
+ //5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
+ //4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
+ //5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
+ //4darray F_RN(1,nps,1,nr,1,nyr,1,nfl)
+ //matrix rec_devs_RN(1,nps,1,nyr)
+ //3darray Rec_apport_RN(1,nps,1,nyr,1,nr)
+ //3darray rec_index_RN(1,nps,1,nr,1,nyr)
 PARAMETER_SECTION
  
- init_matrix F_est(1,npops,1,nregions,phase_F)
+ //init_matrix F_est(1,npops,1,nregions,phase_F)
+
+//movement parameters
+   //will depend on functional form.  Must translate functional form to fill T array.
+//end movement parameters
+
+//selectivity parameters
+  init_3darray sel_beta1(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity  //Change to logistic parameters instead of input //JJD
+ // end selectivity parameters
 
  init_number dummy(phase_dummy)
 
@@ -486,12 +503,12 @@ PARAMETER_SECTION
 
 INITIALIZATION_SECTION  //set initial values
      
-  F_est .7;
-  dummy 1;
+  //F_est .7;
+  //dummy 1;
 
 PROCEDURE_SECTION
 
-  get_random_numbers();
+  //get_random_numbers();
   get_movement();
   get_selectivity();
   get_F_age();
@@ -507,47 +524,7 @@ PROCEDURE_SECTION
   evaluate_the_objective_function();
  
 
-FUNCTION get_random_numbers
-   random_number_generator myrand_yield(myseed_yield);
-   random_number_generator myrand_survey(myseed_survey);
-   random_number_generator myrand_F(myseed_F);
-   random_number_generator myrand_rec_devs(myseed_rec_devs);
-   random_number_generator myrand_rec_apport(myseed_rec_apport);
-   random_number_generator myrand_rec_index(myseed_rec_index);
-
-  for (int p=1;p<=npops;p++)
-   {
-    for (int j=1;j<=npops;j++)
-     {  
-      for (int r=1;r<=nregions(j);r++)   
-       {       
-        for (int y=1;y<=nyrs;y++)
-         {
-          for (int z=1;z<=nfleets(j);z++)
-           {
-            for (int x=1;x<=nfleets_survey(j);x++)
-             {
-              yield_RN(j,r,y,z)=randn(myrand_yield);
-              yield_RN_overlap(p,j,r,y,z)=randn(myrand_yield);
-              survey_RN(j,r,y,x)=randn(myrand_survey);
-              survey_RN_overlap(p,j,r,y,x)=randn(myrand_survey);
-              F_RN(j,r,y,z)=randn(myrand_F);
-              rec_devs_RN(j,y)=randn(myrand_rec_devs);
-               if(apportionment_type==3)//completely random apportionment
-                {
-                 Rec_apport_RN(j,y,r)=randu(myrand_rec_apport);//generate a positive random number bw 0-1
-                }
-               if(apportionment_type==4)//completely random apportionment
-                {
-                 Rec_apport_RN(j,y,r)=randn(myrand_rec_apport);//generate a positive random number bw 0-1
-               }
-              rec_index_RN(j,r,y)=randn(myrand_rec_index);
-             }
-           }
-         }
-       }
-     }
-    }
+//FUNCTION get_random_numbers(); deleted by JJD
 
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
@@ -697,6 +674,7 @@ FUNCTION get_movement
    }
   }
 
+//JJD stopped here on June 13, 2017.  Needs to add and change selectivity parameters to parameter section above.
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 //POSSIBLE ADDITIONS:
