@@ -220,13 +220,10 @@ DATA_SECTION
  matrix Bstar(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
  matrix c(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
  4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag) //maybe needed depending on how movement parameterized? //JJD
- //5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- //4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
- 5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //param
- //4darray F(1,nps,1,nr,1,nyr,1,nag)
+ 
+ 5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+
  4darray M(1,nps,1,nr,1,nyr,1,nag) //param
- matrix rec_devs(1,nps,1,nyr) //param
- //matrix rec_devs_randwalk(1,nps,1,nyr)
  //4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  //4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
@@ -236,9 +233,6 @@ DATA_SECTION
  matrix SPR_N(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
  matrix SPR_SSB(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
  vector SPR(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- vector SSB_zero(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD //param
- vector alpha(1,nps) //param
- vector beta(1,nps) //param
 
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr) //param
@@ -491,8 +485,27 @@ PARAMETER_SECTION
   init_3darray sel_beta2(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
   init_3darray sel_beta3(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
   init_3darray sel_beta4(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity  //Change to logistic parameters instead of input //JJD
+  init_3darray sel_beta1surv(1,np,1,nreg,1,nfs)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2surv(1,np,1,nreg,1,nfs)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
  // end selectivity parameters
+
+//F parameters
+  init_4darray log_F(1,nps,1,nr,1,nyr,1,nfl) //the actual parameters
+  init_5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
+  init_4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
+  init_4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
+//end F parameters
+ 
+ //
+//recruitment parameters
+  init_matrix rec_devs_RN(1,nps,1,nyr) //actual parameters (log scale devs)
+  init_matrix rec_devs(1,nps,1,nyr) //derived quantity as exp(rec_devs_RN)
+  init_vector R_ave(1,np) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  init_vector SSB_zero(1,nps) //derived quantity
+  init_vector steep(1,np) //B-H steepness //could be estimated parameter or input value
+  init_vector alpha(1,nps) //derived quantity
+  init_vector beta(1,nps) //derived quantity
+//end recruitment parameters
 
  init_number dummy(phase_dummy)
 
@@ -674,7 +687,6 @@ FUNCTION get_movement
    }
   }
 
-//JJD stopped here on June 13, 2017.  Needs to add and change selectivity parameters to parameter section above.
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 //POSSIBLE ADDITIONS:
@@ -710,7 +722,7 @@ FUNCTION get_selectivity
         }
       }
 
-//survey selectivity - always input for now but can adjust later if wanted
+//survey selectivity
  for (int j=1;j<=npops;j++)
     {
      for (int r=1;r<=nregions(j);r++)
@@ -721,7 +733,8 @@ FUNCTION get_selectivity
             {
              for (int z=1;z<=nfleets_survey(j);z++)
                {
-                survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+                //survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+                survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //change to logistic for EM //JJD
               }
              }
             }
@@ -742,64 +755,21 @@ FUNCTION get_F_age
          {
           for (int z=1;z<=nfleets(j);z++)
            { 
-             if(F_switch==1) //input F directly
+             if(F_switch==1) //estimate annual deviations
               {
-               F_year(j,r,y,z)=input_F(j,r,z);
+               F_year(j,r,y,z)=mfexp(log_F(j,r,y,z));
               }
-             if(F_switch==2) //input single yearly F (i.e., using single population FMSY for all populations)
+             if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
-               F_year(j,r,y,z)=input_F_MSY;
-              }
-             if(F_switch==3) //estimate F that achieves desired Total F
-              {
-               F_year(j,r,y,z)=value(F_est(j,r));
-              }
-             if(F_switch==4) //split F_MSY by npops
-              {
-               F_year(j,r,y,z)=input_F_MSY/npops;
-              }
-             if(F_switch==5) //split F_MSY by total number of regionp
-              {
-               F_year(j,r,y,z)=input_F_MSY/sum(nregions);
-              }
-             if(F_switch==6) //split F_MSY by total number of fleets
-              {
-               F_year(j,r,y,z)=input_F_MSY/sum(nfleets);
-              }
-             if(F_switch==7) //F devs about input F based on sigma_F
-              {
-               F_year(j,r,y,z)=input_F(j,r,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
-              }
-             if(F_switch==8) //random walk in F
-              {
-               F_year(j,r,y,z)=F_rho(j,r,z)*F_year(j,r,y-1,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
-              }
-             if(F_switch==9)  //Dunce cap F
-              {
-               Fstartyr=dunce_F(1);
-               minF=dunce_F(2);
-               maxF=dunce_F(3);
-               stepF=(maxF-minF)/((nyrs-Fstartyr)/2);
-              if(y<Fstartyr)
+               if(y=1) //year one separate because no y-1
                {
-                F_year(j,r,y,z)=0;
+               F_year(j,r,y,z)=mfexp(log_F(j,r,y,z));
                }
-               if(y>=Fstartyr)
+               if(y>1)
                {
-               if(y<((nyrs-Fstartyr)/2+Fstartyr))
-                {
-                 F_year(j,r,y,z)=minF+(y-Fstartyr)*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
-                }
+               F_year(j,r,y,z)=F_rho(j,r,z)*mfexp(log_F(j,r,y-1,z));
                }
-               if(y>=((nyrs-Fstartyr)/2+Fstartyr))
-                {
-                 F_year(j,r,y,z)=maxF-((y-Fstartyr)-((nyrs-Fstartyr)/2))*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
-                  if(F_year(j,r,y,z)<0) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
-                  {
-                  F_year(j,r,y,z)=minF;
-                  }
-                }
-              }
+              }             
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
              F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
              M(j,r,y,a)=input_M(j,a);
@@ -808,6 +778,7 @@ FUNCTION get_F_age
          }
         }
        }
+
 FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
@@ -959,6 +930,8 @@ FUNCTION get_SPR
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       }
     }
+
+//JJD ende here on June 14, 2017.  Working top to bottom. Certaintly not making all the needed changes.
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
        for (int p=1;p<=npops;p++)
