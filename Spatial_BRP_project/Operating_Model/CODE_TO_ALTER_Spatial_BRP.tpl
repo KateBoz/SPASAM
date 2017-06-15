@@ -287,10 +287,18 @@ DATA_SECTION
   int x
   int u
   int d
+
+
+
+//Add counters to enumerate the regions for the report out section for 6d arrays
+  int region_counter
+ 
+   !! cout << "debug = " << debug << endl;
+   !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
+   !! cout << "input read" << endl;
   
- !! cout << "debug = " << debug << endl;
- !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
- !! cout << "input read" << endl;
+   //!!EOUT(input_T);
+
 
 PARAMETER_SECTION
 
@@ -547,6 +555,25 @@ PARAMETER_SECTION
  3darray rec_index_RN(1,nps,1,nr,1,nyr)
 
  init_number dummy(phase_dummy)
+
+
+
+ ///////////////////////////////////////////////////////////////////////////////////////////////
+ //Temporary (reorganized) 6d arrary parameters 
+ //Reorganize so that region is the second dimension. 
+ //////////////////////////////////////////////////////////////////////////////////////////////
+ //survey index  
+ 6darray ro_true_survey_fleet_overlap_age(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
+ 6darray ro_survey_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag) 
+ 6darray ro_SIM_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
+ 6darray ro_OBS_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
+ 6darray ro_true_survey_fleet_overlap_age_bio(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
+ //yield & BRP calcs 
+ 6darray ro_catch_at_age_region_fleet_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
+ 6darray ro_catch_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag)
+ 6darray ro_SIM_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
+ 6darray ro_OBS_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag)
+
 
   objective_function_value f
 
@@ -991,9 +1018,8 @@ FUNCTION get_vitals
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
-  if(Rec_type=2) //BH recruitment
-   {
-    for (int k=1;k<=npops;k++)
+
+     for (int k=1;k<=npops;k++)
      {
       for (int n=1;n<=nages;n++)
        {
@@ -1015,11 +1041,14 @@ FUNCTION get_SPR
        }
      SPR(k)=sum(SPR_SSB(k))/1000;
      SSB_zero(k)=SPR(k)*R_ave(k);
-     //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
-     alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
-     beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
-     }
+      //if(Rec_type==2) //BH recruitment
+      //{
+      //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
+      alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
+      beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
+      //}
     }
+
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
        for (int p=1;p<=npops;p++)
@@ -4770,7 +4799,7 @@ FUNCTION evaluate_the_objective_function
 
 
 REPORT_SECTION
- // report<<"$biomass_BM_age"<<endl;
+// report<<"$biomass_BM_age"<<endl;
  // report<<biomass_BM_age<<endl;
  // report<<"$Fract_Move_DD"<<endl;
  // report<<Fract_Move_DD<<endl;
@@ -4778,7 +4807,6 @@ REPORT_SECTION
  // report<<T<<endl;
  // report<<"$rel_bio"<<endl;
  // report<<rel_bio<<endl;
-
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
   report<<"$res_u"<<endl;
@@ -4793,11 +4821,10 @@ REPORT_SECTION
   report<<npops<<endl;
   report<<"$nregions"<<endl;
   report<<nregions<<endl;
-  report<<"$nages"<<endl;
-  report<<nages<<endl;
   report<<"$nfleets"<<endl;
   report<<nfleets<<endl;
-
+  report<<"$nfleets_survey"<<endl;
+  report<<nfleets_survey<<endl;
   report<<"$larval_move_switch"<<endl;
   report<<larval_move_switch<<endl;
   report<<"$move_switch"<<endl;
@@ -4820,7 +4847,6 @@ REPORT_SECTION
   report<<return_probability<<endl;
   report<<"$spawn_return_prob"<<endl;
   report<<spawn_return_prob<<endl;
-
   report<<"$tspawn"<<endl;
   report<<tspawn<<endl;
   report<<"$steep"<<endl;
@@ -4829,10 +4855,6 @@ REPORT_SECTION
   report<<R_ave<<endl;
   report<<"$SSB_zero"<<endl;
   report<<SSB_zero<<endl;
-
-
-
-
 //  report<<"$input_T"<<endl;
 //  report<<input_T<<endl;
 //  report<<"$input_residency"<<endl;
@@ -4871,11 +4893,8 @@ REPORT_SECTION
 //  report<<init_abund<<endl;
 //  report<<$"rec_index_sigma"<<end;
 //  report<<rec_index_sigma<<end;
-
 //  report<<"$F_est"<<endl;
 //  report<<F_est<<endl;
-
-
 //  report<<"$rec_devs"<<endl;
  // report<<rec_devs<<endl;
 //  report<<"$weight_population"<<endl;
@@ -4896,13 +4915,10 @@ REPORT_SECTION
 //  report<<SPR_N<<endl;
 //  report<<"$SPR_SSB"<<endl;
 // report<<SPR_SSB<<endl;
-
   report<<"$alpha"<<endl;
   report<<alpha<<endl;
   report<<"$beta"<<endl;
   report<<beta<<endl;
-
-
 //  report<<"$abundance_at_age_BM"<<endl;
 //  report<<abundance_at_age_BM<<endl;
 //  report<<"$abundance_at_age_AM"<<endl;
@@ -4927,17 +4943,14 @@ REPORT_SECTION
 //  report<<biomass_BM<<endl;
 //  report<<"$biomass_BM_age"<<endl;
 //  report<<biomass_BM_age<<endl;
-
 //  report<<"$biomass_AM_age"<<endl;
 //  report<<biomass_AM_age<<endl;
-
 //  report<<"$bio_in"<<endl;
 //  report<<bio_in<<endl;
 //  report<<"$bio_res"<<endl;
 //  report<<bio_res<<endl;
 //  report<<"$bio_leave"<<endl;
 //  report<<bio_leave<<endl;
-
 //  report<<"$catch_at_age_fleet"<<endl;
 //  report<<catch_at_age_fleet<<endl;
 //  report<<"$catch_at_age_region"<<endl;
@@ -4946,40 +4959,32 @@ REPORT_SECTION
 //  report<<catch_at_age_population<<endl;
 //  report<<"$catch_at_age_total"<<endl;
 //  report<<catch_at_age_total<<endl;
-
 //  report<<"$obs_caa_fleet"<<endl;
 //  report<<obs_caa_fleet<<endl;
 //  report<<"$obs_prop_fleet"<<endl;
 //  report<<obs_prop_fleet<<endl;
-
 //  report<<"$obs_caa_overlap_reg"<<endl;
 //  report<<obs_caa_overlap_reg<<endl;
 //  report<<"$obs_prop_overlap_reg"<<endl;
 //  report<<obs_prop_overlap_reg<<endl;
-
  report<<"$recruits_BM"<<endl;
  report<<recruits_BM<<endl;
 //  report<<"$rec_index_BM"<<endl;
 //  report<<rec_index_BM<<endl;
-
 //  report<<"$OBS_index_region<<endl;
 //  report<<OBS_index_region<<endl;
 //  report<<"$apport_region_survey<<endl;
 //  report<<apport_region_survey<<endl;
-
-
 //  report<<"$harvest_rate_region_num"<<endl;
 //  report<<harvest_rate_region_num<<endl;
 //  report<<"$harvest_rate_population_num"<<endl;
 //  report<<harvest_rate_population_num<<endl;
 //  report<<"$harvest_rate_total_num"<<endl;
 //  report<<harvest_rate_total_num<<endl;
-
 //  report<<"$residuals"<<endl;
 //  report<<res<<endl;
 //  report<<"$harvest_rate_pen"<<endl;
 //  report<<harvest_rate_pen<<endl;
-
 //  report<<"$abundance_at_age_BM_overlap_region"<<endl;
 //  report<<abundance_at_age_BM_overlap_region<<endl;
 //  report<<"$abundance_at_age_BM_overlap_population"<<endl;
@@ -4992,39 +4997,28 @@ REPORT_SECTION
 //  report<<abundance_natal_overlap<<endl;
 //  report<<"$abundance_spawn_overlap"<<endl;
 //  report<<abundance_spawn_overlap<<endl;
-
-
-
 //  report<<"$catch_at_age_region_overlap"<<endl;
 //  report<<catch_at_age_region_overlap<<endl;
 //  report<<"$catch_at_age_population_overlap"<<endl;
 //  report<<catch_at_age_population_overlap<<endl;
 //  report<<"$catch_at_age_natal_overlap"<<endl;
 //  report<<catch_at_age_natal_overlap<<endl;
-
-
-
 //  report<<"$biomass_BM_overlap_region"<<endl;
 //  report<<biomass_BM_overlap_region<<endl;
 //  report<<"$biomass_BM_age_overlap"<<endl;
 //  report<<biomass_BM_age_overlap<<endl;
-
  // report<<"$biomass_AM_age_overlap"<<endl;
 //  report<<biomass_AM_age_overlap<<endl;
-
-
   report<<"$F"<<endl;
   report<<F<<endl;
   report<<"$M"<<endl;
   report<<M<<endl;
-
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"$biomass_population"<<endl;
   report<<biomass_population<<endl;
   report<<"$biomass_total"<<endl;
   report<<biomass_total<<endl;
-
   report<<"$yield_fleet"<<endl;
   report<<yield_fleet<<endl;
   report<<"$yield_region"<<endl;
@@ -5035,7 +5029,6 @@ REPORT_SECTION
   report<<yield_population<<endl;
   report<<"$yield_total"<<endl;
   report<<yield_total<<endl;
-
   report<<"$OBS_yield_fleet"<<endl;
   report<<OBS_yield_fleet<<endl;
   report<<"$OBS_yield_region"<<endl;
@@ -5044,125 +5037,262 @@ REPORT_SECTION
   report<<OBS_yield_population<<endl;
   report<<"$OBS_yield_total"<<endl;
   report<<OBS_yield_total<<endl;
-
-  report<<"$true_survey_fleet_bio"<<endl;
-  report<<true_survey_fleet_bio<<endl;
-  report<<"$true_survey_region_bio"<<endl;
-  report<<true_survey_region_bio<<endl;
-  report<<"$true_survey_population_bio"<<endl;
-  report<<true_survey_population_bio<<endl;
-  report<<"$true_survey_total_bio"<<endl;
-  report<<true_survey_total_bio<<endl;
-
-  report<<"$OBS_survey_fleet_bio"<<endl;
-  report<<OBS_survey_fleet_bio<<endl;
-  report<<"$OBS_survey_region_bio"<<endl;
-  report<<OBS_survey_region_bio<<endl;
-  report<<"$OBS_survey_population_bio"<<endl;
-  report<<OBS_survey_population_bio<<endl;
-  report<<"$OBS_survey_total_bio"<<endl;
-  report<<OBS_survey_total_bio<<endl;
-
-  report<<"$true_survey_fleet_bio_overlap"<<endl;
-  report<<true_survey_fleet_bio_overlap<<endl;
-  report<<"$true_survey_region_bio_overlap"<<endl;
-  report<<true_survey_region_bio_overlap<<endl;
-  report<<"$true_survey_population_bio_overlap"<<endl;
-  report<<true_survey_population_bio_overlap<<endl;
-  report<<"$true_survey_natal_bio_overlap"<<endl;
-  report<<true_survey_natal_bio_overlap<<endl;
-  report<<"$true_survey_total_bio_overlap"<<endl;
-  report<<true_survey_total_bio_overlap<<endl;
-
-  report<<"$OBS_survey_fleet_bio_overlap"<<endl;
-  report<<OBS_survey_fleet_bio_overlap<<endl;
-  report<<"$OBS_survey_region_bio_overlap"<<endl;
-  report<<OBS_survey_region_bio_overlap<<endl;
-  report<<"$OBS_survey_population_bio_overlap"<<endl;
-  report<<OBS_survey_population_bio_overlap<<endl;
-  report<<"$OBS_survey_natal_bio_overlap"<<endl;
-  report<<OBS_survey_natal_bio_overlap<<endl;
-  report<<"$OBS_survey_total_bio_overlap"<<endl;
-  report<<OBS_survey_total_bio_overlap<<endl;
-
+  //report<<"$true_survey_fleet_bio"<<endl;
+  //report<<true_survey_fleet_bio<<endl;
+  //report<<"$true_survey_region_bio"<<endl;
+  //report<<true_survey_region_bio<<endl;
+  //report<<"$true_survey_population_bio"<<endl;
+  //report<<true_survey_population_bio<<endl;
+  //report<<"$true_survey_total_bio"<<endl;
+  //report<<true_survey_total_bio<<endl;
+  //report<<"$OBS_survey_fleet_bio"<<endl;
+ // report<<OBS_survey_fleet_bio<<endl;
+  //report<<"$OBS_survey_region_bio"<<endl;
+ // report<<OBS_survey_region_bio<<endl;
+  //report<<"$OBS_survey_population_bio"<<endl;
+  //report<<OBS_survey_population_bio<<endl;
+  //report<<"$OBS_survey_total_bio"<<endl;
+  //report<<OBS_survey_total_bio<<endl;
+  //report<<"$true_survey_fleet_bio_overlap"<<endl; //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<true_survey_fleet_bio_overlap<<endl;    //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<"$true_survey_region_bio_overlap"<<endl;
+  //report<<true_survey_region_bio_overlap<<endl;
+  //report<<"$true_survey_population_bio_overlap"<<endl;
+  //report<<true_survey_population_bio_overlap<<endl;
+  //report<<"$true_survey_natal_bio_overlap"<<endl;
+  //report<<true_survey_natal_bio_overlap<<endl;
+  //report<<"$true_survey_total_bio_overlap"<<endl;
+  //report<<true_survey_total_bio_overlap<<endl;
+  //report<<"$OBS_survey_fleet_bio_overlap"<<endl; //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<OBS_survey_fleet_bio_overlap<<endl;    //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<"$OBS_survey_region_bio_overlap"<<endl;
+  //report<<OBS_survey_region_bio_overlap<<endl;
+  //report<<"$OBS_survey_population_bio_overlap"<<endl;
+  //report<<OBS_survey_population_bio_overlap<<endl;
+  //report<<"$OBS_survey_natal_bio_overlap"<<endl;
+  //report<<OBS_survey_natal_bio_overlap<<endl;
+  //report<<"$OBS_survey_total_bio_overlap"<<endl;
+  //report<<OBS_survey_total_bio_overlap<<endl;
   report<<"$harvest_rate_region_bio"<<endl;
   report<<harvest_rate_region_bio<<endl;
   report<<"$harvest_rate_population_bio"<<endl;
   report<<harvest_rate_population_bio<<endl;
   report<<"$harvest_rate_total_bio"<<endl;
   report<<harvest_rate_total_bio<<endl;
-
   report<<"$depletion_region"<<endl;
   report<<depletion_region<<endl;
   report<<"$depletion_population"<<endl;
   report<<depletion_population<<endl;
   report<<"$depletion_total"<<endl;
   report<<depletion_total<<endl;
-
   report<<"$SSB_region"<<endl;
   report<<SSB_region<<endl;
   report<<"$SSB_population"<<endl;
   report<<SSB_population<<endl;
   report<<"$SSB_total"<<endl;
   report<<SSB_total<<endl;
-
   report<<"$SSB_region_overlap"<<endl;
   report<<SSB_region_overlap<<endl;
   report<<"$SSB_population_overlap"<<endl;
   report<<SSB_population_overlap<<endl;
   report<<"$SSB_natal_overlap"<<endl;
   report<<SSB_natal_overlap<<endl;
-
-  report<<"$yield_region_fleet_overlap"<<endl;
-  report<<yield_region_fleet_overlap<<endl;
+  //report<<"$yield_region_fleet_overlap"<<endl;
+  //report<<yield_region_fleet_overlap<<endl;
   report<<"$yield_region_overlap"<<endl;
   report<<yield_region_overlap<<endl;
   report<<"$yield_population_overlap"<<endl;
   report<<yield_population_overlap<<endl;
   report<<"$yield_natal_overlap"<<endl;
   report<<yield_natal_overlap<<endl;
-
-  report<<"$OBS_yield_region_fleet_overlap"<<endl;
-  report<<OBS_yield_region_fleet_overlap<<endl;
-  report<<"$OBS_yield_region_overlap"<<endl;
-  report<<OBS_yield_region_overlap<<endl;
-  report<<"$OBS_yield_population_overlap"<<endl;
-  report<<OBS_yield_population_overlap<<endl;
-  report<<"$OBS_yield_natal_overlap"<<endl;
-  report<<OBS_yield_natal_overlap<<endl;
-  report<<"$OBS_yield_total_overlap"<<endl;
-  report<<OBS_yield_total_overlap<<endl;
-
+  //report<<"$OBS_yield_region_fleet_overlap"<<endl; //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<OBS_yield_region_fleet_overlap<<endl;    //this variable needs to be commented out, will cause issue when reading in report to R
+  //report<<"$OBS_yield_region_overlap"<<endl;
+  //report<<OBS_yield_region_overlap<<endl;
+  //report<<"$OBS_yield_population_overlap"<<endl;
+  //report<<OBS_yield_population_overlap<<endl;
+  //report<<"$OBS_yield_natal_overlap"<<endl;
+  //report<<OBS_yield_natal_overlap<<endl;
+  //report<<"$OBS_yield_total_overlap"<<endl;
+  //report<<OBS_yield_total_overlap<<endl;
   report<<"$biomass_AM_overlap_region"<<endl;
   report<<biomass_AM_overlap_region<<endl;
   report<<"$biomass_population_overlap"<<endl;
   report<<biomass_population_overlap<<endl;
   report<<"$biomass_natal_overlap"<<endl;
   report<<biomass_natal_overlap<<endl;
-
-  report<<"$harvest_rate_region_bio_overlap"<<endl;
-  report<<harvest_rate_region_bio_overlap<<endl;
-  report<<"$harvest_rate_population_bio_overlap"<<endl;
-  report<<harvest_rate_population_bio_overlap<<endl;
-  report<<"$harvest_rate_natal_bio_overlap"<<endl;
-  report<<harvest_rate_natal_bio_overlap<<endl;
-
-  report<<"$depletion_region_overlap"<<endl;
-  report<<depletion_region_overlap<<endl;
-  report<<"$depletion_population_overlap"<<endl;
-  report<<depletion_population_overlap<<endl;
-  report<<"$depletion_natal_overlap"<<endl;
-  report<<depletion_natal_overlap<<endl;
-
+  //report<<"$harvest_rate_region_bio_overlap"<<endl;
+  //report<<harvest_rate_region_bio_overlap<<endl;
+  //report<<"$harvest_rate_population_bio_overlap"<<endl;
+  //report<<harvest_rate_population_bio_overlap<<endl;
+  //report<<"$harvest_rate_natal_bio_overlap"<<endl;
+  //report<<harvest_rate_natal_bio_overlap<<endl;
+  //report<<"$depletion_region_overlap"<<endl;
+  //report<<depletion_region_overlap<<endl;
+  //report<<"$depletion_population_overlap"<<endl;
+  //report<<depletion_population_overlap<<endl;
+ // report<<"$depletion_natal_overlap"<<endl;
+ // report<<depletion_natal_overlap<<endl;
   report<<"$Bratio_population"<<endl;
   report<<Bratio_population<<endl;
   report<<"$Bratio_total"<<endl;
   report<<Bratio_total<<endl;
-
   report<<"$Bratio_population_overlap"<<endl;
   report<<Bratio_population_overlap<<endl;
   report<<"$Bratio_natal_overlap"<<endl;
   report<<Bratio_natal_overlap<<endl;
+///////////////////////////////////////////////////////////////////////////
+  //Reorganization and report-out section
+  //Used so that R can read 5d and 6d arrarys. 
+  //Index by population and region for 6d arrarys (and input_T), 
+  //by population for 5d arrays.
+  //Requires reorganizing some 6d array variables
+  //Exclude 5d and 6d array "temp" variables because they are not needed
+///////////////////////////////////////////////////////////////////////////
+  if(npops>1 || nregions[1]>1) //more than one population or if one population, more than 1 region within that population. Fleets are restricted to be one fleet per region
+  {
+  //////////////////////////
+  //Reorganize
+  //////////////////////////
+  //Assigns original parameter names to reorganized (ro) parameter names with either population and region at the beginning
+  //or with age removed entirely
+    for (int p=1;p<=npops;p++)
+    {
+     for (int j=1;j<=npops;j++)
+      {
+       for (int r=1;r<=nregions(p);r++)
+        {
+         for (int a=1;a<=nages;a++)
+          {
+           for(int x=1;x<=nfleets(p);x++)
+            {
+             for(int y=1;y<=nyrs;y++)
+              {
+               for(int z=1;z<=nfleets_survey(p);z++)
+                {
+                //6D arrary
+                 //survey index
+                 ro_true_survey_fleet_overlap_age(p,r,j,y,z,a) = true_survey_fleet_overlap_age(p,j,r,y,z,a);
+                 ro_survey_at_age_region_fleet_overlap_prop(p,r,j,z,y,a) = survey_at_age_region_fleet_overlap_prop(p,j,r,z,y,a);
+                 ro_SIM_survey_prop_overlap(p,r,j,z,y,a) = SIM_survey_prop_overlap(p,j,r,z,y,a);
+                 ro_OBS_survey_prop_overlap(p,r,j,z,y,a) = OBS_survey_prop_overlap(p,j,r,z,y,a);
+                 ro_true_survey_fleet_overlap_age_bio(p,r,j,y,z,a) = true_survey_fleet_overlap_age_bio(p,j,r,y,z,a);
+                 //yield & BRP calcs 
+                 ro_catch_at_age_region_fleet_overlap(p,r,j,x,y,a) = catch_at_age_region_fleet_overlap(p,j,r,x,y,a);
+                 ro_catch_at_age_region_fleet_overlap_prop(p,r,j,x,y,a) = catch_at_age_region_fleet_overlap_prop(p,j,r,x,y,a);
+                 ro_SIM_catch_prop_overlap(p,r,j,x,y,a) = SIM_catch_prop_overlap(p,j,r,x,y,a);
+                 ro_OBS_catch_prop_overlap(p,r,j,x,y,a) = OBS_catch_prop_overlap(p,j,r,x,y,a);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ////////////////////////////
+  //Report out 
+  //All 5D and 6D arrays, both those reorganized and those not
+  ////////////////////////////
+    //Since regions are by population, need to include in population loop
+    //Thus, need counters to index total number of regions.
+    //For example, with region, for 3 pops with 2 1 and 1 regions, region1 is region 1 of pop 1, 
+    //region2 is region 2 of pop 1, region3 is region 1 of pop 2, and region4 is region 1 of pop 3. 
+    region_counter=1;
+    for (int p=1;p<=npops;p++)
+     {
+      for (int r=1;r<=nregions(p);r++)
+        {
+         //6d arrays. Output population-region
+         //vitals
+         report<<"$alt_T_"<<region_counter<<endl;
+         report<<T[p][r]<<endl;
+         report<<"$alt_rel_bio_"<<region_counter<<endl;
+         report<<rel_bio[p][r]<<endl;
+         //survey index
+         report<<"$ro_true_survey_fleet_overlap_age_"<<region_counter<<endl;
+         report<<ro_true_survey_fleet_overlap_age[p][r]<<endl;
+         report<<"$ro_survey_at_age_region_fleet_overlap_prop_"<<region_counter<<endl;
+         report<<ro_survey_at_age_region_fleet_overlap_prop[p][r]<<endl;
+         report<<"$ro_SIM_survey_prop_overlap_"<<region_counter<<endl;
+         report<<ro_SIM_survey_prop_overlap[p][r]<<endl;
+         report<<"$ro_OBS_survey_prop_overlap_"<<region_counter<<endl;
+         report<<ro_OBS_survey_prop_overlap[p][r]<<endl;
+         report<<"$ro_true_survey_fleet_overlap_age_bio_"<<region_counter<<endl;
+         report<<ro_true_survey_fleet_overlap_age_bio[p][r]<<endl;
+         //yield & BRP calcs 
+         report<<"$ro_catch_at_age_region_fleet_overlap_"<<region_counter<<endl;
+         report<<ro_catch_at_age_region_fleet_overlap[p][r]<<endl;
+         report<<"$ro_catch_at_age_region_fleet_overlap_prop_"<<region_counter<<endl;
+         report<<ro_catch_at_age_region_fleet_overlap_prop[p][r]<<endl;
+         report<<"$ro_SIM_catch_prop_overlap_"<<region_counter<<endl;
+         report<<ro_SIM_catch_prop_overlap[p][r]<<endl;
+         report<<"$ro_OBS_catch_prop_overlap_"<<region_counter<<endl;
+         report<<ro_OBS_catch_prop_overlap[p][r]<<endl; 
+         //DATA SECTION
+         report<<"$alt_input_T_"<<region_counter<<endl;
+         report<<input_T[p][r]<<endl;
+         region_counter++;
+        }
+        
+      //5d arrays. Output population
+      //Observed yield
+      report<<"$alt_OBS_yield_region_fleet_overlap_"<<p<<endl;
+      report<<OBS_yield_region_fleet_overlap[p]<<endl;
+      report<<"$alt_yield_RN_overlap_"<<p<<endl;
+      report<<yield_RN_overlap[p]<<endl;
+      report<<"$alt_survey_RN_overlap_"<<p<<endl;
+      report<<survey_RN_overlap[p]<<endl;
+      //yield & BRP calcs
+      report<<"$alt_abundance_spawn_overlap_"<<p<<endl;
+      report<<abundance_spawn_overlap[p]<<endl;
+      report<<"$alt_catch_at_age_region_overlap_"<<p<<endl;
+      report<<catch_at_age_region_overlap[p]<<endl;
+      report<<"$alt_catch_at_age_region_overlap_prop_"<<p<<endl;
+      report<<catch_at_age_region_overlap_prop[p]<<endl;
+      report<<"$alt_biomass_BM_age_overlap_"<<p<<endl;
+      report<<biomass_BM_age_overlap[p]<<endl;
+      report<<"$alt_biomass_AM_age_overlap_"<<p<<endl; 
+      report<<biomass_AM_age_overlap[p]<<endl; 
+      report<<"$alt_abundance_at_age_BM_overlap_region_"<<p<<endl;
+      report<<abundance_at_age_BM_overlap_region[p]<<endl;
+      report<<"$alt_abundance_at_age_AM_overlap_region_"<<p<<endl;
+      report<<abundance_at_age_AM_overlap_region[p]<<endl;
+      report<<"$alt_catch_at_age_fleet_prop_"<<p<<endl;
+      report<<catch_at_age_fleet_prop[p]<<endl;
+      report<<"$alt_SIM_catch_prop_"<<p<<endl;
+      report<<SIM_catch_prop[p]<<endl;
+      report<<"$alt_OBS_catch_prop_"<<p<<endl;
+      report<<OBS_catch_prop[p]<<endl;
+      report<<"$alt_yield_region_fleet_overlap_"<<p<<endl;
+      report<<yield_region_fleet_overlap[p]<<endl;
+      report<<"$alt_harvest_rate_region_fleet_bio_overlap_"<<p<<endl;          
+      report<<harvest_rate_region_fleet_bio_overlap[p]<<endl;
+      report<<"$alt_catch_at_age_fleet_"<<p<<endl;
+      report<<catch_at_age_fleet[p]<<endl;
+      //survey index
+      report<<"$alt_true_survey_fleet_age_"<<p<<endl;
+      report<<true_survey_fleet_age[p]<<endl;
+      report<<"$alt_survey_at_age_fleet_prop_"<<p<<endl;
+      report<<survey_at_age_fleet_prop[p]<<endl;
+      report<<"$alt_SIM_survey_prop_"<<p<<endl;
+      report<<SIM_survey_prop[p]<<endl;
+      report<<"$alt_OBS_survey_prop_"<<p<<endl;
+      report<<OBS_survey_prop[p]<<endl;
+      report<<"$alt_true_survey_fleet_age_bio_"<<p<<endl;
+      report<<true_survey_fleet_age_bio[p]<<endl; 
+      report<<"$alt_survey_selectivity_"<<p<<endl;
+      report<<survey_selectivity[p]<<endl;
+      report<<"$alt_true_survey_fleet_bio_overlap_"<<p<<endl;
+      report<<true_survey_fleet_bio_overlap[p]<<endl;
+      report<<"$alt_OBS_survey_fleet_bio_overlap_"<<p<<endl;
+      report<<OBS_survey_fleet_bio_overlap[p]<<endl;
+      //vitals
+      report<<"$alt_selectivity_"<<p<<endl;
+      report<<selectivity[p]<<endl;
+      report<<"$alt_F_fleet_"<<p<<endl;
+      report<<F_fleet[p]<<endl; 
+     }
+   }
 
 
   
