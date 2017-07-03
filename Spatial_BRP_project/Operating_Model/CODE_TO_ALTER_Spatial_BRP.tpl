@@ -297,7 +297,7 @@ DATA_SECTION
    !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
    !! cout << "input read" << endl;
   
-   //!!EOUT(input_T);
+   //!!EOUT(Rec_type);
 
 
 PARAMETER_SECTION
