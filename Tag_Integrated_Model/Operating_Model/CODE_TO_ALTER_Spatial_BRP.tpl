@@ -5133,10 +5133,10 @@ FUNCTION evaluate_the_objective_function
 REPORT_SECTION
  //report<<"$recaps"<<endl;
  //report<<recaps<<endl;
- report<<"$True_tag_prop"<<endl;
- report<<tag_prop_final<<endl;
- report<<"$OBS_tag_prop"<<endl;
- report<<OBS_tag_prop_final<<endl;
+ //report<<"$True_tag_prop"<<endl; // 5-D array not reading in with R so comment out
+ //report<<tag_prop_final<<endl;  //5-D array not reading in with R so comment out
+ //report<<"$OBS_tag_prop"<<endl;  //5-D array not reading in with R so comment out
+ //report<<OBS_tag_prop_final<<endl;  //5-D array not reading in with R so comment out
  // report<<"$biomass_BM_age"<<endl;
  // report<<biomass_BM_age<<endl;
  // report<<"$Fract_Move_DD"<<endl;
@@ -5434,8 +5434,8 @@ REPORT_SECTION
   report<<"$OBS_survey_total_bio"<<endl;
   report<<OBS_survey_total_bio<<endl;
 
-  report<<"$true_survey_fleet_bio_overlap"<<endl;
-  report<<true_survey_fleet_bio_overlap<<endl;
+  //report<<"$true_survey_fleet_bio_overlap"<<endl; //5-D array not reading in with R so comment out
+  //report<<true_survey_fleet_bio_overlap<<endl;  //5-D array not reading in with R so comment out
   report<<"$true_survey_region_bio_overlap"<<endl;
   report<<true_survey_region_bio_overlap<<endl;
   report<<"$true_survey_population_bio_overlap"<<endl;
@@ -5445,8 +5445,8 @@ REPORT_SECTION
   report<<"$true_survey_total_bio_overlap"<<endl;
   report<<true_survey_total_bio_overlap<<endl;
 
-  report<<"$OBS_survey_fleet_bio_overlap"<<endl;
-  report<<OBS_survey_fleet_bio_overlap<<endl;
+  //report<<"$OBS_survey_fleet_bio_overlap"<<endl; //5-D array not reading in with R so comment out 
+  //report<<OBS_survey_fleet_bio_overlap<<endl;  //5-D array not reading in with R so comment out
   report<<"$OBS_survey_region_bio_overlap"<<endl;
   report<<OBS_survey_region_bio_overlap<<endl;
   report<<"$OBS_survey_population_bio_overlap"<<endl;
@@ -5484,8 +5484,8 @@ REPORT_SECTION
   report<<"$SSB_natal_overlap"<<endl;
   report<<SSB_natal_overlap<<endl;
 
-  report<<"$yield_region_fleet_overlap"<<endl;
-  report<<yield_region_fleet_overlap<<endl;
+  //report<<"$yield_region_fleet_overlap"<<endl; //5-D array not reading in with R so comment out
+  //report<<yield_region_fleet_overlap<<endl;  //5-D array not reading in with R so comment out
   report<<"$yield_region_overlap"<<endl;
   report<<yield_region_overlap<<endl;
   report<<"$yield_population_overlap"<<endl;
@@ -5493,8 +5493,8 @@ REPORT_SECTION
   report<<"$yield_natal_overlap"<<endl;
   report<<yield_natal_overlap<<endl;
 
-  report<<"$OBS_yield_region_fleet_overlap"<<endl;
-  report<<OBS_yield_region_fleet_overlap<<endl;
+  //report<<"$OBS_yield_region_fleet_overlap"<<endl; //5-D array not reading in with R so comment out
+  //report<<OBS_yield_region_fleet_overlap<<endl; //5-D array not reading in with R so comment out
   report<<"$OBS_yield_region_overlap"<<endl;
   report<<OBS_yield_region_overlap<<endl;
   report<<"$OBS_yield_population_overlap"<<endl;

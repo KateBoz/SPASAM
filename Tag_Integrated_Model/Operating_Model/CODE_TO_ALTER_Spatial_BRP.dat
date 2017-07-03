@@ -85,7 +85,7 @@
   #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   #//uses use_input_Bstar switch 
-0
+1
 #use_input_Bstar
   #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
   #==1 use input_Bstar
@@ -114,7 +114,7 @@
   #==7 F devs about input F based on sigma_F
   #==8 random walk in F
   #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
-9
+2
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -143,7 +143,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-4
+1
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -240,129 +240,129 @@
 15
 15
 #input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
 
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
 
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
 
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
-1 0
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
+0.5 0.5
 
 #input_residency_larval
 1 1
@@ -435,7 +435,7 @@
 0.2
 #sigma_F: used for random walk F and random devs around dunce cap F
 0.0
-0
+0.0
 0.0
 0.0
 ##########################################################################################################################################
@@ -477,10 +477,10 @@
 0.5
 0.5
 #input_Rec_prop
-0.9
-0.1
-0.9
-0.1
+.3
+.7
+.3
+.7
 
 #Equil_ssb_apportion
 .2612
@@ -503,6 +503,7 @@
 0.5
 0.5
 #sigma_survey
+0.2
 0.2
 0.2
 0.2
