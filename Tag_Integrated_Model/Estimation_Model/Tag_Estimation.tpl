@@ -1,7 +1,7 @@
 
 /////////////////////////////////////////////////////////
 // Spatial Estimation Model based on Operating Model by Daniel Goethel (NMFS SEFSC)  
-// started by Dana Hanselman (AFSC) //Further screwed up by Jon Deroba (NEFSC)
+// started by Dana Hanselman (AFSC) //Further screwed up by Jon Deroba (NEFSC)//Terrorized by Dan Goethel (SEFSC)
 //////////////////////////////////////////////////////////
 
 GLOBALS_SECTION
@@ -36,7 +36,6 @@ DATA_SECTION
 //////////////SWITCHES//////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
- 
   init_matrix tsurvey(1,np,1,nreg) //time of survey in proportion of year (0,1)
   init_number larval_move_switch
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
@@ -58,10 +57,6 @@ DATA_SECTION
   //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal population eg ontogenetic migration)
   //==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
-  //==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions 
-  init_number use_input_Bstar
-  //==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
-  //==1 use input_Bstar
 
 ////// Population Structure switches
   init_number natal_homing_switch
@@ -79,61 +74,58 @@ DATA_SECTION
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 /////////////////////////////////////////////////////
-// I don't think we are going to experiment with any F switches for estimation model??
-//dhdhdhdhdhdhdhdh//
-//my notes say we'll estimate a fully selected F for each fleet, year, region.  And so no need for F switches.  //JJD
 
- // init_number F_switch
-  //==1 input F
-  //==2 input single overall F (FMSY)
-  //==3 Estimate F that minimizes difference in input and estimated total harvest rate
-  //==4 overall F (FMSY) is split evenly among populations (each fleet uses population F)
-  //==5 overall F (FMSY) is is split evenly among all regions (each fleet uses region F)
-  //==6 overall F (FMSY) is split evenly among fleets
-  //==7 F devs about input F based on sigma_F
-  //==8 random walk in F
+ //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
+  init_number maturity_switch_equil
+  //==0 for equal by area or average
+  //==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  //SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  //Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  //With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  //When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
   
-  //dhdhdhdhhdhdhdhdhdhddhdhdh
-  //weight based only remove this switch?
-  //dhdhdhdhdhdhdhdhd
-  //We are definitely only using weight based, but the OM and EM code still both require an input value for this in some nested if-statements.  Maybe easier just to make sure always ==2 than delete everywhere //JJD
-  //Nothing wrong with keeping some code we're not using now, but somebody might later //JJD
   init_number SSB_type
   //==1 fecundity based SSB
   //==2 weight based SSB
   
-     //dhdhdhdhdhdhdhdhdhddhdhdhd
-  // Likewise, are we doing both recruitment styles?
-  //dhdhdhdhdhdhdhdhdhdhdhdhdhdhd
-  //Same reply comment as for SSB_type switch //JJD
   init_number Rec_type
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt population-recruit functions based on population-specific input steepness, R0 (R_ave), M, and weight
-  //==3 environmental recruitment - sine fucntion based on amplitude and frequency
 
-  
+  init_number apportionment_type
+  //==-1 no recruitment apportionment to regions within a population (each region within a population gets full amount of recruits from SR curve)
+  //==0 apportionment to each region is based on relative SSB in region compared to population SSB
+  //==1 input apportionment
+  //==2 recruits are apportioned equally to each region within a population
+  //==3 estimate pop/reg apportionment
+  //==4 estimate pop/reg/year apportionment
+
+  init_number use_stock_comp_info_survey //for likelihood calcs
+  //Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+  //==0 calc survey age comps by area (summed across natal population)
+  //==1 calc survey age comps by natal population within each area
+
+  init_number use_stock_comp_info_catch //for likelihood calcs
+  //Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+  //==0 calc  catch age comps by area (summed across natal population)
+  //==1 calc  catch age comps by natal population within each area
+
 ///////////////////////////////////////////////////////////////////////////////
-////////READ IN THE DATA  //////////////////////////////////
+////////READ IN THE SPECS  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-//Recruit indices
- 3darray rec_index_BM(1,nps,1,nr,1,nyr)
- 3darray rec_index_AM(1,nps,1,nr,1,nyr)
-
-//Survey data
-  4darray OBS_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)  //total by year, region, fleet I think //JJD
-  5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag) //proportion at age by year and region, fleet; I think //JJD
-
 //tagging data parameters
   init_int nyrs_release //number of years with tag release events  //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
   !! int ny_rel=nyrs_release;
   init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
   init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
-//tag data
-  4darray ntags(1,nps,1,nr,1,nyr_rel,1,nag) //releases
-  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
 
-//##########################################################################################################################################
+//phases and bounds for est parameters
+
+//likelihood parameters (sigma, ESS, penalties)
+
+
+//###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -141,10 +133,6 @@ DATA_SECTION
 //######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
 //######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
 //#########################################################################################################################################
-  //dhdhdhdhdhd
-  // are these the same in all our models? 
-  // dhdhdhhdh
-  //No //JJD
   ////////////////BIOLOGICAL PARAMETERS////////////////
   /////////////////////////////////////////////////////
   init_3darray input_weight(1,np,1,nreg,1,na)  
@@ -156,30 +144,74 @@ DATA_SECTION
 //#########################################################################################################################################
 //##########################################################################################################################################
 //#########################################################################################################################################
- //// CATCH DATA //////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+////////READ IN THE OBS DATA  //////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+//NEED BOTH OVERLAP AND REGULAR DATA (i.e., read in ALL data)
+//Recruit indices
+ 3darray OBS_rec_index_BM(1,nps,1,nr,1,nyr)
+ 3darray OBS_rec_index_AM(1,nps,1,nr,1,nyr)
+
+//Survey data
+  4darray OBS_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)  //total by year, region, fleet I think //JJD
+  5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag) //proportion at age by year and region, fleet; I think //JJD
+
+//Catch Prop
+
+//Yield
+
+//tag data
+  4darray ntags(1,nps,1,nr,1,nyr_rel,1,nag) //releases
+  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
+
+//Tag prop
+
+
+///////////////////////////////////////////////////////////////////////////////
+////////READ IN THE TRUE DATA  //////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+//parameters (F, T, recruitment...)
+
+//data (yield, survey...)
+
+  //##########################################################################################################################################
+//#########################################################################################################################################
+//##########################################################################################################################################
+//#########################################################################################################################################
+ init_number dummy(phase_dummy)
+//////////////////////////////////////
+// END DATA SECTION /////////////////////
+///////////////////////////////////////
+ !! cout << "debug = " << debug << endl;
+ !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
+ !! cout << "input read" << endl;
+//////////////////////////////////////////////////////////////
+ !! cout << "begin setup of containers" << endl;
 
  //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
 
- //I don't think we need this because it's used to generate tag recaps, but these will be input for EM.  //JJD
-   // init_imatrix nregions_temp(1,np,1,np) //used to fill tag_recap matrices
+    init_imatrix nregions_temp(1,np,1,np) //used to fill tag_recap matrices
 
- // !! for(int j=1;j<=npops;j++) //recap stock
- // !! {
-//  !!  for (int r=1;r<=npops;r++) //recap region
- // !!  {
-//  !!    if(j<=r)
- // !!     {
- // !!     nregions_temp(j,r)=0;
- // !!     }
- // !!    if(j>r)
- // !!     {
- // !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
- // !!     }
- // !!   }
- // !!  }
- // ivector nreg_temp(1,np)
+ !! for(int j=1;j<=npops;j++) //recap stock
+ !! {
+ !!  for (int r=1;r<=npops;r++) //recap region
+ !!  {
+ !!    if(j<=r)
+ !!     {
+ !!     nregions_temp(j,r)=0;
+ !!     }
+ !!    if(j>r)
+ !!     {
+ !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+ !!     }
+ !!   }
+ !!  }
+  ivector nreg_temp(1,np)
 
  //I didn't give any thought to whether all of these are still required; just left them //JJD
   int a
@@ -199,9 +231,6 @@ DATA_SECTION
   int d
   int xx
 
- !! cout << "debug = " << debug << endl;
- !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
- !! cout << "input read" << endl;
 
   !! ivector nr=nregions;
   !! int nps=npops;
@@ -216,16 +245,11 @@ DATA_SECTION
  
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
- 6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
- matrix Bstar(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
- matrix c(1,nps,1,nr) //maybe needed depending on how movement parameterized? //JJD
- 4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag) //maybe needed depending on how movement parameterized? //JJD
- 
+
  5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
 
- 4darray M(1,nps,1,nr,1,nyr,1,nag) //param
- //4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
- //4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
+ 4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
+ 4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
  3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
@@ -237,14 +261,13 @@ DATA_SECTION
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr) //param
  3darray recruits_AM(1,nps,1,nr,1,nyr) //param
- //3darray Rec_Prop(1,nps,1,nr,1,nyr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
- //3darray Rec_prop_temp1(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
- //3darray Rec_prop_temp2(1,nps,1,nyr,1,nr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
- 
- //3darray rec_index_prop_BM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- //3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- //3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- //3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ 3darray Rec_Prop(1,nps,1,nr,1,nyr) //should be no need to specify this since recruitment (potentially by region) will be estimated //JJD
+ 3darray rec_index_BM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_AM(1,nps,1,nr,1,nyr)
+ 3darray rec_index_prop_BM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ 3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ 3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ 3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
 
 //abundance 
  4darray abundance_at_age_BM(1,nps,1,nr,1,nyr,1,nag) //param
@@ -264,59 +287,43 @@ DATA_SECTION
  4darray bio_leave(1,nps,1,nr,1,nyr,1,nag) //param
 
  //tagging data
- //Don't think any of this should be necessary for EM //JJD
-  //vector ntags_total(1,nyr_rel)  
-  //7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
-  //4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  //4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  //7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
-  //4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  //5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
-  //5darray SIM_tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
-  //5darray OBS_tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
+  vector ntags_total(1,nyr_rel)  
+  7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
+  4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
+  4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
 
  //survey index
  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
- //6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
- //6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- //6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- //6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag) 
- //6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
- //5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
- //4darray true_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
- //3darray true_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
- //matrix true_survey_natal_bio_overlap(1,nyr,1,nps)
- //vector true_survey_total_bio_overlap(1,nyr)
- //5darray true_survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
- //5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag) 
- //5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
- 4darray true_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
- //3darray OBS_survey_region_bio(1,nps,1,nyr,1,nr)
- //3darray true_survey_region_bio(1,nps,1,nyr,1,nr)
- //matrix true_survey_population_bio(1,nyr,1,nps)
- //vector true_survey_total_bio(1,nyr) 
- //5darray OBS_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls) 
- //4darray OBS_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr) 
- //3darray OBS_survey_population_bio_overlap(1,nps,1,nyr,1,nps)
- //matrix OBS_survey_natal_bio_overlap(1,nyr,1,nps)
- //vector OBS_survey_total_bio_overlap(1,nyr)
- //matrix OBS_survey_population_bio(1,nyr,1,nps)
- //vector OBS_survey_total_bio(1,nyr)
- //3darray apport_region_survey_biomass(1,nps,1,nr,1,nyr)
+ 6darray survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
+ 6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 6darray survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
+ 4darray survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
+ 3darray survey_population_bio_overlap(1,nps,1,nyr,1,nps)
+ matrix survey_natal_bio_overlap(1,nyr,1,nps)
+ vector survey_total_bio_overlap(1,nyr)
+ 5darray survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 5darray survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 4darray survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
+ 3darray survey_region_bio(1,nps,1,nyr,1,nr)
+ matrix survey_population_bio(1,nyr,1,nps)
+ vector survey_total_bio(1,nyr) 
 
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag) //move code to just calculate these proportions from input CAA in DAta section //JJD
- //5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
- //5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
- //4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
- //4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
- //3darray yield_region(1,nps,1,nr,1,nyr)
- //3darray catch_at_age_population(1,nps,1,nyr,1,nag)
- //3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
- //matrix yield_population(1,nps,1,nyr)
+ 4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
+ 4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
+ 3darray yield_region(1,nps,1,nr,1,nyr)
+ 3darray catch_at_age_population(1,nps,1,nyr,1,nag)
+ 3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
+ matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr) //param
  matrix SSB_population(1,nps,1,nyr) //param
  vector SSB_total(1,nyr) //param
@@ -349,8 +356,6 @@ DATA_SECTION
 
  6darray catch_at_age_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  6darray catch_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 6darray SIM_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 6darray OBS_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray catch_at_age_region_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  5darray catch_at_age_region_overlap_prop(1,nps,1,nps,1,nr,1,nyr,1,nag)
  5darray yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
@@ -363,7 +368,6 @@ DATA_SECTION
  5darray biomass_AM_age_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  4darray biomass_BM_overlap_region(1,nps,1,nps,1,nr,1,nyr)
  4darray biomass_AM_overlap_region(1,nps,1,nps,1,nr,1,nyr)
- 5darray biomass_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
  4darray biomass_AM_overlap_age_region_all_natal(1,nps,1,nr,1,nyr,1,nag)
  3darray biomass_AM_overlap_region_all_natal(1,nps,1,nr,1,nyr)
  3darray biomass_population_overlap(1,nps,1,nps,1,nyr)
@@ -382,103 +386,60 @@ DATA_SECTION
  matrix Bratio_natal_overlap(1,nps,1,nyr)
  matrix Bratio_population(1,nps,1,nyr)
  vector Bratio_total(1,nyr)
+ matrix SSB_overlap_natal(1,nps,1,nr)
 
- //Observed Yield
- //5darray OBS_yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- //4darray OBS_yield_region_overlap(1,nps,1,nps,1,nyr,1,nr)
- //3darray OBS_yield_population_overlap(1,nps,1,nyr,1,nps)
- //matrix OBS_yield_natal_overlap(1,nyr,1,nps)
- //vector OBS_yield_total_overlap(1,nyr)
- 4darray OBS_yield_fleet(1,nps,1,nr,1,nyr,1,nfl) //see yield_fleet above.  One of these will be input data and other based on fit ("estimated") //JJD
- //3darray OBS_yield_region(1,nps,1,nyr,1,nr)
- //matrix OBS_yield_population(1,nyr,1,nps)
- vector OBS_yield_total(1,nyr) //see yield_fleet above.  One of these will be input data and other based on fit ("estimated") //JJD
- //3darray apport_yield_region(1,nps,1,nr,1,nyr)
-
- matrix biomass_BM_temp(1,nps,1,nr) //might need these for DD movement? //JJD
- number biomass_BM_temp2 //might need these for DD movement? //JJD
  5darray biomass_BM_overlap_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
  4darray init_abund_temp(1,nps,1,nr,1,nag,1,nps)
- 
- //5darray rand_SIM_survey_prop_temp(1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- //6darray rand_SIM_survey_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,2000) //should make function of max(ncatch) but had issues making an index, used 2000 as placeholder since nsurvey unlikely to exceed 2000
- //5darray rand_SIM_catch_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
- //6darray rand_SIM_catch_prop_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,2000) //should make function of max(ncatch) but had issues making an index
- //vector rand_SIM_survey_prop_temp2(1,nages)
- //vector rand_SIM_catch_prop_temp2(1,nages)
- //5darray OBS_survey_fleet_bio_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps) //Don't think we need this.  Just used to reorganize array.  I don't think need for EM (?) //JJD
- //5darray true_survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
- //5darray catch_at_age_fleet_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 
- //not sure //JJD
-matrix abundance_move_temp(1,nps,1,nr)
+ 5darray survey_fleet_bio_overlap_temp(1,nps,1,nr,1,nyr,1,nfls,1,nps)
+ 5darray catch_at_age_fleet_prop_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
+ matrix abundance_move_temp(1,nps,1,nr)
  matrix bio_move_temp(1,nps,1,nr)
- 5darray yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
- 4darray yield_region_temp(1,nps,1,nr,1,nyr,1,nag)
- 3darray yield_population_temp(1,nps,1,nyr,1,nag)
- 4darray SSB_region_temp(1,nps,1,nr,1,nyr,1,nag)
- matrix SSB_total_temp(1,nyr,1,nps)
- 4darray abundance_population_temp(1,nps,1,nyr,1,nag,1,nr)
- 3darray abundance_total_temp(1,nyr,1,nag,1,nps)
- 3darray biomass_population_temp(1,nps,1,nyr,1,nr)
- matrix biomass_total_temp(1,nyr,1,nps)
- 3darray catch_at_age_total_temp(1,nyr,1,nag,1,nps)
- matrix yield_total_temp(1,nyr,1,nps)
- 4darray catch_at_age_population_temp(1,nps,1,nyr,1,nag,1,nr)
- 5darray SSB_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  matrix abundance_move_overlap_temp(1,nps,1,nr)
- 5darray OBS_yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nps)
+ 5darray abundance_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
+ 5darray biomass_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
+ 3darray SSB_natal_overlap_temp(1,nps,1,nyr,1,nps)
+ 4darray abundance_natal_temp_overlap(1,nps,1,nyr,1,nag,1,nps)
+ 4darray SSB_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
+ 5darray SSB_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  6darray yield_region_fleet_temp_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray yield_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  4darray yield_population_temp_overlap(1,nps,1,nps,1,nyr,1,nag)
- 4darray abundance_natal_temp_overlap(1,nps,1,nyr,1,nag,1,nps)
- 4darray biomass_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
- 3darray biomass_natal_temp_overlap(1,nps,1,nyr,1,nps)
- 4darray catch_at_age_natal_temp_overlap(1,nps,1,nyr,1,nag,1,nps)
  3darray yield_natal_temp_overlap(1,nps,1,nyr,1,nps)
  5darray catch_at_age_population_temp_overlap(1,nps,1,nps,1,nyr,1,nag,1,nr)
- 3darray SSB_natal_overlap_temp(1,nps,1,nyr,1,nps)
- 
- matrix SSB_overlap_natal(1,nps,1,nr)
- 5darray abundance_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
-
+ 4darray catch_at_age_natal_temp_overlap(1,nps,1,nyr,1,nag,1,nps)
+ 5darray yield_fleet_temp(1,nps,1,nr,1,nyr,1,nfl,1,nag)
+ 4darray yield_region_temp(1,nps,1,nr,1,nyr,1,nag)
+ 3darray yield_population_temp(1,nps,1,nyr,1,nag)
+ 3darray catch_at_age_total_temp(1,nyr,1,nag,1,nps)
+ 4darray catch_at_age_population_temp(1,nps,1,nyr,1,nag,1,nr)
+ matrix yield_total_temp(1,nyr,1,nps)
+ 4darray SSB_region_temp(1,nps,1,nr,1,nyr,1,nag)
+ matrix SSB_total_temp(1,nyr,1,nps)
  3darray SSB_population_temp(1,nps,1,nyr,1,nr)
- 4darray SSB_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
-
- 5darray rand_tag_prop_temp(1,nps,1,nr,1,nyr_rel,1,nag,1,2000) //should make function of max(ncatch) but had issues making an index
- vector rand_tag_prop_temp2(1,nt)
+ 3darray biomass_population_temp(1,nps,1,nyr,1,nr)
+ matrix biomass_total_temp(1,nyr,1,nps)
+ 4darray biomass_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
+ 3darray biomass_natal_temp_overlap(1,nps,1,nyr,1,nps)
+ 4darray abundance_population_temp(1,nps,1,nyr,1,nag,1,nr)
+ 3darray abundance_total_temp(1,nyr,1,nag,1,nps)
  3darray total_recap_temp(1,nps,1,tag_age,1,nr)
  matrix tags_avail_temp(1,nps,1,nr)
  3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
  vector tag_prop_temp2(1,nt2)
-   //end not sures above
- 
- //4darray res_TAC(1,nps,1,nr,1,nfl,1,nyr)
- //3darray res_u(1,nps,1,nr,1,nyr)
- //number Fnew
- //number delt
- //number fofF
- //number fprimeF
- //vector fofFvect(1,nag)
- //vector fprimeFhigh(1,nag)
- //vector fprimeFlow(1,nag)
- //4darray TAC(1,nps,1,nr,1,nfl,1,nyr)
- //3darray u(1,nps,1,nr,1,nfl) // already declared u above as int
- //4darray yield_RN(1,nps,1,nr,1,nyr,1,nfl)
- //5darray yield_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl)
- //4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
- //5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
- //4darray F_RN(1,nps,1,nr,1,nyr,1,nfl)
- //matrix rec_devs_RN(1,nps,1,nyr)
- //3darray Rec_apport_RN(1,nps,1,nyr,1,nr)
- //3darray rec_index_RN(1,nps,1,nr,1,nyr)
+
+
+ !! cout << "end setup of containers" << endl;
+
 PARAMETER_SECTION
- 
- //init_matrix F_est(1,npops,1,nregions,phase_F)
+ !! cout << "begin parameter section" << endl;
+
+//ADD PHASES AND BOUNDS 
 
 //movement parameters
    //will depend on functional form.  Must translate functional form to fill T array.
 //end movement parameters
+
+//initial abundance estimated parameters
 
 //selectivity parameters
   init_3darray sel_beta1(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -489,25 +450,30 @@ PARAMETER_SECTION
   init_3darray sel_beta2surv(1,np,1,nreg,1,nfs)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
  // end selectivity parameters
 
-//F parameters
-  init_4darray log_F(1,nps,1,nr,1,nyr,1,nfl) //the actual parameters
-  init_5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
-  init_4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
-  init_4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
-//end F parameters
- 
- //
-//recruitment parameters
-  init_matrix rec_devs_RN(1,nps,1,nyr) //actual parameters (log scale devs)
-  init_matrix rec_devs(1,nps,1,nyr) //derived quantity as exp(rec_devs_RN)
-  init_vector R_ave(1,np) //estimated parameter Average Recruitment or R0 for B-H S-R curve
-  init_vector SSB_zero(1,nps) //derived quantity
-  init_vector steep(1,np) //B-H steepness //could be estimated parameter or input value
-  init_vector alpha(1,nps) //derived quantity
-  init_vector beta(1,nps) //derived quantity
-//end recruitment parameters
+//survey q estimated parameters
 
- init_number dummy(phase_dummy)
+//F parameters
+  init_4darray ln_F(1,nps,1,nr,1,nyr,1,nfl) //the actual parameters
+  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
+  4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
+  4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
+//end F parameters
+
+ init_4darray M(1,nps,1,nr,1,nyr,1,nag) //param
+
+//tagging estimated parameters (reporting rate)
+
+//recruitment parameters
+  init_bounded_matrix ln_rec_prop(1,nps,1,nreg)
+  init_3darray ln_rec_prop_year(1,nps,1,nreg,1,nyr)
+  init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr) //actual parameters (log scale devs)
+  matrix rec_devs(1,nps,1,nyr) //derived quantity as exp(rec_devs_RN)
+  init_bounded_vector R_ave(1,np) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  vector SSB_zero(1,nps) //derived quantity
+  init_bounded_vector steep(1,np) //B-H steepness //could be estimated parameter or input value
+  vector alpha(1,nps) //derived quantity
+  vector beta(1,nps) //derived quantity
+//end recruitment parameters
 
   objective_function_value f
 
@@ -520,36 +486,26 @@ INITIALIZATION_SECTION  //set initial values
   //dummy 1;
 
 PROCEDURE_SECTION
-
-  //get_random_numbers();
   get_movement();
   get_selectivity();
   get_F_age();
   get_vitals();
   get_SPR();
-  get_env_Rec();
-  get_DD_move_parameters();
   get_abundance();
-  get_rand_survey_CAA_prop();
-  get_rand_CAA_prop();
+  get__survey_CAA_prop();
+  get__CAA_prop();
   get_tag_recaptures();
   get_observed_tag_recaptures();
   evaluate_the_objective_function();
  
-
-//FUNCTION get_random_numbers(); deleted by JJD
-
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
+//ADD if_phase=-, parameter=input_parameter
+//make logit transforms of estimated parameters
 
 //POSSIBLE ADDITIONS:
   //new functional forms
-  //simulate yearly differences and age-based movement
-  //random movement same as a random F value
   //random walk
-  //denpity dependent
-  //yearly deviationp around an input average value (e.g., unidirectional movement with yearly deviationp based on a variance term and lognormal distribution)
-  //need to enpure random values still sum to 1 for an area (relativization of values)
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -689,8 +645,8 @@ FUNCTION get_movement
 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
-//POSSIBLE ADDITIONS:
-  //yearly selectivity
+
+//ADD if_phase=-, parameter=input_parameter
   
 //fishery selectivity
   for (int j=1;j<=npops;j++)
@@ -744,6 +700,7 @@ FUNCTION get_selectivity
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
+//ADD if_phase=-, parameter=input_parameter
 
   for (int j=1;j<=npops;j++)
    {
@@ -757,16 +714,19 @@ FUNCTION get_F_age
            { 
              if(F_switch==1) //estimate annual deviations
               {
-               F_year(j,r,y,z)=mfexp(log_F(j,r,y,z));
+               F_year(j,r,y,z)=mfexp(ln_F(j,r,y,z));
               }
              if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
                if(y=1) //year one separate because no y-1
                {
-               F_year(j,r,y,z)=mfexp(log_F(j,r,y,z));
+               F_year(j,r,y,z)=mfexp(ln_F(j,r,y,z));
                }
                if(y>1)
                {
+               //DG
+               // IS THIS CORRECT or do we need a separate F_init and replace log_F with F_year here?-DG
+               //DG
                F_year(j,r,y,z)=F_rho(j,r,z)*mfexp(log_F(j,r,y-1,z));
                }
               }             
@@ -780,9 +740,6 @@ FUNCTION get_F_age
        }
 
 FUNCTION get_vitals
-//POSSIBLE ADDITIONS:
-  //random walk in apportionment or random to give time-varying
-  //switch for input recruitment devs by year to recreate a given population trajectory
 
   for (int p=1;p<=npops;p++)
    {
@@ -866,35 +823,18 @@ FUNCTION get_vitals
                 {
                  Rec_Prop(j,r,y)=1;
                 }
-               if(apportionment_type==3)//completely random apportionment
+               if(apportionment_type==(3) //no yearly  NEED LOGIT TRANSFORM
                 {
-                Rec_prop_temp1(j,y,r)=Rec_apport_RN(j,y,r);//generate a positive random number bw 0-1
-                }                 
-               if(apportionment_type==4) //add input obersvation error to input recruit proportions following Schnute and Richards 1995 (as implemented in Cox and Kronlund 2008)
-                {
-                 Rec_prop_temp1(j,y,r)=log(input_Rec_prop(j,r))+sigma_rec_prop(j)*Rec_apport_RN(j,y,r);//applying the additive error in log space; this equals "log(u) + error" in Cox and Kronlund Table 1
+                 Rec_Prop(j,r,y)=ln_rec_prop(j,r);
                 }
-               //if(apportionment_type==5)    /// add in the two switches for shifting approtionment based on the enviromment. and random with normal dis
+               if(apportionment_type==(4) //Yearly  NEED LOGIT TRANSFORM
+                {
+                 Rec_Prop(j,r,y)=ln_rec_prop_year(j,r,y);
+                }  
                }   
              }
            }         
          }
-
-  for (int r=1;r<=nregions(j);r++)
-       {
-        for (int y=1;y<=nyrs;y++)
-         {
-          if(apportionment_type==3)
-           { //need to standardize year by region matrix to ensure new proportions sum to one
-            Rec_Prop(j,r,y)=Rec_prop_temp1(j,y,r)/sum(Rec_prop_temp1(j,y));
-           }
-          if(apportionment_type==4)
-           { //need to run through region by year matrix to calculate second half of Schnute and Richards 1995 random mult equations and to standardize randomized apportioments to total one
-            Rec_prop_temp2(j,y,r)=Rec_prop_temp1(j,y,r)-(sum(Rec_prop_temp1(j,y))/nregions(j)); //finish equation T1.21 in Cox and Kronlund Table 1 (note that here nregions is the same as A (number of ages) in Table 1 paper
-            Rec_Prop(j,r,y)=mfexp(Rec_prop_temp2(j,y,r))/sum(mfexp(Rec_prop_temp2(j,y))); // back-transform and standardize
-           }
-         }
-        }
        }
      }
 
@@ -933,64 +873,9 @@ FUNCTION get_SPR
 
 //JJD ende here on June 14, 2017.  Working top to bottom. Certaintly not making all the needed changes.
 
-FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
-       for (int p=1;p<=npops;p++)
-        {
-        for (int j=1;j<=npops;j++)
-         {
-         for (int r=1;r<=nregions(j);r++)
-          {
-          for (int y=1;y<=nyrs;y++)
-           {
-           if(y==1)
-             {
-              env_rec(y)=init_abund(p,j,r,1);
-             }           
-           if(y>1)
-            {
-             env_rec(y) = R_ave(j)+(R_ave(j)*amplitude)*sin(((2*M_PI)/freq)*years(y)+freq);
-            }
-           }
-         }
-        }
-       }
-FUNCTION get_DD_move_parameters
- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- ///////////////////////DD Movement///////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there           
-      if(move_switch==8)
-       {
-        for (int s=1;s<=npops;s++)
-         {
-          for (int n=1;n<=nregions(s);n++)
-           {       
-            if(use_input_Bstar==0 && Rec_type==2) //set Bstar==SSB0
-             {
-              if(nregions(s)==1)
-               {
-                Bstar(s,n)=SSB_zero(s);
-               }
-              if(nregions(s)>1)
-               {
-                Bstar(s,n)=SSB_zero(s)*SSB_zero_appor(s,n);
-               }
-             }
-            if(use_input_Bstar==1 || Rec_type!=2)
-             {
-              Bstar(s,n)=input_Bstar(s,n);
-             }
-           c(s,n)=-log(A(s,n))/Bstar(s,n);  ///Bstar is the point of inflection in T
-          }
-         }
-        }
-
 FUNCTION get_abundance
        for (int y=1;y<=nyrs;y++)
         {
-
-//need to add all_natal calcs for all values that might want to compare across an area, because regular non-natal homing calcs do not account for different weights across natal populationp so if if any part of calc involves weight it needs to use the biomass_all_natal value not just biomass_AM
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1036,7 +921,7 @@ FUNCTION get_abundance
                    }
                    
  ///get year one recruitment index
-               rec_index_BM(j,r,y) = recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y) = recruits_BM(j,r,y);
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
               }
@@ -1056,66 +941,7 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j);z++)
                   {
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
-            
-                    if(move_switch==8)
-                     {
-                      Fract_Move_DD(j,r,y,a)=(1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a)));
-       
-                      biomass_BM_temp=0;
-                      biomass_BM_temp2=0;
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {       
-                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
-                          }
-                        }
-                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
-                        for (int s=1;s<=npops;s++)
-                         {
-                          for (int n=1;n<=nregions(s);n++)
-                           {
-                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
-                             {
-                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
-                             }
-                            if(j!=s || r!=n) 
-                             {
-                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
-                             }
-                            if(sum(nregions)==2)
-                             {
-                              rel_bio(j,r,y,a,s,n)=1;
-                             }
-                            }
-                           }                          
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {
-                           if(j==s && r==n) 
-                            {
-                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
-                            }
-                           if(j!=s || r!=n) 
-                            {
-                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
-                            }
-                          }
-                        }
-                    }
-                  
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                abundance_move_overlap_temp=0;
+                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
                  {
@@ -1220,7 +1046,7 @@ FUNCTION get_abundance
                 biomass_total(y)=sum(biomass_total_temp(y));
 
                 recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);                
-                rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+                rec_index_AM(j,r,y)=recruits_AM(j,r,y);
                 rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                 rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -1237,43 +1063,30 @@ FUNCTION get_abundance
               {
                if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
-                  true_survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*q_survey(j,r,z);
-                  true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
-                  true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
-                  true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
-                  OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
+                  survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*q_survey(j,r,z);
+                  survey_fleet_overlap_age_bio(p,j,r,y,z,a)=survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
+                  survey_fleet_bio_overlap(p,j,r,y,z)=sum(survey_fleet_overlap_age_bio(p,j,r,y,z));  
+                  survey_fleet_bio_overlap_temp(j,r,y,z,p)=survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
                  {
-                  true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
-                  true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
+                  survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
+                  survey_fleet_age_bio(j,r,y,z,a)=survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_age_bio(j,r,y,z));
                  }
                 if(natal_homing_switch==1)
                  {
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_bio_overlap_temp(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=sum(OBS_survey_fleet_bio_temp(j,r,y,z));  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_bio_overlap_temp(j,r,y,z));
                  }
              
-                  true_survey_region_bio_overlap(p,j,y,r)=sum(true_survey_fleet_bio_overlap(p,j,r,y));               
-                  true_survey_population_bio_overlap(p,y,j)=sum(true_survey_region_bio_overlap(p,j,y));               
-                  true_survey_natal_bio_overlap(y,p)=sum(true_survey_population_bio_overlap(p,y));               
-                  true_survey_total_bio_overlap(y)=sum(true_survey_natal_bio_overlap(y));
-                  OBS_survey_region_bio_overlap(p,j,y,r)=sum(OBS_survey_fleet_bio_overlap(p,j,r,y));
-                  OBS_survey_population_bio_overlap(p,y,j)=sum(OBS_survey_region_bio_overlap(p,j,y));
-                  OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
-                  OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
-                  
-                  true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
-                  true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
-                  true_survey_total_bio(y)=sum(true_survey_population_bio(y));
-                  OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
-                  OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
-                  OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
+                  survey_region_bio_overlap(p,j,y,r)=sum(survey_fleet_bio_overlap(p,j,r,y));               
+                  survey_population_bio_overlap(p,y,j)=sum(survey_region_bio_overlap(p,j,y));               
+                  survey_natal_bio_overlap(y,p)=sum(survey_population_bio_overlap(p,y));               
+                  survey_total_bio_overlap(y)=sum(survey_natal_bio_overlap(y));
 
-                  apport_region_survey_biomass(j,r,y)=OBS_survey_region_bio(j,y,r)/OBS_survey_population_bio(y,j);
+                  survey_region_bio(j,y,r)=sum(survey_fleet_bio(j,r,y));
+                  survey_population_bio(y,j)=sum(survey_region_bio(j,y));
+                  survey_total_bio(y)=sum(survey_population_bio(y));
                   
                 }  //tsurvey==0
                } //end survey_fleets
@@ -1281,714 +1094,7 @@ FUNCTION get_abundance
            }
           }
          } //end age loop
- ///////////////////////////////////////////////////////////////////////////////////
- ////////////////NEWTON-RAPHSON for YEAR 1////////////////////////////////////////////////////////////////////////////
- //////////////////////////////////////////////////////////////////////////////////////////////////////
-           for (int p=1;p<=npops;p++)
-            {
-             for (int j=1;j<=npops;j++)
-              {
-               for (int r=1;r<=nregions(j);r++)
-                {
-                   if(model_type_switch>0)  //Find the fully selected F that would result in the TAC
-                     {
-                      for (int a=1;a<=nages;a++)
-                       {
-                         for(int x=1;x<=nfleets(j);x++)
-                           {
-                             if(model_type_switch==1)
-                                {
-                                 if(natal_homing_switch>0)
-                                   {
-                                               if(parse_TAC==0) //use input TAC
-                                                {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
-                                                   }
-                                                }
-                                             if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  }
-                                                 }
-                                     if(TAC(j,r,x,y)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                             {
-                                              if(s==1)
-                                               {
-                                                 fofFvect(s)=((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                                 fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                                 fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
-                                               }
-                                              if(s>1)
-                                               {
-                                                fofFvect(s)=((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                                fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                                fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                               }
-                                             }
-                                              fofF=sum(fofFvect)-TAC(j,r,x,y);
-                                              fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                              Fnew=Fnew-(fofF/fprimeF);                                           
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                         } 
-                                       }
-                                 if(natal_homing_switch==0)
-                                   {
-                                               if(parse_TAC==0) //use input TAC
-                                                {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
-                                                   }
-                                                }
-                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  }
-                                                 }
-                                     if(TAC(j,r,x,y)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                            {
-                                              if(s==1)
-                                              {
-                                               fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
-                                              }
-                                              if(s>1)
-                                              {
-                                              fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              }
-                                             }
-                                            fofF=sum(fofFvect)-TAC(j,r,x,y);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                       } 
-                                      }
-                                     }
 
-                             if(model_type_switch==2)
-                                {
-                                 if(natal_homing_switch>0)
-                                   {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 u(j,r,x)=input_u(j,r,x);
-                                                }
-                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                  }
-                                                 }
-                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                             {
-                                              if(s==1)
-                                               {  
-                                                 fofFvect(s)=(((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                 fprimeFhigh(s)=((((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                 fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);                                              
-                                               }
-                                              if(s>1)
-                                               {
-                                                fofFvect(s)=(((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                fprimeFhigh(s)=((((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                               }
-                                             } 
-                                            fofF=sum(fofFvect)-u(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                         } 
-                                       }
-                                 if(natal_homing_switch==0)
-                                   {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 u(j,r,x)=input_u(j,r,x);
-                                                }
-                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                  }
-                                                 }
-                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                            {
-                                              if(s==1)
-                                              {
-                                               fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
-                                              }
-                                              if(s>1)
-                                              {
-                                              fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              }
-                                             }
-                                            fofF=sum(fofFvect)-u(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                       } 
-                                      }
-                                     }
-                             F_fleet(j,r,y,a,x)=Fnew*selectivity(j,r,y,a,x);                                         
-                         }
-                       F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
-                      }                     
-                     }
-                    }
-                   }
-                  }
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
          for (int a=1;a<=nages;a++)
            {
@@ -2123,70 +1229,35 @@ FUNCTION get_abundance
                 Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
 
-                //YIELD observation error
-                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(yield_RN_overlap(p,j,r,y,z)*sigma_catch_overlap(p,j,r,z)-.5*square(sigma_catch_overlap(p,j,r,z)));
-                OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
-               if(natal_homing_switch==0)
-                {
-                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(yield_RN(j,r,y,z)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
-                }
-               if(natal_homing_switch==1)
-                {
-                 OBS_yield_fleet(j,r,y,z)=sum(OBS_yield_fleet_temp(j,r,y,z));  
-                }
-                OBS_yield_region_overlap(p,j,y,r)=sum(OBS_yield_region_fleet_overlap(p,j,r,y));
-                OBS_yield_population_overlap(p,y,j)=sum(OBS_yield_region_overlap(p,j,y));
-                OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
-                OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
-                OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
-                OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
-                OBS_yield_total(y)=sum(OBS_yield_population(y));
-             //apportion variables
-                apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
-
           } //end fleets loop
              for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)>0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
-                  true_survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
-                  true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
-                  true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
-                  true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
-                  OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
+                  survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
+                  survey_fleet_overlap_age_bio(p,j,r,y,z,a)=survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
+                  survey_fleet_bio_overlap(p,j,r,y,z)=sum(survey_fleet_overlap_age_bio(p,j,r,y,z));  
+                  survey_fleet_bio_overlap_temp(j,r,y,z,p)=survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
                  {
-                  true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
-                  true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
+                  survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
+                  survey_fleet_age_bio(j,r,y,z,a)=survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_age_bio(j,r,y,z));
                  }
                 if(natal_homing_switch==1)
                  {
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_bio_overlap_temp(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=sum(OBS_survey_fleet_bio_temp(j,r,y,z));  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_bio_overlap_temp(j,r,y,z));
                  }
              
-                  true_survey_region_bio_overlap(p,j,y,r)=sum(true_survey_fleet_bio_overlap(p,j,r,y));               
-                  true_survey_population_bio_overlap(p,y,j)=sum(true_survey_region_bio_overlap(p,j,y));               
-                  true_survey_natal_bio_overlap(y,p)=sum(true_survey_population_bio_overlap(p,y));               
-                  true_survey_total_bio_overlap(y)=sum(true_survey_natal_bio_overlap(y));
-                  OBS_survey_region_bio_overlap(p,j,y,r)=sum(OBS_survey_fleet_bio_overlap(p,j,r,y));
-                  OBS_survey_population_bio_overlap(p,y,j)=sum(OBS_survey_region_bio_overlap(p,j,y));
-                  OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
-                  OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
-                  
-                  true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
-                  true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
-                  true_survey_total_bio(y)=sum(true_survey_population_bio(y));
-                  OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
-                  OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
-                  OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
+                  survey_region_bio_overlap(p,j,y,r)=sum(survey_fleet_bio_overlap(p,j,r,y));               
+                  survey_population_bio_overlap(p,y,j)=sum(survey_region_bio_overlap(p,j,y));               
+                  survey_natal_bio_overlap(y,p)=sum(survey_population_bio_overlap(p,y));               
+                  survey_total_bio_overlap(y)=sum(survey_natal_bio_overlap(y));
 
-                  apport_region_survey_biomass(j,r,y)=OBS_survey_region_bio(j,y,r)/OBS_survey_population_bio(y,j);
-                  
+                  survey_region_bio(j,y,r)=sum(survey_fleet_bio(j,r,y));
+                  survey_population_bio(y,j)=sum(survey_region_bio(j,y));
+                  survey_total_bio(y)=sum(survey_population_bio(y));
                 } //tsurvey>0
                }  //end survey_fleets 
              }
@@ -2200,7 +1271,6 @@ FUNCTION get_abundance
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-////need to fix and use SSB and R_ave for BH calcs.
 
     if(y>1)
      {
@@ -2295,7 +1365,7 @@ FUNCTION get_abundance
                    }
                  }
                  }
-               rec_index_BM(j,r,y)=recruits_BM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_BM(j,r,y)=recruits_BM(j,r,y);
                rec_index_BM_temp(j,y,r)=rec_index_BM(j,r,y);
                rec_index_prop_BM(j,r,y)=rec_index_BM(j,r,y)/sum(rec_index_BM_temp(j,y));
 
@@ -2354,63 +1424,7 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
-            
-                    if(move_switch==8)
-                     {
-                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
-       
-                      biomass_BM_temp=0;
-                      biomass_BM_temp2=0;
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {       
-                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
-                          }
-                        }
-                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
-                        for (int s=1;s<=npops;s++)
-                         {
-                          for (int n=1;n<=nregions(s);n++)
-                           {
-                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
-                             {
-                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
-                             }
-                            if(j!=s || r!=n) 
-                             {
-                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
-                             }
-                            if(sum(nregions)==2)
-                             {
-                              rel_bio(j,r,y,a,s,n)=1;
-                             }
-                            }
-                           }
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {
-                           if(j==s && r==n) 
-                            {
-                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
-                            }
-                           if(j!=s || r!=n) 
-                            {
-                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
-                            }
-                          }
-                        }
-                    }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
                
@@ -2418,9 +1432,6 @@ FUNCTION get_abundance
                  {
                   for (int n=1;n<=nregions(k);n++)
                    {
-
-  ///////////NEED TO CHECK WHY USING FULL RECRUITMENT FUNCTIOnp TO CALCULATE MOVEMENT OF AGE-1 FISH HERE, MIGHT BE ABLE TO CONDEnpE CODE AND USE RECRUITS_BM OR ABUNDANCE_BM
-
 
                  if(natal_homing_switch>0)
                  {
@@ -2585,7 +1596,7 @@ FUNCTION get_abundance
                    }
 
                recruits_AM(j,r,y)=abundance_at_age_AM(j,r,y,a);
-               rec_index_AM(j,r,y)=recruits_AM(j,r,y)*mfexp(rec_index_RN(j,r,y)*rec_index_sigma(j,r)-0.5*square(rec_index_sigma(j,r)));
+               rec_index_AM(j,r,y)=recruits_AM(j,r,y);
                rec_index_AM_temp(j,y,r)=rec_index_AM(j,r,y);
                rec_index_prop_AM(j,r,y)=rec_index_AM(j,r,y)/sum(rec_index_AM_temp(j,y));
 
@@ -2652,63 +1663,6 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
-            
-                    if(move_switch==8)
-                     {
-                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
-       
-                      biomass_BM_temp=0;
-                      biomass_BM_temp2=0;
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {       
-                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
-                          }
-                        }
-                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
-                        for (int s=1;s<=npops;s++)
-                         {
-                          for (int n=1;n<=nregions(s);n++)
-                           {
-                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
-                             {
-                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
-                             }
-                            if(j!=s || r!=n) 
-                             {
-                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
-                             }
-                            if(sum(nregions)==2)
-                             {
-                              rel_bio(j,r,y,a,s,n)=1;
-                             }
-                            }
-                           }
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {
-                           if(j==s && r==n) 
-                            {
-                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
-                            }
-                           if(j!=s || r!=n) 
-                            {
-                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
-                            }
-                          }
-                        }
-                    }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
 
@@ -2862,63 +1816,6 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
-            
-                    if(move_switch==8)
-                     {
-                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
-       
-                      biomass_BM_temp=0;
-                      biomass_BM_temp2=0;
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {       
-                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
-                          }
-                        }
-                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
-                        for (int s=1;s<=npops;s++)
-                         {
-                          for (int n=1;n<=nregions(s);n++)
-                           {
-                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
-                             {
-                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
-                             }
-                            if(j!=s || r!=n) 
-                             {
-                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
-                             }
-                            if(sum(nregions)==2)
-                             {
-                              rel_bio(j,r,y,a,s,n)=1;
-                             }
-                            }
-                           }
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {
-                           if(j==s && r==n) 
-                            {
-                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
-                            }
-                           if(j!=s || r!=n) 
-                            {
-                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
-                            }
-                          }
-                        }
-                    }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
 
@@ -3072,63 +1969,6 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////Density-Dependent Movement Calcs///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-           /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
-            /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
-            
-                    if(move_switch==8)
-                     {
-                      Fract_Move_DD(j,r,y,a)=((1-input_residency(j,r,a))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
-       
-                      biomass_BM_temp=0;
-                      biomass_BM_temp2=0;
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {       
-                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n);
-                          }
-                        }
-                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r)); //do not include population/region moving from in summation
-                        for (int s=1;s<=npops;s++)
-                         {
-                          for (int n=1;n<=nregions(s);n++)
-                           {
-                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
-                             {
-                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
-                             }
-                            if(j!=s || r!=n) 
-                             {
-                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
-                             }
-                            if(sum(nregions)==2)
-                             {
-                              rel_bio(j,r,y,a,s,n)=1;
-                             }
-                            }
-                           }
-                       for (int s=1;s<=npops;s++)
-                        {
-                         for (int n=1;n<=nregions(s);n++)
-                          {
-                           if(j==s && r==n) 
-                            {
-                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
-                            }
-                           if(j!=s || r!=n) 
-                            {
-                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
-                            }
-                          }
-                        }
-                    }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                 abundance_move_overlap_temp=0;
 
@@ -3245,760 +2085,37 @@ FUNCTION get_abundance
                   {
                    if(tsurvey(j,r)==0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                    {
-                  true_survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*q_survey(j,r,z);
-                  true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
-                  true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
-                  true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
-                  OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
+                  survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*q_survey(j,r,z);
+                  survey_fleet_overlap_age_bio(p,j,r,y,z,a)=survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
+                  survey_fleet_bio_overlap(p,j,r,y,z)=sum(survey_fleet_overlap_age_bio(p,j,r,y,z));  
+                  survey_fleet_bio_overlap_temp(j,r,y,z,p)=survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
                  {
-                  true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
-                  true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
+                  survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*q_survey(j,r,z);
+                  survey_fleet_age_bio(j,r,y,z,a)=survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_age_bio(j,r,y,z));
                  }
                 if(natal_homing_switch==1)
                  {
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_bio_overlap_temp(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=sum(OBS_survey_fleet_bio_temp(j,r,y,z));  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_bio_overlap_temp(j,r,y,z));
                  }
              
-                  true_survey_region_bio_overlap(p,j,y,r)=sum(true_survey_fleet_bio_overlap(p,j,r,y));               
-                  true_survey_population_bio_overlap(p,y,j)=sum(true_survey_region_bio_overlap(p,j,y));               
-                  true_survey_natal_bio_overlap(y,p)=sum(true_survey_population_bio_overlap(p,y));               
-                  true_survey_total_bio_overlap(y)=sum(true_survey_natal_bio_overlap(y));
-                  OBS_survey_region_bio_overlap(p,j,y,r)=sum(OBS_survey_fleet_bio_overlap(p,j,r,y));
-                  OBS_survey_population_bio_overlap(p,y,j)=sum(OBS_survey_region_bio_overlap(p,j,y));
-                  OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
-                  OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
+                  survey_region_bio_overlap(p,j,y,r)=sum(survey_fleet_bio_overlap(p,j,r,y));               
+                  survey_population_bio_overlap(p,y,j)=sum(survey_region_bio_overlap(p,j,y));               
+                  survey_natal_bio_overlap(y,p)=sum(survey_population_bio_overlap(p,y));               
+                  survey_total_bio_overlap(y)=sum(survey_natal_bio_overlap(y));
                   
-                  true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
-                  true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
-                  true_survey_total_bio(y)=sum(true_survey_population_bio(y));
-                  OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
-                  OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
-                  OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
+                  survey_region_bio(j,y,r)=sum(survey_fleet_bio(j,r,y));
+                  survey_population_bio(y,j)=sum(survey_region_bio(j,y));
+                  survey_total_bio(y)=sum(survey_population_bio(y));
 
-                  apport_region_survey_biomass(j,r,y)=OBS_survey_region_bio(j,y,r)/OBS_survey_population_bio(y,j);
-                  
                 } //tsurvey==0
                } //end survey_fleets 
       }
      }
     }
    } //end age loop
- ///////////////////////////////////////////////////////////////////////////////////
- ///////////////////////////////////////////////////////////////////////////////////
- /////////////////NEWTON RAPHSON CALCS//////////////////////////////////////////////////////////////////
- ///////////////////////////////////////////////////////////////////////////////////
- ///////////////////////////////////////////////////////////////////////////////////
-           for (int p=1;p<=npops;p++)
-            {
-             for (int j=1;j<=npops;j++)
-              {
-               for (int r=1;r<=nregions(j);r++)
-                {
-                   if(model_type_switch>0)  //Find the fully selected F that would result in the TAC
-                     {
-                      for (int a=1;a<=nages;a++)
-                       {
-                         for(int x=1;x<=nfleets(j);x++)
-                           {
-                             if(model_type_switch==1)
-                                {
-                                 if(natal_homing_switch>0)
-                                   {
-                                               if(parse_TAC==0) //use input TAC
-                                                {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
-                                                   }
-                                                }
-                                             if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  }
-                                                 }
-                                     if(TAC(j,r,x,y)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                             {
-                                              if(s==1)
-                                               {
-                                                 fofFvect(s)=((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                                 fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                                 fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
-                                               }
-                                              if(s>1)
-                                               {
-                                                fofFvect(s)=((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                                fprimeFhigh(s)=(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                                fprimeFlow(s)=(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                               }
-                                             }
-                                              fofF=sum(fofFvect)-TAC(j,r,x,y);
-                                              fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                              Fnew=Fnew-(fofF/fprimeF);                                           
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                         } 
-                                       }
-                                 if(natal_homing_switch==0)
-                                   {
-                                               if(parse_TAC==0) //use input TAC
-                                                {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y);
-                                                   }
-                                                   if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y);
-                                                   }
-                                                }
-                                             if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_TAC(j,r,x)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(y==1)
-                                                    {
-                                                     TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j)); //partition evenly by total fleets in area
-                                                    }
-                                                   if(y>1) //assume rec index occurs at time of spawning so never have available in current year
-                                                    {
-                                                     TAC(j,r,x,y)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j); //partition regional quota evenly by fleets in region
-                                                    }
-                                                   }
-                                                  }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //apportion TAC equally among fleets if y<timelag
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_TAC(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_TAC(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_population(j,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         TAC(j,r,x,y)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)*biomass_AM(j,r,y)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                  if(calc_TAC_from_uMSY==0)
-                                                   {
-                                                    TAC(j,r,x,y)=input_TAC(j,r,x)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==1)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_population(j,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  if(calc_TAC_from_uMSY==2)
-                                                   {
-                                                    TAC(j,r,x,y)=input_u(j,r,x)*biomass_AM(j,r,y)/(nregions(j)*nfleets(j));
-                                                   }
-                                                  }
-                                                 }
-                                     if(TAC(j,r,x,y)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                            {
-                                              if(s==1)
-                                              {
-                                               fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));
-                                               fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j))));                                              
-                                              }
-                                              if(s>1)
-                                              {
-                                              fofFvect(s)=weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFhigh(s)=weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              fprimeFlow(s)=weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))));
-                                              }
-                                             }
-                                            fofF=sum(fofFvect)-TAC(j,r,x,y);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                       } 
-                                      }
-                                     }
-
-                             if(model_type_switch==2)
-                                {
-                                 if(natal_homing_switch>0)
-                                   {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 u(j,r,x)=input_u(j,r,x);
-                                                }
-                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                  }
-                                                 }
-                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                             {
-                                              if(s==1)
-                                               {  
-                                                 fofFvect(s)=(((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                 fprimeFhigh(s)=((((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                 fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM_overlap_region_all_natal(j,r,y);                                              
-                                               }
-                                              if(s>1)
-                                               {
-                                                fofFvect(s)=(((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                fprimeFhigh(s)=((((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                                fprimeFlow(s)=((((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*biomass_AM_overlap_age_region_all_natal(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM_overlap_region_all_natal(j,r,y);
-                                               }
-                                             } 
-                                            fofF=sum(fofFvect)-u(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                         } 
-                                       }
-                                 if(natal_homing_switch==0)
-                                   {
-                                               if(parse_TAC==0) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 u(j,r,x)=input_u(j,r,x);
-                                                }
-                                               if(parse_TAC==1) //use observed data to parse input_TAC by region // if multiple fleets then evenly distribute across fleets
-                                                {
-                                                 if(parse_TAC_source==0)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_BM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                  }
-                                                 if(parse_TAC_source==1)
-                                                  {
-                                                   if(y==1)
-                                                    {
-                                                     u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                    }
-                                                   if(y>1)
-                                                    {
-                                                     u(j,r,x)=rec_index_prop_AM(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                    }
-                                                   }
-                                                 if(parse_TAC_source==2)
-                                                  {
-                                                   if(TAC_survey_parse_timelag_switch==1) //use timelag
-                                                    {
-                                                       if(y<=TAC_survey_parse_timelag) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>TAC_survey_parse_timelag)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,(y-TAC_survey_parse_timelag))*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                     }
-                                                  if(TAC_survey_parse_timelag_switch==0) //no timelag
-                                                    {
-                                                     if(tsurvey(j,r)==0)
-                                                      {
-                                                       u(j,r,x)=apport_region_survey_biomass(j,r,y)*input_u(j,r,x)/nfleets(j);
-                                                      }
-                                                     if(tsurvey(j,r)>0)
-                                                      {
-                                                       if(y==1) //first year apportion TAC equally among fleets
-                                                        {                                                     
-                                                         u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                        }
-                                                       if(y>1)
-                                                        {                                                     
-                                                         u(j,r,x)=apport_region_survey_biomass(j,r,y-1)*input_u(j,r,x)/nfleets(j);
-                                                        }
-                                                       }
-                                                     }
-                                                    }
-                                                 if(parse_TAC_source==3)
-                                                  {
-                                                   u(j,r,x)=input_u(j,r,x)/(nregions(j)*nfleets(j));
-                                                  }
-                                                 }
-                                     if(u(j,r,x)==0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                       {
-                                        Fnew=0;
-                                       }
-                                     if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
-                                      {
-                                        Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
-                                         {
-                                          delt=Fnew*NR_dev;  // NR_dev~0.001
-                                           for(int s=1;s<=nages;s++)
-                                            {
-                                              if(s==1)
-                                              {
-                                               fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);
-                                               fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s))*(1-tspawn(j)))))/biomass_AM(j,r,y);                                              
-                                              }
-                                              if(s>1)
-                                              {
-                                              fofFvect(s)=(weight_catch(j,r,y,s)*((Fnew*selectivity(j,r,y,s,x))/(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*(Fnew*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFhigh(s)=(weight_catch(j,r,y,s)*(((Fnew+delt)*selectivity(j,r,y,s,x))/((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew+delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              fprimeFlow(s)=(weight_catch(j,r,y,s)*(((Fnew-delt)*selectivity(j,r,y,s,x))/((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))*abundance_at_age_AM(j,r,y,s)*(1-mfexp(-1*((Fnew-delt)*selectivity(j,r,y,s,x)+M(j,r,y,s)))))/biomass_AM(j,r,y);
-                                              }
-                                             }
-                                            fofF=sum(fofFvect)-u(j,r,x);
-                                            fprimeF=(sum(fprimeFhigh)-sum(fprimeFlow))/(2.0*delt);
-                                            Fnew=Fnew-(fofF/fprimeF);
-                                          if(Fnew<0) Fnew=0.5*(Fnew+(fofF/fprimeF));
-                                          if(Fnew>max_Fnew) Fnew=max_Fnew;  //At low N, Fnew would sometimes be really high and I'd get an error message.  This prevents those errors.
-                                         }
-                                       } 
-                                      }
-                                     }
-                             F_fleet(j,r,y,a,x)=Fnew*selectivity(j,r,y,a,x);                                         
-                         }
-                       F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
-                      }                     
-                     }
-                    }
-                   }
-                  }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //a==1 natal homing
@@ -4352,70 +2469,36 @@ FUNCTION get_abundance
                 Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
                 Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
 
-                //YIELD observation error
-                OBS_yield_region_fleet_overlap(p,j,r,y,z)=yield_region_fleet_overlap(p,j,r,z,y)*mfexp(yield_RN_overlap(p,j,r,y,z)*sigma_catch_overlap(p,j,r,z)-.5*square(sigma_catch_overlap(p,j,r,z)));
-                OBS_yield_fleet_temp(j,r,y,z,p)=OBS_yield_region_fleet_overlap(p,j,r,y,z);
-               if(natal_homing_switch==0)
-                {
-                 OBS_yield_fleet(j,r,y,z)=yield_fleet(j,r,y,z)*mfexp(yield_RN(j,r,y,z)*sigma_catch(j,r,z)-.5*square(sigma_catch(j,r,z)));
-                }
-               if(natal_homing_switch==1)
-                {
-                 OBS_yield_fleet(j,r,y,z)=sum(OBS_yield_fleet_temp(j,r,y,z));  
-                }
-                OBS_yield_region_overlap(p,j,y,r)=sum(OBS_yield_region_fleet_overlap(p,j,r,y));
-                OBS_yield_population_overlap(p,y,j)=sum(OBS_yield_region_overlap(p,j,y));
-                OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
-                OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
-                OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
-                OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
-                OBS_yield_total(y)=sum(OBS_yield_population(y));
-             //apportion variables
-                apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
-
           } //end fleets loop
              for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)>0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
                 {
-                  true_survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
-                  true_survey_fleet_overlap_age_bio(p,j,r,y,z,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
-                  true_survey_fleet_bio_overlap(p,j,r,y,z)=sum(true_survey_fleet_overlap_age_bio(p,j,r,y,z));  
-                  true_survey_fleet_bio_overlap_temp(j,r,y,z,p)=true_survey_fleet_bio_overlap(p,j,r,y,z);
-                  OBS_survey_fleet_bio_overlap(p,j,r,y,z)=true_survey_fleet_bio_overlap(p,j,r,y,z)*mfexp(survey_RN_overlap(p,j,r,y,z)*sigma_survey_overlap(p,j,r,z)-.5*square(sigma_survey_overlap(p,j,r,z)));
-                  OBS_survey_fleet_bio_temp(j,r,y,z,p)=OBS_survey_fleet_bio_overlap(p,j,r,y,z);
+                  survey_fleet_overlap_age(p,j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM_overlap_region(p,j,y,a,r)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
+                  survey_fleet_overlap_age_bio(p,j,r,y,z,a)=survey_fleet_overlap_age(p,j,r,y,z,a)*weight_population(p,r,y,a);
+                  survey_fleet_bio_overlap(p,j,r,y,z)=sum(survey_fleet_overlap_age_bio(p,j,r,y,z));  
+                  survey_fleet_bio_overlap_temp(j,r,y,z,p)=survey_fleet_bio_overlap(p,j,r,y,z);
 
                 if(natal_homing_switch==0)
                  {
-                  true_survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
-                  true_survey_fleet_age_bio(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
+                  survey_fleet_age(j,r,y,z,a)=survey_selectivity(j,r,y,a,z)*abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tsurvey(j,r))*q_survey(j,r,z);
+                  survey_fleet_age_bio(j,r,y,z,a)=survey_fleet_age(j,r,y,z,a)*weight_population(j,r,y,a);                  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_age_bio(j,r,y,z));
                  }
                 if(natal_homing_switch==1)
                  {
-                  true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_bio_overlap_temp(j,r,y,z));
-                  OBS_survey_fleet_bio(j,r,y,z)=sum(OBS_survey_fleet_bio_temp(j,r,y,z));  
+                  survey_fleet_bio(j,r,y,z)=sum(survey_fleet_bio_overlap_temp(j,r,y,z));
                  }
              
-                  true_survey_region_bio_overlap(p,j,y,r)=sum(true_survey_fleet_bio_overlap(p,j,r,y));               
-                  true_survey_population_bio_overlap(p,y,j)=sum(true_survey_region_bio_overlap(p,j,y));               
-                  true_survey_natal_bio_overlap(y,p)=sum(true_survey_population_bio_overlap(p,y));               
-                  true_survey_total_bio_overlap(y)=sum(true_survey_natal_bio_overlap(y));
-                  OBS_survey_region_bio_overlap(p,j,y,r)=sum(OBS_survey_fleet_bio_overlap(p,j,r,y));
-                  OBS_survey_population_bio_overlap(p,y,j)=sum(OBS_survey_region_bio_overlap(p,j,y));
-                  OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
-                  OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
-                  
-                  true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
-                  true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
-                  true_survey_total_bio(y)=sum(true_survey_population_bio(y));
-                  OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
-                  OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
-                  OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
+                  survey_region_bio_overlap(p,j,y,r)=sum(survey_fleet_bio_overlap(p,j,r,y));               
+                  survey_population_bio_overlap(p,y,j)=sum(survey_region_bio_overlap(p,j,y));               
+                  survey_natal_bio_overlap(y,p)=sum(survey_population_bio_overlap(p,y));               
+                  survey_total_bio_overlap(y)=sum(survey_natal_bio_overlap(y));
 
-                  apport_region_survey_biomass(j,r,y)=OBS_survey_region_bio(j,y,r)/OBS_survey_population_bio(y,j);
-                  
+                  survey_region_bio(j,y,r)=sum(survey_fleet_bio(j,r,y));
+                  survey_population_bio(y,j)=sum(survey_region_bio(j,y));
+                  survey_total_bio(y)=sum(survey_population_bio(y));
+
                 }  //tsurvey>0
                } //end survey_fleets
       }
@@ -4466,9 +2549,7 @@ FUNCTION get_abundance
                  }
                 }
                }
-FUNCTION get_rand_survey_CAA_prop
- random_number_generator myrand_survey_age(myseed_survey_age);
- 
+FUNCTION get_survey_CAA_prop      
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -4481,8 +2562,8 @@ FUNCTION get_rand_survey_CAA_prop
            {
             for (int a=1;a<=nages;a++)
              {
-              survey_at_age_region_fleet_overlap_prop(p,j,r,z,y,a)=true_survey_fleet_overlap_age(p,j,r,y,z,a)/sum(true_survey_fleet_overlap_age(p,j,r,y,z));              
-              survey_at_age_fleet_prop(j,r,y,z,a)=true_survey_fleet_age(j,r,y,z,a)/sum(true_survey_fleet_age(j,r,y,z));
+              survey_at_age_region_fleet_overlap_prop(p,j,r,z,y,a)=survey_fleet_overlap_age(p,j,r,y,z,a)/sum(survey_fleet_overlap_age(p,j,r,y,z));              
+              survey_at_age_fleet_prop(j,r,y,z,a)=survey_fleet_age(j,r,y,z,a)/sum(survey_fleet_age(j,r,y,z));
              }
             }
            }
@@ -4490,78 +2571,8 @@ FUNCTION get_rand_survey_CAA_prop
          }
         }
 
-  for (int p=1;p<=npops;p++)
-   {
-    for (int j=1;j<=npops;j++)
-     {
-      for (int r=1;r<=nregions(j);r++)
-       {
-        for (int z=1;z<=nfleets_survey(j);z++)
-         {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-            if(use_stock_comp_info_survey==0)
-             {
-              rand_SIM_survey_prop_temp(j,r,y,z).fill_multinomial(myrand_survey_age,(survey_at_age_fleet_prop(j,r,y,z)));
-             }
-            if(use_stock_comp_info_survey==1)
-             {
-              rand_SIM_survey_prop_temp_overlap(p,j,r,y,z).fill_multinomial(myrand_survey_age,(survey_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
-             }
-           }
-         }
-       }
-     }
-   }
 
-  for (int p=1;p<=npops;p++)
-   {
-    for (int j=1;j<=npops;j++)
-     {
-      for (int r=1;r<=nregions(j);r++)
-       {
-        for (int z=1;z<=nfleets_survey(j);z++)
-         {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-             rand_SIM_survey_prop_temp2=0;
-            if(use_stock_comp_info_survey==0)
-             {
-               for(int n=1;n<=SIM_nsurvey(j,r,z);n++) 
-                {
-                 rand_SIM_survey_prop_temp2((rand_SIM_survey_prop_temp(j,r,y,z,n)))+= 1.0;
-                }
-               SIM_survey_prop(j,r,z,y)=rand_SIM_survey_prop_temp2;
-             }
-            if(use_stock_comp_info_survey==1)
-             {              
-               for(int n=1;n<=SIM_nsurvey_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
-                {
-                 rand_SIM_survey_prop_temp2((rand_SIM_survey_prop_temp_overlap(p,j,r,y,z,n)))+= 1.0;
-                }
-               SIM_survey_prop_overlap(p,j,r,z,y)=rand_SIM_survey_prop_temp2;
-             }
-             
-        for(int a=1;a<=nages;a++)
-         {
-          if(use_stock_comp_info_survey==0)
-           {
-            OBS_survey_prop(j,r,z,y,a)=SIM_survey_prop(j,r,z,y,a)/SIM_nsurvey(j,r,z);
-           }
-          if(use_stock_comp_info_survey==1)
-           {
-            OBS_survey_prop_overlap(p,j,r,z,y,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
-           }
-         }
-       }
-      }
-     }
-    }
-   }
-
-FUNCTION get_rand_CAA_prop
- random_number_generator myrand_catch_age(myseed_catch_age);
- 
+FUNCTION get_CAA_prop 
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -4591,76 +2602,6 @@ FUNCTION get_rand_CAA_prop
          }
         }
         
-  for (int p=1;p<=npops;p++)
-   {
-    for (int j=1;j<=npops;j++)
-     {
-      for (int r=1;r<=nregions(j);r++)
-       {
-        for (int z=1;z<=nfleets(j);z++)
-         {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-            if(use_stock_comp_info_catch==0)
-             {
-              rand_SIM_catch_prop_temp(j,r,y,z).fill_multinomial(myrand_catch_age,(catch_at_age_fleet_prop(j,r,y,z)));
-             }
-            if(use_stock_comp_info_catch==1)
-             {
-              rand_SIM_catch_prop_temp_overlap(p,j,r,y,z).fill_multinomial(myrand_catch_age,(catch_at_age_region_fleet_overlap_prop(p,j,r,z,y)));
-             }
-           }
-         }
-       }
-     }
-   }
-            
-  for (int p=1;p<=npops;p++)
-   {
-    for (int j=1;j<=npops;j++)
-     {
-      for (int r=1;r<=nregions(j);r++)
-       {
-        for (int z=1;z<=nfleets(j);z++)
-         {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-             rand_SIM_catch_prop_temp2=0;
-
-            if(use_stock_comp_info_catch==0)
-             {
-               for(int n=1;n<=SIM_ncatch(j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
-                {
-                 rand_SIM_catch_prop_temp2((rand_SIM_catch_prop_temp(j,r,y,z,n)))+= 1.0;
-                }
-               SIM_catch_prop(j,r,z,y)=rand_SIM_catch_prop_temp2;
-             }
-            if(use_stock_comp_info_catch==1)
-             {              
-               for(int n=1;n<=SIM_ncatch_overlap(p,j,r,z);n++) /// look into changing this so can have ncatch change by year (ie different sample sizes for beginning and end of timeseries)
-                {
-                 rand_SIM_catch_prop_temp2((rand_SIM_catch_prop_temp_overlap(p,j,r,y,z,n)))+= 1.0;
-                }
-               SIM_catch_prop_overlap(p,j,r,z,y)=rand_SIM_catch_prop_temp2;
-             }
-             
-        for(int a=1;a<=nages;a++)
-         {
-          if(use_stock_comp_info_catch==0)
-           {
-            OBS_catch_prop(j,r,z,y,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
-           }
-          if(use_stock_comp_info_catch==1)
-           {
-            OBS_catch_prop_overlap(p,j,r,z,y,a)=SIM_catch_prop_overlap(p,j,r,z,y,a)/SIM_ncatch_overlap(p,j,r,z);
-           }
-         }
-       }
-      }
-     }
-    }
-   }
-
 FUNCTION get_tag_recaptures
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
@@ -4684,7 +2625,7 @@ FUNCTION get_tag_recaptures
       for (int a=1;a<=nages;a++) //release age 
         {
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*survey_selectivity(i,n,xx,a,1);
+          ntags(i,n,x,a)=ntags_total(x)*(survey_population_bio(xx,i)/survey_total_bio(xx))*(survey_region_bio(i,xx,n)/survey_population_bio(xx,i))*survey_selectivity(i,n,xx,a,1);
         }
        }
       }
@@ -4848,99 +2789,10 @@ FUNCTION get_tag_recaptures
          }
         }
  }
-FUNCTION get_observed_tag_recaptures
- if(do_tag==1)
-  {
-  
- random_number_generator myrand_tag(myseed_tag);
 
- for (int i=1;i<=npops;i++)
-  {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-       for (int a=1;a<=nages;a++) //release age 
-        {
-         rand_tag_prop_temp(i,n,x,a).fill_multinomial(myrand_tag,(tag_prop_final(i,n,x,a))); //fill multinomial using recap prop for each cohort
-        }
-       }
-      }
-     }
- for (int i=1;i<=npops;i++)
-  {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-       for (int a=1;a<=nages;a++) //release age 
-        {
-          rand_tag_prop_temp2=0;
-            for(int s=1;s<=SIM_ntag;s++) /// look into changing this so can have ntag change by year (ie different sample sizes for beginning and end of timeseries)
-             {
-               rand_tag_prop_temp2((rand_tag_prop_temp(i,n,x,a,s)))+= 1.0; //count up number in each recap state
-              }
-           SIM_tag_prop(i,n,x,a)=rand_tag_prop_temp2; //put number in each recap state into appropriate release cohort
-        }
-       }
-      }
-     }
-
- for (int i=1;i<=npops;i++)
-  {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-       for (int a=1;a<=nages;a++) //release age 
-        {
-         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
-          {           
-           OBS_tag_prop_final(i,n,x,a,s)=SIM_tag_prop(i,n,x,a,s)/SIM_ntag;
-              if(ntags(i,n,x,a)==0)
-               {                   
-                OBS_tag_prop_final(i,n,x,a,s)=0;
-               }
-          }
-        }
-       }
-      }
-     }
- }
 FUNCTION evaluate_the_objective_function
    f=0.0;
 
-           for (int y=1;y<=nyrs;y++)
-            {
-             for (int j=1;j<=npops;j++)
-              {
-               for (int r=1;r<=nregions(j);r++)
-                {
-                 for (int z=1;z<=nfleets(j);z++)
-                  {
-                    res_TAC(j,r,z,y)=input_TAC(j,r,z)-yield_fleet(j,r,y,z);
-                  }
-                 res_u(j,r,y)=sum(input_u(j,r))-harvest_rate_region_bio(j,r,y);
-                }
-               }
-              }
-
-
-//dhdhdhdhdhdhdhdhdhhdhd
- //Started up some likelihood sections here
- // dhdhdhdhdhdhdhdhdhdhdh
-FUNCTION Surv_Likelihood
- // Calculate likelihood for survey biomass
-  surv_like.initialize();
-  for (i=1; i<=nyrs_srv1; i++)  {   ii=yrs_srv1(i);
-  surv_like(1) += square((log(obs_srv1_biom(i)+0.0001)-log(pred_srv1(ii)+0.0001) ))/ (2.*square(obs_srv1_se(i)/obs_srv1_biom(i))); }// log-likelihood for survey biomass
-  for (i=1; i<=nyrs_srv2; i++)  {   ii=yrs_srv2(i);
-  surv_like(2) += square((log(obs_srv2_biom(i)+0.0001)-log(pred_srv2(ii)+0.0001) ))/ (2.*square(obs_srv2_se(i)/obs_srv2_biom(i))); }
-    // likelihood for survey biomass 
-  surv_like(1) *= wt_srv1 ;  
-  surv_like(2) *= wt_srv2 ;  
-  
-FUNCTION Multinomial_Likelihood
 // Calculate multinomial likelihoods for compositions
   age_like.initialize();
   for (i=1; i <= nyrs_fish1_age; i++)
@@ -4950,23 +2802,18 @@ FUNCTION Multinomial_Likelihood
   age_like(1) *= wt_fish1_age;                 // Multiple each likelihood by their weights from .ctl file
   age_like(2) *= wt_srv1_age;  
 
-FUNCTION evaluate_the_objective_function
-   f=0.0;
 
-           for (int y=1;y<=nyrs;y++)
-            {
-             for (int j=1;j<=npops;j++)
-              {
-               for (int r=1;r<=nregions(j);r++)
-                {
-                 for (int z=1;z<=nfleets(j);z++)
-                  {
-                    res_TAC(j,r,z,y)=input_TAC(j,r,z)-yield_fleet(j,r,y,z);
-                  }
-                 res_u(j,r,y)=sum(input_u(j,r))-harvest_rate_region_bio(j,r,y);
-                }
-               }
-              }
+ // Calculate likelihood for survey biomass
+  surv_like.initialize();
+  for (i=1; i<=nyrs_srv1; i++)  {   ii=yrs_srv1(i);
+  surv_like(1) += square((log(obs_srv1_biom(i)+0.0001)-log(pred_srv1(ii)+0.0001) ))/ (2.*square(obs_srv1_se(i)/obs_srv1_biom(i))); }// log-likelihood for survey biomass
+  for (i=1; i<=nyrs_srv2; i++)  {   ii=yrs_srv2(i);
+  surv_like(2) += square((log(obs_srv2_biom(i)+0.0001)-log(pred_srv2(ii)+0.0001) ))/ (2.*square(obs_srv2_se(i)/obs_srv2_biom(i))); }
+    // likelihood for survey biomass 
+  surv_like(1) *= wt_srv1 ;  
+  surv_like(2) *= wt_srv2 ;
+
+
   obj_fun.initialize();
   ssqcatch.initialize();
   rec_like.initialize();
@@ -4985,7 +2832,7 @@ FUNCTION evaluate_the_objective_function
 REPORT_SECTION
  //report<<"$recaps"<<endl;
  //report<<recaps<<endl;
- report<<"$True_tag_prop"<<endl;
+ report<<"$tag_prop"<<endl;
  report<<tag_prop_final<<endl;
  report<<"$OBS_tag_prop"<<endl;
  report<<OBS_tag_prop_final<<endl;
@@ -5268,14 +3115,14 @@ REPORT_SECTION
   report<<"$OBS_yield_total"<<endl;
   report<<OBS_yield_total<<endl;
 
-  report<<"$true_survey_fleet_bio"<<endl;
-  report<<true_survey_fleet_bio<<endl;
-  report<<"$true_survey_region_bio"<<endl;
-  report<<true_survey_region_bio<<endl;
-  report<<"$true_survey_population_bio"<<endl;
-  report<<true_survey_population_bio<<endl;
-  report<<"$true_survey_total_bio"<<endl;
-  report<<true_survey_total_bio<<endl;
+  report<<"$survey_fleet_bio"<<endl;
+  report<<survey_fleet_bio<<endl;
+  report<<"$survey_region_bio"<<endl;
+  report<<survey_region_bio<<endl;
+  report<<"$survey_population_bio"<<endl;
+  report<<survey_population_bio<<endl;
+  report<<"$survey_total_bio"<<endl;
+  report<<survey_total_bio<<endl;
 
   report<<"$OBS_survey_fleet_bio"<<endl;
   report<<OBS_survey_fleet_bio<<endl;
@@ -5286,16 +3133,16 @@ REPORT_SECTION
   report<<"$OBS_survey_total_bio"<<endl;
   report<<OBS_survey_total_bio<<endl;
 
-  report<<"$true_survey_fleet_bio_overlap"<<endl;
-  report<<true_survey_fleet_bio_overlap<<endl;
-  report<<"$true_survey_region_bio_overlap"<<endl;
-  report<<true_survey_region_bio_overlap<<endl;
-  report<<"$true_survey_population_bio_overlap"<<endl;
-  report<<true_survey_population_bio_overlap<<endl;
-  report<<"$true_survey_natal_bio_overlap"<<endl;
-  report<<true_survey_natal_bio_overlap<<endl;
-  report<<"$true_survey_total_bio_overlap"<<endl;
-  report<<true_survey_total_bio_overlap<<endl;
+  report<<"$survey_fleet_bio_overlap"<<endl;
+  report<<survey_fleet_bio_overlap<<endl;
+  report<<"$survey_region_bio_overlap"<<endl;
+  report<<survey_region_bio_overlap<<endl;
+  report<<"$survey_population_bio_overlap"<<endl;
+  report<<survey_population_bio_overlap<<endl;
+  report<<"$survey_natal_bio_overlap"<<endl;
+  report<<survey_natal_bio_overlap<<endl;
+  report<<"$survey_total_bio_overlap"<<endl;
+  report<<survey_total_bio_overlap<<endl;
 
   report<<"$OBS_survey_fleet_bio_overlap"<<endl;
   report<<OBS_survey_fleet_bio_overlap<<endl;
