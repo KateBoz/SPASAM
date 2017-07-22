@@ -5216,7 +5216,13 @@ REPORT_SECTION
   report<<R_ave<<endl;
   report<<"$SSB_zero"<<endl;
   report<<SSB_zero<<endl;
-
+ 
+  report<<"$sigma_survey"<<endl;
+  report<<sigma_survey<<endl;
+  report<<"$fishery_sampleN"<<endl;
+  report<<SIM_ncatch<<endl;
+  report<<"$survey_sampleN"<<endl;
+  report<<SIM_nsurvey<<endl;
 
   
 
@@ -5334,15 +5340,16 @@ REPORT_SECTION
 //  report<<"$catch_at_age_total"<<endl;
 //  report<<catch_at_age_total<<endl;
 
-//  report<<"$obs_caa_fleet"<<endl;
-//  report<<obs_caa_fleet<<endl;
-//  report<<"$obs_prop_fleet"<<endl;
-//  report<<obs_prop_fleet<<endl;
+//    report<<"$obs_caa_fleet"<<endl;
+//    report<<obs_caa_fleet<<endl;
+//    report<<"$obs_prop_fleet"<<endl;
+//    report<<obs_prop_fleet<<endl;
 
 //  report<<"$obs_caa_overlap_reg"<<endl;
 //  report<<obs_caa_overlap_reg<<endl;
 //  report<<"$obs_prop_overlap_reg"<<endl;
 //  report<<obs_prop_overlap_reg<<endl;
+
 
  report<<"$recruits_BM"<<endl;
  report<<recruits_BM<<endl;
@@ -5542,6 +5549,18 @@ REPORT_SECTION
   report<<Bratio_population_overlap<<endl;
   report<<"$Bratio_natal_overlap"<<endl;
   report<<Bratio_natal_overlap<<endl;
+
+/// TAG INFORMATION
+  report<<"$nyears_tag_release"<<endl;
+  report<<nyrs_release<<endl;
+  report<<"$years_of_tag_releases "<<endl;
+  report<<yrs_releases<<endl;
+  report<<"$reporting_rate"<<endl;
+  report<<report_rate<<endl;
+  report<<"$ntags_total"<<endl;
+  report<<ntags_total<<endl;
+  report<<"$ntags_matrix"<<endl;
+  report<<ntags<<endl;
 
 
 ///////////////////////////////////////////////////////////////////////////
