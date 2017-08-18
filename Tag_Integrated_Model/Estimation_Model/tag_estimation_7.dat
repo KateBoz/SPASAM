@@ -36,6 +36,8 @@
 -1 #ph_sel_dubl
 4 # ph_q
 -1 # ph_F_rho
+-5 #phase_T_pop //use if mult pops
+-5 #phase_T_reg //use if mult regs
 ##### read in some data
 ##### Biological parameters
 # input_weight (survey weight?)
