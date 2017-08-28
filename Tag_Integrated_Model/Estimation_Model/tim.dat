@@ -28,13 +28,13 @@
 1 # 1 = calculate tagging data
 0.8 0.8 # sigma_recruit for mean recruit devs
 ##### phases
-1 #ph_rec
-2 #ph_F
+4 #ph_rec
+1 #ph_F
 -1 #ph_steep
 -1 #ph_M
-3 #ph_sel_log
+2 #ph_sel_log
 -1 #ph_sel_dubl
-4 # ph_q
+3 # ph_q
 -1 # ph_F_rho
 -5 #phase_T_pop //use if mult pops
 -5 #phase_T_reg //use if mult regs
