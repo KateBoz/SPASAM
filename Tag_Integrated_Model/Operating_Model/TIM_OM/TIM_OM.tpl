@@ -5579,6 +5579,8 @@ REPORT_SECTION
   report<<Bratio_natal_overlap<<endl;
 
 /// TAG INFORMATION
+  report<<"$max_life_tags"<<endl;
+  report<<max_life_tags<<endl;
   report<<"$SIM_ntag"<<endl;
   report<<SIM_ntag<<endl;
   report<<"$nyears_tag_release"<<endl;
@@ -5684,7 +5686,7 @@ REPORT_SECTION
          //DATA SECTION
          report<<"$alt_input_T_"<<region_counter<<endl;
          report<<input_T[p][r]<<endl;
-
+         
          //7D array tagging variables
          for(int x=1;x<=nyrs_release;x++)
           {
@@ -5694,6 +5696,10 @@ REPORT_SECTION
            report<<recaps[p][r][x]<<endl;
            report<<"$alt_tag_prop_reg"<<region_counter<<"_rel"<<x<<endl;
            report<<tag_prop[p][r][x]<<endl;
+
+  // further dimension down the OBS tagging arrays for the EM by release and recap_pop       
+         report<<"$OBS_tag_prop_reg"<< region_counter <<"_rel"<< x << endl;
+         report<<OBS_tag_prop_final[p][r][x] <<endl;
           }
 
          region_counter++;
@@ -5761,8 +5767,8 @@ REPORT_SECTION
       report<<tag_prop_final[p]<<endl;
       report<<"$alt_SIM_tag_prop_"<<p<<endl;
       report<<SIM_tag_prop[p]<<endl;
-      report<<"$alt_OBS_tag_prop_final_"<<p<<endl;
-      report<<OBS_tag_prop_final[p]<<endl;
+      report<<"$OBS_tag_prop_final_"<<p<<endl;
+      report<<OBS_tag_prop_final[p] <<endl;
      }
    }
   

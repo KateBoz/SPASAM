@@ -1,4 +1,4 @@
-##########PARAMETERS FOR HAKE-LIKE###########
+##########PARAMETERS FOR SABLEFISH-LIKE###########
 #nages
 31
 #nyrs
@@ -161,39 +161,16 @@
 #/////tagging data parameters
 #nyrs_release
   #number of years with tag release events
-30
+6
 #yrs_releases
   #vector containing the model years with releases
 11
-12
-13
-14
-15
 16
-17
-18
-19
-20
 21
-22
-23
-24
-25
 26
-27
-28
-29
-30
 31
-32
-33
-34
-35
 36
-37
-38
-39
-40
+
 
 #frac_total_abund_tagged
   #proportion of total abundance that is tagged in each release year
@@ -203,63 +180,15 @@
 0.01
 0.01
 0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
 
 #max_life_tags
   #number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
-10
+5
 #SIM_ntag
   #the ESS used to simulate multinomial tagging dat
-100
+500
 #report_rate(1,ny_rel,1,np,1,nreg)
   #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
-1	1	1
 1	1	1
 1	1	1
 1	1	1
