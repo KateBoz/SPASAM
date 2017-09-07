@@ -24,7 +24,7 @@ load_libraries()
 #####################################
 
 #Set the folder for the OM
-OM_folder<-"E:\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
+OM_folder<-"E:\\SPASAM-master\\OM_EM_tests\\OM_SABLEFISH"
 
 #set the name of the OM
 OM_name<-"TIM_OM"
@@ -32,38 +32,47 @@ OM_name<-"TIM_OM"
 #run the OM and get a report file
 setwd(OM_folder)
 
-
 # use if need to compile
 #invisible(shell(paste0("adcomp ",OM_name,sep=""),wait=T))
 
 #run the OM
-invisible(shell(paste0(OM_name," -nohess",sep=""),wait=T))
+#invisible(shell(paste0(OM_name," -nohess",sep=""),wait=T))
 
 out=PBSmodelling::readList(paste0(OM_name,".rep", sep=""))
 
 names(out)
 
 #pulling out core specifications for formatting the data for EM
-nages<-out$nages
-nyrs<-out$nyrs
-npops<-out$npops
-nregions<-out$nregions
-nfleets<-out$nfleets
-nfleets_survey<-out$nfleets_survey
-tag_rel_years<-out$years_of_tag_releases
+nages<-out$nages #ages
+nyrs<-out$nyrs #simulation years
+npops<-out$npops #populations
+nregions<-out$nregions #regions - thankfully only 1 per pop
+nfleets<-out$nfleets #nfleets fishery
+nfleets_survey<-out$nfleets_survey #nfleets survey (usually 1)
+tag_rel_years<-out$years_of_tag_releases # model years with tag releases
+n_rel<-length(tag_rel_years) #number of releases
+max_life_tags<-out$max_life_tags # number of years tally tags after release - need to output this in OM
+
+#setting everything as a .csv for now to check dims and values
 
 #################
 # REC DATA
 #################
 #rec_index
-#write.csv(out2$rec_index_BM,"rec_index_BM.csv")
+write.csv(out$rec_index_BM,"rec_index_BM.csv")
+
+#################
+# Mortality 
+################
+#create a matrix with dimensions (1,np,1,nreg,1,ny,1,na)
+write.csv(out$M,"M_matrix.csv")
 
 #################
 #SURVEY DATA
 #################
 #obs_survey_fleet
 OBS_survey_region_bio<-t(out$OBS_survey_region_bio)
-#write.csv(OBS_survey_region_bio,"OBS_survey_bio.csv")
+write.csv(OBS_survey_region_bio,"OBS_survey_bio.csv")
 
 #setting up the obs_survey_fleet_se
 #create a matrix with dimensions (1,np,1,nreg,1,ny,1,nfs)
@@ -71,13 +80,13 @@ OBS_survey_region_bio_se<-matrix(NA,(npops*nregions*nfleets),nyrs)
 for(i in 1:nyrs){
   OBS_survey_region_bio_se[,i]<-out$sigma_survey
 }
-#write.csv(OBS_survey_region_bio_se,"OBS_survey_region_bio_se.csv")
+write.csv(OBS_survey_region_bio_se,"OBS_survey_region_bio_se.csv")
 
 #Setting up the age compositions. Needs to be (1,np,1,nreg,1,ny,1,nfs,1,na). 
 temp<-grep("alt_OBS_survey_prop", names(out), value = TRUE) #pulling out the age_comps
 temp2<-out[temp] 
 OBS_survey_prop<-do.call("rbind", temp2)
-#write.csv(OBS_survey_prop,"OBS_survey_prop.csv")
+write.csv(OBS_survey_prop,"OBS_survey_prop.csv")
 
 #setting up the survey_sample N
 #create a matrix with dimensions (1,np,1,nreg,1,ny,1,nfs)
@@ -85,7 +94,7 @@ OBS_survey_prop_N<-matrix(NA,(npops*nregions*nfleets),nyrs)
 for(i in 1:nyrs){
 OBS_survey_prop_N[,i]<-out$survey_sampleN
 }
-#write.csv(OBS_survey_prop_N,"OBS_survey_prop_N.csv")
+write.csv(OBS_survey_prop_N,"OBS_survey_prop_N.csv")
 
 #####################
 # FISHERY CATCH DATA
@@ -93,27 +102,27 @@ OBS_survey_prop_N[,i]<-out$survey_sampleN
 
 #yield catch matrix
 OBS_yield_region<-t(out$OBS_yield_region)
-#write.csv(OBS_yield_region,"OBS_yield_fleet.csv")
+write.csv(OBS_yield_region,"OBS_yield_fleet.csv")
 
 #yield_se
 OBS_yield_fleet_se<-matrix(NA,(npops*nregions*nfleets),nyrs)
 for(i in 1:nyrs){
   OBS_yield_fleet_se[,i]<-out$sigma_catch
 }
-#write.csv(OBS_yield_fleet_se,"OBS_yield_fleet_se.csv")
+write.csv(OBS_yield_fleet_se,"OBS_yield_fleet_se.csv")
 
 #fishery age compositions
 temp<-grep("alt_OBS_catch_prop", names(out), value = TRUE) #pulling out the age_comps
 temp2<-out[temp] 
 OBS_catch_at_age_fleet_prop<-do.call("rbind", temp2)
-#write.csv(OBS_catch_at_age_fleet_prop,"OBS_catch_at_age_fleet_prop.csv")
+write.csv(OBS_catch_at_age_fleet_prop,"OBS_catch_at_age_fleet_prop.csv")
 
 #create a matrix with dimensions (1,np,1,nreg,1,ny,1,nfs)
 OBS_catch_prop_N<-matrix(NA,(npops*nregions*nfleets),nyrs)
 for(i in 1:nyrs){
   OBS_catch_prop_N[,i]<-out$fishery_sampleN
 }
-#write.csv(OBS_catch_prop_N,"OBS_catch_prop_N.csv")
+write.csv(OBS_catch_prop_N,"OBS_catch_prop_N.csv")
 
 #####################
 # TAGGING DATA
@@ -121,70 +130,100 @@ for(i in 1:nyrs){
 
 #ntags (1,np,1,nreg,1,ny_rel,1,na) #number of tags released in each year for each age
 ntags<-out$ntags_matrix # this will be tricky
+#not generallized #SET UP FOR 3 POPS/AREA
+#temp1<-(ntags[1:years_tally])
+#temp2<-(ntags[(years_tally+1):(years_tally*2),])
+#temp3<-(ntags[((years_tally*2)+1):(years_tally*3),])
+#ntags_matrix<-(rbind(temp1,temp2,temp3))
 
-#not generallized
-temp1<-t(ntags[1:30,])
-temp2<-t(ntags[31:60,])
-temp3<-t(ntags[61:90,])
-ntags_matrix<-rbind(temp1,temp2,temp3)
-write.csv(ntags_matrix,"ntags_matrix.csv")
+write.csv(ntags,"ntags_matrix.csv")
 
 #backup plan  = set number of tags manually
-ntags_matrix2<-ntags_matrix
+ntags_matrix2<-ntags
 ntags_matrix2[,]<-200 #can fill in with whatever you want! Or use out$SIM_ntag
 write.csv(ntags_matrix2,"ntags_matrix_ESS.csv")
+
+##########################
+#Getting Observed tag recaps
+##########################
+#ESS matrix 
+temp<-grep("alt_SIM_tag_prop", names(out), value = TRUE) #pulling out the recaptures
+temp2<-out[temp] #pulling all the recapture
+
+#proportion - full matrix
+temp1<-grep("OBS_tag_prop_final", names(out), value = TRUE) #pulling out the recaptures
+temp1.1<-out[temp1] #pulling all the recapture
+recaps<-do.call("rbind", temp1.1) # if many populations
+write.csv(recaps,"tag_recaps.csv")
+
+
+temp2<-grep("OBS_tag_prop_reg", names(out), value = TRUE)
+length(temp2)
+temp2.1<-out[temp2] #pulling all the recaptures
+
+
+#move it into an array for re-arranging
+index<-n_rel*nregions #length
+test.array<-array(NA,dim=c(nages,max_life_tags*nregions+1,index)) #3d array 
+
+#fill in array for further indexing
+  for(i in 1:index){
+    test.array[,,i]<-temp2.1[[i]]
+    
+  }
+
+#pulling only the recaps
+ test.array<-test.array[,1:15,]
+ dim(test.array)
+ 
+ #split the array into three separate
+ 
+ recap1<-test.array[,1:5,] #recoveries for reg1
+ recap2<-test.array[,6:10,] #recoveries in reg2
+ recap3<-test.array[,11:15,] #recoveries in reg3
+ 
+ new.array1<-array(NA,dim=c(max_life_tags,1,index,nages)) # think I have it...now filling it
+ 
+ for(i in 1:max_life_tags){
+   for(j in 1:index){
+     for(k in 1:nages){
+        new.array1[i,1,j,k]<-recap1[k,i,j]
+ 
+ }}}
+ 
+ new.array2<-array(NA,dim=c(max_life_tags,1,index,nages)) # think I have it...now filling it
+ 
+ for(i in 1:max_life_tags){
+   for(j in 1:index){
+     for(k in 1:nages){
+       new.array2[i,1,j,k]<-recap2[k,i,j]
+       
+     }}}
+ 
+ new.array3<-array(NA,dim=c(max_life_tags,1,index,nages)) # think I have it...now filling it
+ 
+ for(i in 1:max_life_tags){
+   for(j in 1:index){
+     for(k in 1:nages){
+       new.array3[i,1,j,k]<-recap3[k,i,j]
+       
+     }}}
+ 
+#combine arrays
+tag.matrix.EM<-data.frame(reg1=as.vector(new.array1),reg2=as.vector(new.array2),reg3=as.vector(new.array3))
+ 
+write.csv(tag.matrix.EM,"obs_tag_array.csv")
+
+
+
+# getting true recaps from 7 d matrix from the report file
+recaps_all<-grep("recaps", names(out), value = TRUE) #pulling out the recaptures
+temp_recaps<-out[recaps_all[[1]]]
+
 
 ######################
 # ADDITIONAL PARAMS  #
 ######################
-
-
-#pick the parameters we want to use in the estimation model in the order we want them in
-select<-c(
-  'nages',#number of ages
-  'nyrs',#number of years
-  'npops',# number of populations
-  'nregions', #number of regions,
-  'nfleets', #number of fleets
-  'sigma_survey', #survey error
-  'survey_sampleN', #survey N 
-  'fishery_sampleN', #fishery N
-  'rec_index_BM',
-  'OBS_survey_region_bio', #observed survey biomass by fleet - only 1 fleet per region
-  'OBS_yield_region', #observed landings (biomass)
-  'alt_OBS_survey_prop_1', #survey age comps for pop1, region, fleet and year
-  'alt_OBS_survey_prop_2', #survey age comps for pop2, region, fleet and year
-  'alt_OBS_catch_prop_1', #fishery age comp for pop1, region, fleet, and year
-  'alt_OBS_catch_prop_2',#fishery age comp for pop2, region, fleet, and year
-  'nyears_tag_release',
-  'years_of_tag_releases',
-  'reporting_rate',
-  'ntags_total', #total number of tags
-  'ntags_matrix'
-  ) #recaptures 
-
-out2<-out[select] # pull all the data we want...
-
-#formatting the age_comps by pop_region_fleet_year
-
-
-
-
-
-
-
-
-# getting recaps from the report file
-temp<-grep("recaps", names(out), value = TRUE) #pulling out the recaptures
-
-temp2<-out[temp] #pulling all the recapture
-recaps<-do.call("rbind", temp2)
-
-out2[[length(out2)+1]] <- recaps #merge the recapture data
-
-names(out2)[20]<-"recaps"
-
-#all the data...
 
 #save the file for later use
 saveRDS(out2,'TM_EM_data.rds')
