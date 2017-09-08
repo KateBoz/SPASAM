@@ -318,11 +318,11 @@ PARAMETER_SECTION
   5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
   5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
 
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-10,2,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-10,5,ph_q)
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
 
 //F parameters
-  init_bounded_3darray ln_F(1,parpops,1,nyr,1,fishfleet,-10,0,ph_F) //the actual parameters  
+  init_3darray ln_F(1,parpops,1,nyr,1,fishfleet,ph_F) //the actual parameters  
   init_3darray F_rho(1,parpops,1,nyr,1,fishfleet,ph_F_rho) //random walk params*
   5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
   4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
@@ -347,7 +347,8 @@ PARAMETER_SECTION
  // init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr,-40,40,ph_rec) //actual parameters (log scale devs)
   init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages,-40,40,ph_rec) //actual parameters (log scale devs)
   matrix rec_devs(1,nps,1,nyr+nages) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector R_ave(1,parpops,0.001,200,ph_rec) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  init_bounded_vector ln_R_ave(1,parpops,-10,10,ph_rec) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,-5,0,ph_steep) //B-H steepness //could be estimated parameter or input value
   vector alpha(1,nps) //derived quantity
@@ -568,7 +569,6 @@ PROCEDURE_SECTION
     } 
     }
   // assign catchabilities to arithmetic scale
-   cout<<"proc 0.5"<<endl;
        for(int i=1;i<=npops;i++) 
     {
         for(int k=1;k<=nregions(i);k++) 
@@ -579,7 +579,8 @@ PROCEDURE_SECTION
     }
     }
     }
-
+  
+  R_ave=mfexp(ln_R_ave);
    get_movement();
    get_selectivity();
    get_F_age();
@@ -2984,7 +2985,7 @@ FUNCTION evaluate_the_objective_function
 // Sum objective function
   f           += survey_like;
   f           += 5*catch_like;
-  f           += fish_age_like;
+ // f           += 0.001*fish_age_like;
   f           += survey_age_like;
   f           += rec_like;
   f           += tag_like;
