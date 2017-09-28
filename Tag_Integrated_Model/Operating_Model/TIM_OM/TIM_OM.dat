@@ -102,6 +102,13 @@
   #==1 logistic selectivity based on input sel_beta1 and sel_beta2
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
 0
+
+#select_switch_survey
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+0
+
 #F_switch
   #==1 input F
   #==2 input single overall F (FMSY)
@@ -353,6 +360,18 @@
 -0.6
 #sel_beta4
 20
+20
+20
+#sel_beta1_survey
+1
+1.
+#sel_beta2_survey
+2.5
+2.5
+#sel_beta3_survey
+-0.6
+-0.6
+#sel_beta4_survey
 20
 20
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)

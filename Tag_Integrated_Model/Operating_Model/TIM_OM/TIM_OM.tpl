@@ -128,6 +128,12 @@ DATA_SECTION
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 /////////////////////////////////////////////////////
 
+  init_number select_switch_survey
+  //==0 input selectivity
+  //==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
+/////////////////////////////////////////////////////
+
   init_number F_switch
   //==1 input F
   //==2 input single overall F (FMSY)
@@ -220,6 +226,10 @@ DATA_SECTION
   init_3darray sel_beta2(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
   init_3darray sel_beta3(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
   init_3darray sel_beta4(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_3darray sel_beta1_survey(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_survey(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_survey(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_survey(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
   init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nf)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
@@ -248,7 +258,7 @@ DATA_SECTION
 //#########################################################################################################################################
 //##########################################################################################################################################
 //#########################################################################################################################################
-  
+
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_matrix equil_ssb_apport(1,np,1,nreg)
   
@@ -420,6 +430,7 @@ PARAMETER_SECTION
   !! ivector xy(1,nyr_rel);
   !! ivector nt(1,nyr_rel);
   !! ivector nt2(1,nyr_rel);
+  !! int nt3=max_life_tags*sum(nregions)+1;
   !! ivector tag_age(1,nyr_rel);
 
   !!  for(int x=1; x<=nyrs_release; x++)
@@ -439,10 +450,15 @@ PARAMETER_SECTION
   5darray SIM_tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
   5darray OBS_tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
  3darray total_recap_temp(1,nps,1,nr,1,tag_age)
- 5darray rand_tag_prop_temp2(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)  //make these full dimensional?
+ vector rand_tag_prop_temp2(1,nt3)  
  5darray tag_prop_temp2(1,nps,1,nr,1,nyr_rel,1,nag,1,nt2)
 
-
+ 5darray rand_tag_prop_temp(1,nps,1,nr,1,nyr_rel,1,nag,1,2000) //should make function of max(ncatch) but had issues making an index
+// vector rand_tag_prop_temp2(1,nt)
+// 3darray total_recap_temp(1,nps,1,tag_age,1,nr)
+ matrix tags_avail_temp(1,nps,1,nr)
+ 3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
+ //vector tag_prop_temp2(1,nt2)
   //!! int nt=max_life_tags*sum(nregions)+1;
   //!! int nt2=nt-1;
   //!! int tag_age=max_life_tags;
@@ -456,6 +472,7 @@ PARAMETER_SECTION
 
  //survey index
  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 5darray survey_selectivity_temp(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -619,13 +636,6 @@ PARAMETER_SECTION
  5darray abundance_AM_overlap_region_all_natal_temp(1,nps,1,nr,1,nyr,1,nag,1,nps)
  3darray SSB_population_temp(1,nps,1,nyr,1,nr)
  4darray SSB_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
-
- 5darray rand_tag_prop_temp(1,nps,1,nr,1,nyr_rel,1,nag,1,2000) //should make function of max(ncatch) but had issues making an index
-// vector rand_tag_prop_temp2(1,nt)
-// 3darray total_recap_temp(1,nps,1,tag_age,1,nr)
- matrix tags_avail_temp(1,nps,1,nr)
- 3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
- //vector tag_prop_temp2(1,nt2)
  
  4darray res_TAC(1,nps,1,nr,1,nfl,1,nyr)
  3darray res_u(1,nps,1,nr,1,nyr)
@@ -671,10 +681,6 @@ PARAMETER_SECTION
  !! cout << "parameters set" << endl;
  
 
-INITIALIZATION_SECTION  //set initial values
-     
-  F_est .7;
-  dummy 1;
 
 PROCEDURE_SECTION
 
@@ -930,8 +936,7 @@ FUNCTION get_selectivity
           }
         }
       }
-
-//survey selectivity - always input for now but can adjust later if wanted
+//survey selectivity 
  for (int j=1;j<=npops;j++)
     {
      for (int r=1;r<=nregions(j);r++)
@@ -942,7 +947,20 @@ FUNCTION get_selectivity
             {
              for (int z=1;z<=nfleets_survey(j);z++)
                {
-                survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+
+               if(select_switch_survey==2) //4 parameter double logistic selectivity
+                {
+                 survey_selectivity(j,r,y,a,z)=1/((1+mfexp(-sel_beta1_survey(j,r,z)*(a-sel_beta2_survey(j,r,z))))*(1+mfexp(-sel_beta3_survey(j,r,z)*(a-sel_beta4_survey(j,r,z)))));
+                }
+                if(select_switch_survey==1) //two parameter logistic selectivity
+                {
+                 survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1_survey(j,r,z)*(a-sel_beta2_survey(j,r,z))));
+                //selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z)))); 
+                }
+                if(select_switch_survey==0) //input selectivity
+                {
+                 survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+                }
               }
              }
             }
@@ -4931,12 +4949,15 @@ FUNCTION get_tag_recaptures
       xx=yrs_releases(x);
       for (int a=1;a<=nages;a++) //release age 
         {
+          survey_selectivity_temp(i,n,xx,1,a)=survey_selectivity(i,n,xx,a,1);
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*survey_selectivity(i,n,xx,a,1);
+          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
         }
        }
       }
      }
+
+     
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -4947,16 +4968,6 @@ FUNCTION get_tag_recaptures
       xx=yrs_releases(x);
       for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
         {
-         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
-          {
-           for(int j=1;j<=npops;j++) //recap stock
-            {
-             for (int r=1;r<=nregions(j);r++)
-             {
-              total_recap_temp(j,r,y)=0; //for whatever reason ADMB won't let a 3darray=double...this is workaround for total_recap_temp=0;, ie setting temp 3darray to 0 after loops through all years 
-             }
-            }
-           }
          for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
@@ -4992,11 +5003,34 @@ FUNCTION get_tag_recaptures
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
                  recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
                }
-             total_recap_temp(j,r,y)=recaps(i,n,x,a,y,j,r);
              }
             }
            }
-             total_rec(i,n,x,a)=sum(total_recap_temp);
+          }
+         }
+        }
+       }
+ for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+      xx=yrs_releases(x);
+      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+        {
+        total_recap_temp.initialize();
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+             {
+              total_recap_temp(j,r,y)=recaps(i,n,x,a,y,j,r);
+             }
+            }
+           }
+              total_rec(i,n,x,a)=sum(total_recap_temp);
              not_rec(i,n,x,a)=ntags(i,n,x,a)-total_rec(i,n,x,a);  //for ntags  at a given age all entries represent all tags released so can just use any of the entries (hence the i,x,a,1 subscripts)
            }
           }
@@ -5039,7 +5073,6 @@ FUNCTION get_tag_recaptures
  //this essentially requires stacking the tag_prop array into vectors for each release cohort covering all recap states (recap year, population, region)
  //need to extract each recap prob vector and store, then combine into array where can extract the last index (essentially the columns of the array)
  //can then use the fill.multinomial with that vector of probabilities
-
 
  nreg_temp=rowsum(nregions_temp);
  for (int i=1;i<=npops;i++)
@@ -5088,9 +5121,13 @@ FUNCTION get_tag_recaptures
               {
                tag_prop_final(i,n,x,a,s)=tag_prop_temp2(i,n,x,a,s);
               }
-              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1)) //add not recap probability to final entry of temp array
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags<=(nyrs-xx+1)) //add not recap probability to final entry of temp array
               {
                tag_prop_final(i,n,x,a,s)=tag_prop_not_rec(i,n,x,a);  //for estimation model will use this version of tag_prop in likelihood
+              }
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags>(nyrs-xx+1)) //add not recap probability to final entry of temp array with adjustment for release events where model ends before max_life_tags (so NR remains in last state)
+              {
+               tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))=tag_prop_not_rec(i,n,x,a);  //for estimation model will use this version of tag_prop in likelihood
               }
             }
            }
@@ -5125,12 +5162,12 @@ FUNCTION get_observed_tag_recaptures
      {
        for (int a=1;a<=nages;a++) //release age 
         {
-          //rand_tag_prop_temp2=0;
+          rand_tag_prop_temp2=0;
             for(int s=1;s<=SIM_ntag;s++) /// look into changing this so can have ntag change by year (ie different sample sizes for beginning and end of timeseries)
              {
-               rand_tag_prop_temp2(i,n,x,a,value(rand_tag_prop_temp(i,n,x,a,s)))+= 1.0; //count up number in each recap state
+               rand_tag_prop_temp2(value(rand_tag_prop_temp(i,n,x,a,s)))+= 1.0; //count up number in each recap state
               }
-           SIM_tag_prop(i,n,x,a)=rand_tag_prop_temp2(i,n,x,a); //put number in each recap state into appropriate release cohort
+           SIM_tag_prop(i,n,x,a)=rand_tag_prop_temp2; //put number in each recap state into appropriate release cohort
         }
        }
       }
@@ -5145,12 +5182,12 @@ FUNCTION get_observed_tag_recaptures
       xx=yrs_releases(x);
        for (int a=1;a<=nages;a++) //release age 
         {
-         for(int s=1;s<=(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
+         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
           {           
            OBS_tag_prop_final(i,n,x,a,s)=SIM_tag_prop(i,n,x,a,s)/SIM_ntag;
               if(ntags(i,n,x,a)==0)
                {                   
-                OBS_tag_prop_final(i,n,x,a,s)=0;
+                OBS_tag_prop_final(i,n,x,a,s)=0; 
                }
           }
         }
@@ -5191,8 +5228,17 @@ REPORT_SECTION
  report<<"$Fyear"<<endl;
  report<<F_year<<endl;
 
+ report<<"$ntags"<<endl;
+ report<<ntags<<endl;
+ report<<"$total_rec"<<endl;
+ report<<total_rec<<endl;
+ report<<"$not_rec"<<endl;
+ report<<not_rec<<endl;
+ report<<"$tag_prop_final"<<endl;
+ report<<tag_prop_final<<endl;
  report<<"$OBS_tag_prop_final"<<endl;
  report<<OBS_tag_prop_final<<endl;
+
 
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
