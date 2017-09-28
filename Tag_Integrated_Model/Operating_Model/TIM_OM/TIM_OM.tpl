@@ -226,12 +226,12 @@ DATA_SECTION
   init_3darray sel_beta2(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
   init_3darray sel_beta3(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
   init_3darray sel_beta4(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_3darray sel_beta1_survey(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta2_survey(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta3_survey(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
-  init_3darray sel_beta4_survey(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_3darray sel_beta1_survey(1,np,1,nreg,1,nfs)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_survey(1,np,1,nreg,1,nfs)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_survey(1,np,1,nreg,1,nfs)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_survey(1,np,1,nreg,1,nfs)  //selectivity inflection parameter 2 for double logistic selectivity
   init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
-  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nf)//survey selectivity
+  init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
   init_vector dunce_F(1,3) //min and max F for dunce cap F alternative

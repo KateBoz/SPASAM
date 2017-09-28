@@ -365,13 +365,17 @@
 #sel_beta1_survey
 1
 1.
+1
 #sel_beta2_survey
+2.5
 2.5
 2.5
 #sel_beta3_survey
 -0.6
 -0.6
+-0.6
 #sel_beta4_survey
+20
 20
 20
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
