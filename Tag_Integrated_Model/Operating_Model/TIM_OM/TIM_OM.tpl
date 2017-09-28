@@ -5191,6 +5191,9 @@ REPORT_SECTION
  report<<"$Fyear"<<endl;
  report<<F_year<<endl;
 
+ report<<"$OBS_tag_prop_final"<<endl;
+ report<<OBS_tag_prop_final<<endl;
+
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
   report<<"$res_u"<<endl;
