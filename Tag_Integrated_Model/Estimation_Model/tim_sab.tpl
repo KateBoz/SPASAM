@@ -2753,6 +2753,25 @@ FUNCTION get_CAA_prop
            {
             for (int a=1;a<=nages;a++)
              {
+                 catch_at_age_fleet_prop_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z);
+              }
+            }
+           }
+          }
+         }
+        }
+    for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+            for (int a=1;a<=nages;a++)
+             {
                  catch_at_age_region_fleet_overlap_prop(p,j,r,z,y,a)=catch_at_age_region_fleet_overlap(p,j,r,z,y,a)/sum(catch_at_age_region_fleet_overlap(p,j,r,z,y));              
                  catch_at_age_region_overlap_prop(p,j,r,y,a)=catch_at_age_region_overlap(p,j,r,y,a)/sum(catch_at_age_region_overlap(p,j,r,y));
                  catch_at_age_population_overlap_prop(p,j,y,a)=catch_at_age_population_overlap(p,j,y,a)/sum(catch_at_age_population_overlap(p,j,y));
@@ -2770,6 +2789,7 @@ FUNCTION get_CAA_prop
          }
         }
         
+      
 FUNCTION get_tag_recaptures
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
@@ -2999,7 +3019,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet(j,r,y,z)/OBS_yield_fleet(j,r,y,z))));
+           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)/OBS_yield_fleet(j,r,y,z))));
            fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001));
              }
              }
@@ -3073,7 +3093,7 @@ FUNCTION evaluate_the_objective_function
 
 
   /// Early penalty to keep F under wraps
- if (current_phase()<3) f+= 1000*(norm2(mfexp(ln_F)));
+ //if (current_phase()<3) f+= 1000*(norm2(mfexp(ln_F)));
   
 // Sum objective function
    f           += survey_like*wt_srv;
