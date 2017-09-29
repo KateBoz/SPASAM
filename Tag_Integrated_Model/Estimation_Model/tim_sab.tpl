@@ -152,7 +152,23 @@ DATA_SECTION
   init_int ph_F_rho // if we want random walk F
   init_int phase_T_pop //use if mult pops
   init_int phase_T_reg //use if mult regs
-
+  init_int ph_dummy
+  number ph_theta
+ // !!if(do_tag_mult==0)
+ // !! {
+ // !!  ph_theta==2
+ // !! }
+ // !!if(do_tag_mult==2)
+//  !! {
+//  !!  ph_theta==-2
+//  !! }
+ // likleihood weights
+   init_number wt_srv
+   init_number wt_catch
+   init_number wt_fish_age
+   init_number wt_srv_age 
+   init_number wt_rec
+   init_number wt_tag
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -163,6 +179,7 @@ DATA_SECTION
 //#########################################################################################################################################
   ////////////////BIOLOGICAL PARAMETERS////////////////
   /////////////////////////////////////////////////////
+  init_matrix input_Rec_prop(1,np,1,nreg)
   init_3darray input_weight(1,np,1,nreg,1,na)  
   init_3darray input_catch_weight(1,np,1,nreg,1,na)
   init_3darray fecundity(1,np,1,nreg,1,na)
@@ -204,7 +221,7 @@ DATA_SECTION
   init_4darray ntags(1,np,1,nreg,1,ny_rel,1,na) //releases
   init_4darray OBS_tag_prop_N(1,np,1,nreg,1,ny_rel,1,na) //eff_N for tag mult tag_prop
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
-   init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
+ //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
    init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
 
 
@@ -224,7 +241,7 @@ DATA_SECTION
    3darray input_residency(1,np,1,nreg,1,na) //
 // probably need to calculate quantity below  or omit *dh
    vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each 
-   7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
+ //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
 
    init_4darray init_abund2(1,np,1,np,1,nreg,1,na);  // need to calculate this or input it, we may want rec_devs before start of model? *dh
    init_4darray M(1,np,1,nreg,1,ny,1,na); // input for now, if we estimate we will want to limit how many Ms
@@ -312,14 +329,15 @@ PARAMETER_SECTION
    matrix G_reg(1,parreg,1,parreg);
    vector G_temp_reg(1,parreg);
 
+   init_number dummy(ph_dummy)
  // selectivity parameters
 
   init_bounded_matrix log_sel_beta1(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_bounded_matrix log_sel_beta2(1,parpops,1,fishfleet,-1,10,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_bounded_matrix log_sel_beta2(1,parpops,1,fishfleet,-10,10,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
   init_bounded_matrix log_sel_beta3(1,parpops,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
   init_bounded_matrix log_sel_beta4(1,parpops,1,fishfleet,-10,5,ph_sel_dubl) ;//selectivity inflection parameter 2 for double logistic selectivity
   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,10,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-1,10,ph_sel_log) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,10,ph_sel_log) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
 
   3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
   3darray sel_beta2(1,nps,1,nr,1,nfl)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
@@ -373,7 +391,8 @@ PARAMETER_SECTION
   init_bounded_matrix ln_rec_prop(1,parpops,1,parreg,-4,0,-1)  // do we need this?
   //is phase suppose to be negative below?? --DG
   // for now... not sure what these are used for in estimation model? Are they necessary?
-  init_3darray ln_rec_prop_year(1,parpops,1,parreg,1,nyr,-ph_rec) 
+  //YES..if we want to estimate recruit apportionment (typical in SS)..need to implement logit transform in later code
+  init_3darray ln_rec_prop_year(1,parpops,1,parreg,1,nyr,-1) 
  // init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr,-40,40,ph_rec) //actual parameters (log scale devs)
   init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages,-40,40,ph_rec) //actual parameters (log scale devs)
   matrix rec_devs(1,nps,1,nyr+nages) //derived quantity as exp(rec_devs_RN)
@@ -574,9 +593,10 @@ PARAMETER_SECTION
   number fish_age_like
   number rec_like
   number tag_like
+  number tag_like_temp
   number catch_like 
   number survey_like
-  init_bounded_number  theta(1,100,2);   // for negbinomial -lnL
+ // init_bounded_number  theta(1,100,ph_theta);   // for negbinomial -lnL
   objective_function_value f;
   
   !! cout << "parameters set" << endl;
@@ -586,18 +606,18 @@ PROCEDURE_SECTION
  // initial calcs, can these types go to PRELIMINARY CALCS section?
  
   // assign recaps to larger array
-  k=0;
-    for(int i=1;i<=npops;i++) 
-    {
-    for (int r=1;r<=nregions(i);r++) //recap region
-    {
-     for(int j=1;j<=nyrs_release;j++) 
-    {
-   k=k+1;
-      OBS_recaps(i,r,j)=OBS_recaps_temp(k);
-    }
-    } 
-    }
+ // k=0;
+ //   for(int i=1;i<=npops;i++) 
+ //   {
+ //   for (int r=1;r<=nregions(i);r++) //recap region
+ //   {
+ //    for(int j=1;j<=nyrs_release;j++) 
+ //   {
+ //  k=k+1;
+ //     OBS_recaps(i,r,j)=OBS_recaps_temp(k);
+ //   }
+ //   } 
+ //   }
   // assign catchabilities to arithmetic scale
        for(int i=1;i<=npops;i++) 
     {
@@ -957,10 +977,10 @@ FUNCTION get_vitals
                 {
                  wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);
                 }
-              // if(apportionment_type==1) //input recruitment apportionment directly by population and region
-               // {
-               //  Rec_Prop(j,r,y)=input_Rec_prop(j,r);
-               // }
+               if(apportionment_type==1) //input recruitment apportionment directly by population and region
+                {
+                 Rec_Prop(j,r,y)=input_Rec_prop(j,r);
+                }
                if(apportionment_type==2) //equal apportionment by nregions
                 {
                Rec_Prop(j,r,y)=1.0/nregions(j);
@@ -1020,7 +1040,7 @@ FUNCTION get_SPR
 //JJD ende here on June 14, 2017.  Working top to bottom. Certaintly not making all the needed changes.
 
 FUNCTION get_abundance
-    rec_devs=mfexp(ln_rec_devs_RN);  // gotta get this on the arithmetic scale yo...need to integrate this with switches, need to do it this way right now because of initial devs.;
+   // rec_devs=mfexp(ln_rec_devs_RN);  // gotta get this on the arithmetic scale yo...need to integrate this with switches, need to do it this way right now because of initial devs.;
 
        for (int y=1;y<=nyrs;y++)
         {
@@ -2949,6 +2969,7 @@ FUNCTION evaluate_the_objective_function
  survey_age_like.initialize();
  survey_like.initialize();
  tag_like.initialize();
+ tag_like_temp.initialize();
  rec_like.initialize();
  // Calculate multinomial likelihoods for compositions (Fournier style)
  // and survey biomass lognormal likelihood
@@ -2988,29 +3009,29 @@ FUNCTION evaluate_the_objective_function
  for(int j=1;j<=npops;j++) {
  rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
  }
- if(do_tag_mult==0)
-  {
-   for (int i=1;i<=npops;i++)
-  {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-           xx=yrs_releases(x);
-      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
-        {
-         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
-          {  
-          for(int j=1;j<=npops;j++) //recap stock
-            {
-             for (int r=1;r<=nregions(j);r++)
-             {
+// if(do_tag_mult==0)
+//  {
+//   for (int i=1;i<=npops;i++)
+//  {
+//   for (int n=1;n<=nregions(i);n++)
+//    {
+//    for(int x=1; x<=nyrs_release; x++)
+//     {
+//           xx=yrs_releases(x);
+///      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+ //       {
+ ///        for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+  //        {  
+   //       for(int j=1;j<=npops;j++) //recap stock
+    //        {
+    //         for (int r=1;r<=nregions(j);r++)
+     //        {
       
-             tag_like -= log_negbinomial_density(OBS_recaps(i,n,x,a,y,j,r),recaps(i,n,x,a,y,j,r)+0.00001,theta);  //negative binomial tag likelihood
-            }}}}}}} 
+    //         tag_like -= log_negbinomial_density(OBS_recaps(i,n,x,a,y,j,r),recaps(i,n,x,a,y,j,r)+0.00001,theta);  //negative binomial tag likelihood
+     //       }}}}}}} 
   // I have done Poisson and negative-binomial, if you want multinomial than that's up to you
   // Right now this has a 7d array for recaps and a 6d for OBS
-  }
+ // }
 
  if(do_tag_mult==1)
   {
@@ -3029,7 +3050,24 @@ FUNCTION evaluate_the_objective_function
          }
          for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
            {
-             tag_like -= OBS_tag_prop_N(i,n,x,a) * ((tag_prop_final(i,n,x,a,s)+0.001)*log(OBS_tag_prop_final(i,n,x,a,s)+0.001));
+            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
+             {
+              tag_like -= OBS_tag_prop_N(i,n,x,a) * ((tag_prop_final(i,n,x,a,s)+0.001)*log(OBS_tag_prop_final(i,n,x,a,s)+0.001));
+             }
+            if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+             {
+               if(s<((nyrs-xx+1)*sum(nregions)+1))
+                {
+                 tag_like_temp +=((tag_prop_final(i,n,x,a,s)+0.001)*log(OBS_tag_prop_final(i,n,x,a,s)+0.001));
+                }
+               if(s==((nyrs-xx+1)*sum(nregions)+1))
+                {
+                 tag_like_temp += ((tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
+                }
+               tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
+             }
+
+
             }}}}}
   }
 
@@ -3038,12 +3076,12 @@ FUNCTION evaluate_the_objective_function
  if (current_phase()<3) f+= 1000*(norm2(mfexp(ln_F)));
   
 // Sum objective function
-  f           += survey_like;
-  f           += 5*catch_like;
- // f           += 0.001*fish_age_like;
-  f           += survey_age_like;
-  f           += rec_like;
-  f           += tag_like;
+   f           += survey_like*wt_srv;
+   f           += catch_like*wt_catch;
+   f           += fish_age_like*wt_fish_age;
+   f           += survey_age_like*wt_srv_age;
+   f           += rec_like*wt_rec;
+   f           += tag_like*wt_tag;
   
 REPORT_SECTION
 

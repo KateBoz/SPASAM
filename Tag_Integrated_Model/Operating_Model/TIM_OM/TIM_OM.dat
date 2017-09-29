@@ -101,13 +101,13 @@
   #==0 input selectivity
   #==1 logistic selectivity based on input sel_beta1 and sel_beta2
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
-0
+1
 
 #select_switch_survey
   #==0 input selectivity
   #==1 logistic selectivity based on input sel_beta1 and sel_beta2
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
-0
+1
 
 #F_switch
   #==1 input F
@@ -119,11 +119,11 @@
   #==7 F devs about input F based on sigma_F
   #==8 random walk in F
   #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
-1
+9
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
-0
+1
 #recruit_randwalk_switch
   #==0 no random walk recruitment deviations
   #==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
@@ -148,7 +148,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-1
+2
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
@@ -481,9 +481,9 @@
 0.05
 #SIM_ncatch
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-50
-50
-50
+100
+100
+100
 #SIM_ncatch_overlap
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
@@ -491,14 +491,14 @@
 100
 #SIM_nsurvey
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-50
-50
-50
+100
+100
+100
 #SIM_nsurvey_overlap
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-50
-50
-50
+100
+100
+100
 #input_TAC
  #TAC that are matching if model_type_switch==1
 ################################################################################################################
