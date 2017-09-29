@@ -132,7 +132,8 @@ DATA_SECTION
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
   init_vector spawn_return_prob(1,np) // used if natal_homing_swith==2
-  init_int do_tag  
+  init_int do_tag
+  init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
   init_vector sigma_recruit(1,np)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -151,14 +152,6 @@ DATA_SECTION
   init_int ph_F_rho // if we want random walk F
   init_int phase_T_pop //use if mult pops
   init_int phase_T_reg //use if mult regs
-
- // likleihood weights
-  init_number wt_srv;
-  init_number wt_catch;
-  init_number wt_fish_age
-  init_number wt_srv_age 
-  init_number wt_rec;
-  init_number wt_tag;
 
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
@@ -209,9 +202,24 @@ DATA_SECTION
     !! int tag_age=max_life_tags;
   init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
   init_4darray ntags(1,np,1,nreg,1,ny_rel,1,na) //releases
+  init_4darray OBS_tag_prop_N(1,np,1,nreg,1,ny_rel,1,na) //eff_N for tag mult tag_prop
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
    init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
    init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
+
+
+  !! int nyr_rel=nyrs_release;
+  !! ivector xy(1,nyr_rel);
+  !! ivector nt(1,nyr_rel);
+
+  !!  for(int x=1; x<=nyrs_release; x++)
+  !!   {
+  !!    xx=yrs_releases(x);
+  !!    xy(x)=min(max_life_tags,nyrs-xx+1);
+  !!    nt(x)=xy(x)*sum(nregions)+1;
+  !!   }
+  
+   init_5darray OBS_tag_prop_final(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
    matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
    3darray input_residency(1,np,1,nreg,1,na) //
 // probably need to calculate quantity below  or omit *dh
@@ -289,10 +297,7 @@ PARAMETER_SECTION
   !! int nag=nages;
   !! ivector nfl=nfleets;
   !! ivector nfls=nfleets_survey;  
-  !! int nyr_rel=nyrs_release;
-  !! int nt=max_life_tags*sum(nregions)+1;
-  !! int nt2=nt-1;
-  !! int tag_age=max_life_tags;
+
   !! int k;
 // need these for some if the init parameter arrays below
   !! int fishfleet=nfleets(1); 
@@ -337,6 +342,23 @@ PARAMETER_SECTION
   4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
 
  //tagging data and parameters
+
+  !! int nyr_rel=nyrs_release;
+  !! ivector xy(1,nyr_rel);
+  !! ivector nt(1,nyr_rel);
+  !! ivector nt2(1,nyr_rel);
+  !! ivector tag_age(1,nyr_rel);
+
+  !!  for(int x=1; x<=nyrs_release; x++)
+  !!   {
+  !!    xx=yrs_releases(x);
+  !!    xy(x)=min(max_life_tags,nyrs-xx+1);
+  !!    nt(x)=xy(x)*sum(nregions)+1;
+  !!    nt2(x)=nt(x)-1;
+  !!    tag_age(x)=xy(x);
+  !!   }
+
+
   vector ntags_total(1,nyr_rel)  
   7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
   4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
@@ -542,10 +564,10 @@ PARAMETER_SECTION
  3darray biomass_natal_temp_overlap(1,nps,1,nyr,1,nps)
  4darray abundance_population_temp(1,nps,1,nyr,1,nag,1,nr)
  3darray abundance_total_temp(1,nyr,1,nag,1,nps)
- 3darray total_recap_temp(1,nps,1,tag_age,1,nr)
+ 3darray total_recap_temp(1,nps,1,nr,1,tag_age)
  matrix tags_avail_temp(1,nps,1,nr)
  3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
- vector tag_prop_temp2(1,nt2)
+ 5darray tag_prop_temp2(1,nps,1,nr,1,nyr_rel,1,nag,1,nt2)
 
  // likelihood components
   number survey_age_like
@@ -2740,25 +2762,6 @@ FUNCTION get_tag_recaptures
   /////////////////////////////////////////////////////////////////////////////
  if(do_tag==1)
   {
-//don't need to calculate ntags anymore, they are inputs
-
-//Calculate ntags released by population and region based on relative survey biomass among populations and regions and survey selectivity
- /* for (int i=1;i<=npops;i++)
-  {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-      xx=yrs_releases(x);
-      for (int a=1;a<=nages;a++) //release age 
-        {
-          ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-          ntags(i,n,x,a)=ntags_total(x)*(survey_population_bio(xx,i)/survey_total_bio(xx))*(survey_region_bio(i,xx,n)/survey_population_bio(xx,i))*survey_selectivity(i,n,xx,a,1); // took out the trues *dh*
-        }
-       } 
-      }
-     }
-  */
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -2769,17 +2772,7 @@ FUNCTION get_tag_recaptures
       xx=yrs_releases(x);
       for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
         {
-         for(int y=1;y<=max_life_tags;y++)  //recap year
-          {
-           for(int j=1;j<=npops;j++) //recap stock
-            {
-             for (int r=1;r<=nregions(j);r++)
-             {
-              total_recap_temp(j,y,r)=0; //for whatever reason ADMB won't let a 3darray=double...this is workaround for total_recap_temp=0;, ie setting temp 3darray to 0 after loops through all years 
-             }
-            }
-           }
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
             {
@@ -2799,8 +2792,7 @@ FUNCTION get_tag_recaptures
                 {
                  if(natal_homing_switch==0) //if no natal homing
                  {
-                  // added these extra mins around (xx+y because if tags are released every year up until the end you are hosed with this)
-                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,min((xx+y-1),nyrs),min((a+y),nages),j,r)*mfexp(-(F(p,s,min((xx+y-2),nyrs),min(((a+y)-1),nages))+(M(p,s,min((xx+y-2),nyrs),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
                  }                        
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
@@ -2808,18 +2800,41 @@ FUNCTION get_tag_recaptures
                 //########################################################################################################              
                  if(natal_homing_switch==1) //if natal homing 
                  {
-                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,min((xx+y-1),nyrs),min((a+y),nages),j,r)*mfexp(-(F(p,s,min((xx+y-2),nyrs),min(((a+y)-1),nages))+(M(p,s,min((xx+y-2),nyrs),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
-                 }                        
+                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)             
+                 }               
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,min((xx+y-1),nyrs),min((a+y),nages))*(1.-mfexp(-(F(j,r,min((xx+y-1),nyrs),min((a+y),nages))+(M(j,r,min((xx+y-1),nyrs),min((a+y),nages))))))/(F(j,r,min((xx+y-1),nyrs),min((a+y),nages))+(M(j,r,min((xx+y-1),nyrs),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
                }
-             total_recap_temp(j,y,r)=recaps(i,n,x,a,y,j,r);
              }
             }
            }
-             total_rec(i,n,x,a)=sum(total_recap_temp);
+          }
+         }
+        }
+       }
+ for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+      xx=yrs_releases(x);
+      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+        {
+        total_recap_temp.initialize();
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+             {
+              total_recap_temp(j,r,y)=recaps(i,n,x,a,y,j,r);
+             }
+            }
+           }
+              total_rec(i,n,x,a)=sum(total_recap_temp);
              not_rec(i,n,x,a)=ntags(i,n,x,a)-total_rec(i,n,x,a);  //for ntags  at a given age all entries represent all tags released so can just use any of the entries (hence the i,x,a,1 subscripts)
            }
           }
@@ -2831,9 +2846,10 @@ FUNCTION get_tag_recaptures
     {
     for(int x=1; x<=nyrs_release; x++)
      {
+      xx=yrs_releases(x);
       for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
         {
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
             {
@@ -2870,9 +2886,10 @@ FUNCTION get_tag_recaptures
     {
     for(int x=1; x<=nyrs_release; x++)
      {
+      xx=yrs_releases(x);
        for (int a=1;a<=nages;a++) //release age 
         {
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
             {
@@ -2882,7 +2899,7 @@ FUNCTION get_tag_recaptures
              }
             }
            }
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
             {
@@ -2892,26 +2909,30 @@ FUNCTION get_tag_recaptures
               }
             }
            }
-         tag_prop_temp2=0;
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         //tag_prop_temp2=0;
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {
            for(int j=1;j<=npops;j++) //recap stock
             {
              for (int r=1;r<=nregions(j);r++)
               {
-               tag_prop_temp2(((y-1)*sum(nregions)+nreg_temp(j)+r))=tag_prop_temp(j,y,r); //stack array into single vector by year, population, region
+               tag_prop_temp2(i,n,x,a,((y-1)*sum(nregions)+nreg_temp(j)+r))=tag_prop_temp(j,y,r); //stack array into single vector by year, population, region
               }
              }
             }
              for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
               {
-              if(s<(max_life_tags*sum(nregions)+1))
+              if(s<(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1))
               {
-               tag_prop_final(i,n,x,a,s)=tag_prop_temp2(s);
+               tag_prop_final(i,n,x,a,s)=tag_prop_temp2(i,n,x,a,s);
               }
-              if(s==(max_life_tags*sum(nregions)+1)) //add not recap probability to final entry of temp array
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags<=(nyrs-xx+1)) //add not recap probability to final entry of temp array
               {
                tag_prop_final(i,n,x,a,s)=tag_prop_not_rec(i,n,x,a);  //for estimation model will use this version of tag_prop in likelihood
+              }
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags>(nyrs-xx+1)) //add not recap probability to final entry of temp array with adjustment for release events where model ends before max_life_tags (so NR remains in last state)
+              {
+               tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))=tag_prop_not_rec(i,n,x,a);  //for estimation model will use this version of tag_prop in likelihood
               }
             }
            }
@@ -2967,6 +2988,8 @@ FUNCTION evaluate_the_objective_function
  for(int j=1;j<=npops;j++) {
  rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
  }
+ if(do_tag_mult==0)
+  {
    for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -2976,7 +2999,7 @@ FUNCTION evaluate_the_objective_function
            xx=yrs_releases(x);
       for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
         {
-         for(int y=1;y<=max_life_tags;y++)  //recap year
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
           {  
           for(int j=1;j<=npops;j++) //recap stock
             {
@@ -2986,17 +3009,41 @@ FUNCTION evaluate_the_objective_function
              tag_like -= log_negbinomial_density(OBS_recaps(i,n,x,a,y,j,r),recaps(i,n,x,a,y,j,r)+0.00001,theta);  //negative binomial tag likelihood
             }}}}}}} 
   // I have done Poisson and negative-binomial, if you want multinomial than that's up to you
-  // Right now this has a 7d array for recaps and a 6d for OBS          
+  // Right now this has a 7d array for recaps and a 6d for OBS
+  }
+
+ if(do_tag_mult==1)
+  {
+   for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+           xx=yrs_releases(x);
+      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+        {
+        if(ntags(i,n,x,a)==0)
+         {
+          OBS_tag_prop_N(i,n,x,a)==0; //make tag likelihood==0 if there are no releases in a given cohort (i.e., mainly if no releases at young ages due to selectivity==0)
+         }
+         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
+           {
+             tag_like -= OBS_tag_prop_N(i,n,x,a) * ((tag_prop_final(i,n,x,a,s)+0.001)*log(OBS_tag_prop_final(i,n,x,a,s)+0.001));
+            }}}}}
+  }
+
+
   /// Early penalty to keep F under wraps
  if (current_phase()<3) f+= 1000*(norm2(mfexp(ln_F)));
   
 // Sum objective function
-  f           += survey_like*wt_srv;
-  f           += catch_like*wt_catch;
-  f           += fish_age_like*wt_fish_age;
-  f           += survey_age_like*wt_srv_age;
-  f           += rec_like*wt_rec;
-  f           += tag_like*wt_tag;
+  f           += survey_like;
+  f           += 5*catch_like;
+ // f           += 0.001*fish_age_like;
+  f           += survey_age_like;
+  f           += rec_like;
+  f           += tag_like;
   
 REPORT_SECTION
 
