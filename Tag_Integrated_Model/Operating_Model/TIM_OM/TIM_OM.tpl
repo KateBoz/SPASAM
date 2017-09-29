@@ -5239,6 +5239,10 @@ REPORT_SECTION
  report<<"$OBS_tag_prop_final"<<endl;
  report<<OBS_tag_prop_final<<endl;
 
+ report<<"$OBS_catch_prop"<<endl;
+ report<<OBS_catch_prop<<endl;
+ report<<"$OBS_survey_prop"<<endl;
+ report<<OBS_survey_prop<<endl;
 
   report<<"$res_TAC"<<endl;
   report<<res_TAC<<endl;
