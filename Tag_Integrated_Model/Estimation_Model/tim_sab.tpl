@@ -3,6 +3,7 @@
 // Spatial Estimation Model based on Operating Model by Daniel Goethel (NMFS SEFSC)  
 // started by Dana Hanselman (AFSC) //Further screwed up by Jon Deroba (NEFSC)//Terrorized by Dan Goethel (SEFSC)
 // Agonized over again by Dana Hanselman between bloodlettings...
+// ARRGH
 //////////////////////////////////////////////////////////
 
 GLOBALS_SECTION
