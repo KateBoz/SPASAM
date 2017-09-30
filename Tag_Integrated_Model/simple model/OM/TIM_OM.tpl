@@ -150,7 +150,7 @@ DATA_SECTION
 
   init_number recruit_randwalk_switch
   //==0 no random walk recruitment deviations
-  //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
+  //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
 
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
@@ -382,12 +382,13 @@ DATA_SECTION
   //==1 estimate yearly F
   //==2 random walk in F
   init_number recruit_devs_switch_EM
-  //==0 use stock-recruit relationphip directly
+  //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 
    init_number recruit_randwalk_switch_EM
   //==0 no random walk recruitment deviations
-  //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
+  //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
+  
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
@@ -1248,7 +1249,7 @@ FUNCTION get_vitals
                   rec_devs_randwalk(j,y)=rec_devs(j,y);
                   if(y!=1)
                    {
-                    rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y);
+                    rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y); //is this correct?
                    }
                  }
                 }
