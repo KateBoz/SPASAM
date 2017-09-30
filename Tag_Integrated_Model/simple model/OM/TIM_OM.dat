@@ -125,7 +125,7 @@
 1
 #recruit_randwalk_switch
   #==0 no random walk recruitment deviations
-  #==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
+  #//==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
 0
 #maturity_switch_equil
   #//==0 for equal by area or average
@@ -496,14 +496,14 @@
 1
 
 #recruit_devs_switch
-  #==0 use stock-recruit relationship directly
-  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+ # //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
+ # //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 1
 
 #recruit_randwalk_switch
-  #==0 no random walk recruitment deviations
-  #==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)
-0
+ # //==0 no random walk recruitment deviations
+ # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
+  0
 
 #do_tag
   #==0 do not calculate tagging data
