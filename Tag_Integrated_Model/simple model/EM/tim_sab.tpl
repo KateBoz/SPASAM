@@ -383,7 +383,7 @@ PARAMETER_SECTION
 
   init_bounded_matrix ln_q(1,parpops,1,survfleet,-10,5,ph_q)
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
-
+ //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
   init_3darray ln_F(1,parpops,1,nyr,1,fishfleet,ph_F) //the actual parameters  
   init_3darray F_rho(1,parpops,1,nyr,1,fishfleet,ph_F_rho) //random walk params*
@@ -641,15 +641,15 @@ PARAMETER_SECTION
   
   !! cout << "parameters set" << endl;
 
-INITIALIZATION_SECTION  //set initial values
-   ln_q 0;
-   ln_R_ave 7;
-   log_sel_beta1 0;
-   log_sel_beta2 2;
-   log_sel_beta1surv 0;
-   log_sel_beta2surv 2;
-   ln_F -.7
-   ln_rec_devs_RN 0;
+//INITIALIZATION_SECTION  //set initial values
+//   ln_q 0;
+//   ln_R_ave 7;
+ //  log_sel_beta1 0;
+ //  log_sel_beta2 2;
+ //  log_sel_beta1surv 0;
+ //  log_sel_beta2surv 2;
+ //  ln_F -.7
+ //  ln_rec_devs_RN 0;
 
 PROCEDURE_SECTION
  // initial calcs, can these types go to PRELIMINARY CALCS section?
@@ -668,18 +668,7 @@ PROCEDURE_SECTION
  //   } 
  //   }
   // assign catchabilities to arithmetic scale
-       for(int i=1;i<=npops;i++) 
-    {
-        for(int k=1;k<=nregions(i);k++) 
-        {
-          for(int j=1;j<=nfleets_survey(i);j++) 
-          {
-           q_survey(i,k,j) = mfexp(ln_q(i,j));
-    }
-    }
-    }
-  
-  R_ave=mfexp(ln_R_ave);
+
    get_movement();
    get_selectivity();
    get_F_age();
@@ -866,7 +855,8 @@ FUNCTION get_selectivity
  sel_beta1(j,r,z)=mfexp(log_sel_beta1(j,z));
  sel_beta2(j,r,z)=mfexp(log_sel_beta2(j,z));
  sel_beta3(j,r,z)=mfexp(log_sel_beta3(j,z));
- sel_beta4(j,r,z)=mfexp(log_sel_beta4(j,z)); }}}
+ sel_beta4(j,r,z)=mfexp(log_sel_beta4(j,z));
+ }}}
 
      for (int j=1;j<=npops;j++)
    {
@@ -973,6 +963,19 @@ FUNCTION get_F_age
        }
 
 FUNCTION get_vitals
+
+       for(int i=1;i<=npops;i++) 
+    {
+        for(int k=1;k<=nregions(i);k++) 
+        {
+          for(int j=1;j<=nfleets_survey(i);j++) 
+          {
+           q_survey(i,k,j) = mfexp(ln_q(i,j));
+    }
+    }
+    }
+  
+  R_ave=mfexp(ln_R_ave);
 
   for (int p=1;p<=npops;p++)
    {
@@ -3075,7 +3078,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-              survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)/OBS_survey_fleet_bio(j,r,y,z))));
+              survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001));
              }
             }
@@ -3084,7 +3087,7 @@ FUNCTION evaluate_the_objective_function
         
      
      // catch likelihood and multinomial fishery ages
-         for (int j=1;j<=npops;j++)
+           for (int j=1;j<=npops;j++)
      {
        for (int r=1;r<=nregions(j);r++)
        {
@@ -3092,7 +3095,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)/OBS_yield_fleet(j,r,y,z))));
+           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
            fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001));
              }
              }
@@ -3166,7 +3169,7 @@ FUNCTION evaluate_the_objective_function
 
 
   /// Early penalty to keep F under wraps
- if (current_phase()<3) f+= 1000*(norm2(mfexp(ln_F)));
+ if (current_phase()<4) f+= 1000*(norm2(mfexp(ln_F)));
   
 // Sum objective function
    f           += survey_like*wt_srv;
@@ -3338,10 +3341,18 @@ REPORT_SECTION
   report<<tag_prop_final<<endl;
 
   report<<"likelihood components"<<endl;
-  report<<"tag_like"<<endl<<tag_like<<"fish_age_like"<<endl<<fish_age_like<<endl;
-  report<<"survey_like"<<endl<<survey_like;
-  report<<"catch_like"<<endl<<catch_like;
-  report<<"rec_like"<<endl<<rec_like<<endl;
+  report<<"tag_like"<<endl;
+  report<<tag_like<<endl;
+  report<<"fish_age_like"<<endl;
+  report<<fish_age_like<<endl;
+  report<<"survey_age_like"<<endl;
+  report<<survey_age_like<<endl;
+  report<<"survey_like"<<endl;
+  report<<survey_like<<endl;
+  report<<"catch_like"<<endl;
+  report<<catch_like<<endl;
+  report<<"rec_like"<<endl;
+  report<<rec_like<<endl;
 
   save_gradients(gradients);
 RUNTIME_SECTION
