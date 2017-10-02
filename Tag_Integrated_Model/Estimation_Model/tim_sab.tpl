@@ -395,8 +395,8 @@ PARAMETER_SECTION
   //YES..if we want to estimate recruit apportionment (typical in SS)..need to implement logit transform in later code
   init_3darray ln_rec_prop_year(1,parpops,1,parreg,1,nyr,-1) 
  // init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr,-40,40,ph_rec) //actual parameters (log scale devs)
-  init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages,-40,40,ph_rec) //actual parameters (log scale devs)
-  matrix rec_devs(1,nps,1,nyr+nages) //derived quantity as exp(rec_devs_RN)
+  init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages-1,-40,40,ph_rec) //actual parameters (log scale devs)
+  matrix rec_devs(1,nps,1,nyr+nages-1) //derived quantity as exp(rec_devs_RN)
   init_bounded_vector ln_R_ave(1,parpops,-10,10,ph_rec) //estimated parameter Average Recruitment or R0 for B-H S-R curve
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
@@ -437,7 +437,7 @@ PARAMETER_SECTION
  3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
  3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
  3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- matrix rec_devs_randwalk(1,nps,1,nyr)
+ matrix rec_devs_randwalk(1,nps,1,nyr-1)
 
   // not sure if we need these anymore
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
@@ -953,23 +953,7 @@ FUNCTION get_vitals
                //   wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
               //  }
              //  }                        
-               if(recruit_devs_switch==0)  //use population recruit relationship directly
-                {
-                 rec_devs(j,y+a)=1;
-                }
-               if(recruit_devs_switch==1)  // allow lognormal error around SR curve
-                {
-                 rec_devs(j,y+a)=mfexp(ln_rec_devs_RN(j,y+a)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
 
-                 if(recruit_randwalk_switch==1)
-                 {
-                  rec_devs_randwalk(j,y+a)=rec_devs(j,y+a);
-                  if(y!=1)
-                   {
-                    rec_devs(j,y+a)=rec_devs(j,y-1+a)*rec_devs_randwalk(j,y+a);
-                   }
-                 }
-                }
                if(SSB_type==1) //fecundity based SSB
                 {
                  wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a);// for yearly SSB calcs
@@ -1004,7 +988,29 @@ FUNCTION get_vitals
          }
        }
      }
+    for (int j=1;j<=npops;j++)
+     { 
+        for (int y=1;y<=nyrs+nages-1;y++)
+         {
+               if(recruit_devs_switch==0)  //use population recruit relationship directly
+                {
+                 rec_devs(j,y)=1;
+                }
+               if(recruit_devs_switch==1)  // allow lognormal error around SR curve
+                {
+                 rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
 
+                 if(recruit_randwalk_switch==1)
+                 {
+                  rec_devs_randwalk(j,y)=rec_devs(j,y);
+                  if(y>(nages+1)) //start random walk in year3 based on year 2 devs as starting point (don't use equilibrium devs from year 1)
+                   {
+                    rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y);  //is this correct?
+                   }
+                 }
+                }
+               }
+              }
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
@@ -1463,11 +1469,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
-                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
+                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages-1)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
                     }
                   }
 
@@ -1475,11 +1481,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
-                    recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y+nages)*Rec_Prop(j,r,y);
+                    recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regions within a population
                     {
-                     recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y+nages)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1)));
+                     recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y+nages-1)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1)));
                     }
                   }
                   
@@ -1487,11 +1493,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y+nages)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a population
                     {
-                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y+nages)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y+nages-1)*(SSB_region_overlap(p,j,r,y-1)/sum(SSB_region_overlap(p,j,y-1))); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
                     }
                   }
                  }
@@ -1503,22 +1509,22 @@ FUNCTION get_abundance
                   {
                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages)*Rec_Prop(j,r,y);
+                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                     if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
+                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y+nages-1)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
                     }
                   }
                  if(Rec_type==2) //BH recruitment
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,+nages)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y+nages)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
+                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y+nages-1)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
                     }
                    }
 
@@ -1526,11 +1532,11 @@ FUNCTION get_abundance
                   {
                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     recruits_BM(j,r,y)=env_rec(y)* rec_devs(j,y+nages)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=env_rec(y)* rec_devs(j,y+nages-1)*Rec_Prop(j,r,y);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                    {
-                    recruits_BM(j,r,y)=env_rec(y)* R_ave(j)*rec_devs(j,y+nages)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
+                    recruits_BM(j,r,y)=env_rec(y)* R_ave(j)*rec_devs(j,y+nages-1)*(SSB_region(j,r,y-1)/SSB_population(j,y-1));
                    }
                  }
                  }
@@ -1610,11 +1616,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
+                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
                     }
                   }
 
@@ -1622,11 +1628,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y+nages)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y+nages-1)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r);
                     }
                   }
 
@@ -1634,11 +1640,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
+                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*(SSB_region_overlap(p,k,n,y-1)/sum(SSB_region_overlap(p,k,y-1)))*T(p,n,y,a,j,r); //assume with natal homing that fish aren't from a particular region so when apportion them use relative SSB in each region (but don't account for SSB that moves back to the region to spawn ie fish that move back add to population SSB but not region SSB)
                     }
                   }
                  }
@@ -1650,22 +1656,22 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                     }
                  if(Rec_type==2) //BH recruitment
                   {
                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                     abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
 
@@ -1673,11 +1679,11 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
 
@@ -1718,33 +1724,33 @@ FUNCTION get_abundance
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                      }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                    abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                    abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
                  if(Rec_type==2) //BH recruitment
                   {
                    if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
                 if(Rec_type==3) //env recruitment
                   {
                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y+nages)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y+nages)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y+nages-1)*(SSB_region(k,n,y-1)/SSB_population(k,y-1))*T(k,n,y,a,j,r);
                     }
                   }
                 }
@@ -2778,7 +2784,6 @@ FUNCTION get_CAA_prop
                  catch_at_age_population_overlap_prop(p,j,y,a)=catch_at_age_population_overlap(p,j,y,a)/sum(catch_at_age_population_overlap(p,j,y));
                  catch_at_age_natal_overlap_prop(p,y,a)=catch_at_age_natal_overlap(p,y,a)/sum(catch_at_age_natal_overlap(p,y));
 
-                 catch_at_age_fleet_prop_temp(j,r,y,z,a)=catch_at_age_fleet(j,r,y,a,z);
                  catch_at_age_fleet_prop(j,r,y,z,a)=catch_at_age_fleet_prop_temp(j,r,y,z,a)/sum(catch_at_age_fleet_prop_temp(j,r,y,z));
                  catch_at_age_region_prop(j,r,y,a)=catch_at_age_region(j,r,y,a)/sum(catch_at_age_region(j,r,y));
                  catch_at_age_population_prop(j,y,a)=catch_at_age_population(j,y,a)/sum(catch_at_age_population(j,y));
@@ -3003,7 +3008,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-              survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)/OBS_survey_fleet_bio(j,r,y,z))));
+              survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001));
              }
             }
@@ -3020,7 +3025,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)/OBS_yield_fleet(j,r,y,z))));
+           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
            fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001));
              }
              }
@@ -3520,16 +3525,19 @@ REPORT_SECTION
   report<<Bratio_natal_overlap<<endl;
 
   */
-  report<<"abundance_at_age_AM_overlap_region"<<endl;
-  report<<abundance_at_age_AM_overlap_region  <<endl;
-  report<<"abundance_at_age_BM"<<endl;
-  report<<abundance_at_age_BM <<endl;
-  
   report<<"likelihood components"<<endl;
-  report<<"tag_like"<<endl<<tag_like<<"fish_age_like"<<endl<<fish_age_like<<endl;
-  report<<"survey_like"<<endl<<survey_like;
-  report<<"catch_like"<<endl<<catch_like;
-  report<<"rec_like"<<endl<<rec_like<<endl;
+  report<<"tag_like"<<endl;
+  report<<tag_like<<endl;
+  report<<"fish_age_like"<<endl;
+  report<<fish_age_like<<endl;
+  report<<"survey_age_like"<<endl;
+  report<<survey_age_like<<endl;
+  report<<"survey_like"<<endl;
+  report<<survey_like<<endl;
+  report<<"catch_like"<<endl;
+  report<<catch_like<<endl;
+  report<<"rec_like"<<endl;
+  report<<rec_like<<endl;
   report<<T<<endl;
   save_gradients(gradients);
 RUNTIME_SECTION
