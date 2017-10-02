@@ -645,6 +645,37 @@ PROCEDURE_SECTION
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
 
+ if(move_switch==0)
+  {
+     for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+     for(int y=1;y<=nyrs;y++)
+       {
+        for (int a=1;a<=nages;a++)
+         {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              if(j==k & r==n)
+              {
+               T(j,r,y,a,k,n)=1;
+              }
+              if(j!=k || r!=n)
+              {
+               T(j,r,y,a,k,n)=0;
+              }
+       }
+      } 
+     }
+    }
+   }
+  }
+  }
+  if(move_switch!=0)
+  {
  if(npops>1 && sum(nregions)>npops && phase_T_pop>0) //not coded to do multiple regions AND multiple populations
   {
       cout << "model not setup to estimate T for this pop structure" << endl;
@@ -785,6 +816,9 @@ FUNCTION get_movement
    }
   }
   }
+ }
+
+ 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 
