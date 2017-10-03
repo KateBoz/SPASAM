@@ -361,7 +361,7 @@ PARAMETER_SECTION
    matrix G_reg(1,parreg,1,parreg);
    vector G_temp_reg(1,parreg);
 
-   init_number dummy(ph_dummy)
+   //init_number dummy(ph_dummy)
  // selectivity parameters
 
   init_bounded_matrix log_sel_beta1(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
