@@ -144,11 +144,13 @@ DATA_SECTION
 /////////////////////////////////////////////
 //phases and bounds for est parameters
 
+  init_int ph_lmr
   init_int ph_rec
   init_int ph_F
   init_int ph_steep
   init_int ph_M
   init_int ph_sel_log
+ init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_q
   init_int ph_F_rho // if we want random walk F
@@ -361,15 +363,16 @@ PARAMETER_SECTION
    matrix G_reg(1,parreg,1,parreg);
    vector G_temp_reg(1,parreg);
 
-   //init_number dummy(ph_dummy)
+   init_number dummy(ph_dummy)
  // selectivity parameters
 
-  init_bounded_matrix log_sel_beta1(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_bounded_matrix log_sel_beta2(1,parpops,1,fishfleet,-10,10,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_bounded_matrix log_sel_beta3(1,parpops,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
-  init_bounded_matrix log_sel_beta4(1,parpops,1,fishfleet,-10,5,ph_sel_dubl) ;//selectivity inflection parameter 2 for double logistic selectivity
-  init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,10,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,10,ph_sel_log) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta1(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta3(1,parpops,1,fishfleet,-1,2,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
+   init_bounded_matrix log_sel_beta4(1,parpops,1,fishfleet,-1,5,ph_sel_dubl) ;//selectivity inflection parameter 2 for double logistic selectivity
+   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  
 
   3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
   3darray sel_beta2(1,nps,1,nr,1,nfl)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
@@ -381,7 +384,8 @@ PARAMETER_SECTION
   5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
   5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
 
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-10,5,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,15,ph_q)
+ // init_matrix ln_q(1,parpops,1,survfleet,ph_q)
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
@@ -436,7 +440,7 @@ PARAMETER_SECTION
  //###################################################################################################################################
  
   matrix rec_devs(1,nps,1,nyr+nages-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,-10,10,ph_rec) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  init_bounded_vector ln_R_ave(1,parpops,-10,30,ph_lmr) //estimated parameter Average Recruitment or R0 for B-H S-R curve
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,-5,0,ph_steep) //B-H steepness //could be estimated parameter or input value
@@ -882,11 +886,12 @@ FUNCTION get_selectivity
         for (int z=1;z<=nfleets(j);z++)                    
       {
  // get betas on their arithmetic scale
+
  sel_beta1(j,r,z)=mfexp(log_sel_beta1(j,z));
  sel_beta2(j,r,z)=mfexp(log_sel_beta2(j,z));
  sel_beta3(j,r,z)=mfexp(log_sel_beta3(j,z));
  sel_beta4(j,r,z)=mfexp(log_sel_beta4(j,z));
- }}}
+  }}}
 
      for (int j=1;j<=npops;j++)
    {
@@ -940,8 +945,9 @@ FUNCTION get_selectivity
             {
              for (int z=1;z<=nfleets_survey(j);z++)
                {
-   
- //survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+           //  survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1surv(j,r,z)))/(sel_beta2surv(j,r,z)))); 
+        
+  // survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
                 survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //change to logistic for EM //JJD
               }
              }
@@ -983,11 +989,13 @@ FUNCTION get_F_age
                }
               }             
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
-             F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
+          
             
             // M(j,y,a)=input_M(j,a);
+    
            }
-          }
+               F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
+           }
          }
         }
        }
@@ -1005,7 +1013,7 @@ FUNCTION get_vitals
     }
     }
   
-  R_ave=mfexp(ln_R_ave);
+  R_ave=mfexp(ln_R_ave+square(sigma_recruit)*0.5);
 
   for (int p=1;p<=npops;p++)
    {
@@ -3099,8 +3107,7 @@ FUNCTION evaluate_the_objective_function
  rec_like.initialize();
  // Calculate multinomial likelihoods for compositions (Fournier style)
  // and survey biomass lognormal likelihood
- 
-     for (int j=1;j<=npops;j++)
+      for (int j=1;j<=npops;j++)
      {
        for (int r=1;r<=nregions(j);r++)
        {
@@ -3108,8 +3115,8 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-              survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
-              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001));
+            survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
+              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
              }
             }
            }
@@ -3126,12 +3133,11 @@ FUNCTION evaluate_the_objective_function
              for (int z=1;z<=nfleets(j);z++)
               {
            catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
-           fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001));
+           fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
              }
              }
           }
          }
-   
  for(int j=1;j<=npops;j++) {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
  rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
  }
@@ -3268,6 +3274,10 @@ REPORT_SECTION
   report<<recruits_BM<<endl;
   report<<"$F"<<endl;
   report<<F<<endl;
+//  report<<"$F_year (pre-selectivity)"<<endl;
+//  report<<F_year<<endl;
+//  report<<"Fishery Selectivity"<<endl;
+//  report<<selectivity<<endl;
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"$biomass_population"<<endl;

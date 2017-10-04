@@ -118,7 +118,7 @@
   #==7 F devs about input F based on sigma_F
   #==8 random walk in F
   #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
-9
+1
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
   #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -288,8 +288,8 @@
 0.0001
 0.0001
 #input_F
-0.13
-0.31
+0.5
+0.5
 #start year of fishery (F before this ==0) and min and max F for Dunce Cap F option ==9
 1  #start year
 0.1 #minF
@@ -300,9 +300,9 @@
 #F_MSY
 0.5
 #input_M
-0.1 0.1	0.1 0.1	0.1
+0.5 0.5	0.5 0.5	0.5
 #sigma_recruit
-1.2
+0.6
 #sigma_rec_prop #error around recruit appotionment
 0.2
 #sigma_F: used for random walk F and random devs around dunce cap F
@@ -517,24 +517,37 @@
 ################################
 ##### Phases for estimation ####
 ################################
--4 #ph_rec
--1 #ph_F
--1 #ph_steep
--1 #ph_M
--3 #ph_sel_log
--1 #ph_sel_dubl
--2 # ph_q
--1 # ph_F_rho
-#phase_T_pop //use if mult pops
+#ph_lmr
+ 1
+#ph_rec
+ 2
+#ph_F
+ 3
+#ph_steep
+-1
+#ph_M
+-1
+#ph_sel_log
+ 4
+ #ph_sel_log_surv
+ 4
+#ph_sel_dubl
+-1
+#ph_q
+ 4
+#ph_F_rho
+-1
+#ph_T_pop
 -5
-#phase_T_reg //use if mult regs
+#ph_T_reg
 -5
-1 #ph_dummy
+#ph_dummy
+-1
 
 ##################################
 ### likelihood weights
 #################################
-#wt_srv
+#wt_surv
 1
 #wt_catch
 1
@@ -545,7 +558,7 @@
 #wt_rec
 1
 #wt_tag
-1
+0
 #OBS_survey_fleet_se(1,np,1,nreg,1,ny,1,nf  #standard errors
 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2

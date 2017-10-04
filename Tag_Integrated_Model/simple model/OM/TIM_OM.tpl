@@ -391,12 +391,13 @@ DATA_SECTION
   
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
-
+  init_int ph_lmr
   init_int ph_rec
   init_int ph_F
   init_int ph_steep
   init_int ph_M
   init_int ph_sel_log
+  init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_q
   init_int ph_F_rho // if we want random walk F
@@ -5410,7 +5411,9 @@ REPORT_SECTION
   report<<do_tag_mult<<endl;
   report<<"#sigma_recruit"<<endl;
   report<<sigma_recruit<<endl;
-  report<<"#ph_rec"<<endl;
+ report<<"#ph_lmr"<<endl;
+  report<<ph_lmr<<endl;
+   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
   report<<"#ph_F"<<endl;
   report<<ph_F<<endl;
@@ -5420,6 +5423,8 @@ REPORT_SECTION
   report<<ph_M<<endl;
   report<<"#ph_sel_log"<<endl;
   report<<ph_sel_log<<endl;
+  report<<"#ph_sel_log_surv"<<endl;
+  report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
   report<<ph_sel_dubl<<endl;
   report<<"#ph_q"<<endl;
