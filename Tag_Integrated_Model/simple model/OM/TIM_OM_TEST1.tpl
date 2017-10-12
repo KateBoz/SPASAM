@@ -419,7 +419,6 @@ DATA_SECTION
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray OBS_catch_prop_N(1,np,1,nreg,1,ny,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray tag_N(1,np,1,nreg,1,ny_rel,1,na)
-
 //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -488,7 +487,6 @@ DATA_SECTION
 
 //Add counters to enumerate the regions for the report out section for 6d arrays
   int region_counter
-
  !! cout << "debug = " << debug << endl;
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
@@ -599,15 +597,10 @@ PARAMETER_SECTION
  vector rand_tag_prop_temp2(1,nt3)  
  5darray tag_prop_temp2(1,nps,1,nr,1,nyr_rel,1,nag,1,nt2)
  5darray rand_tag_prop_temp(1,nps,1,nr,1,nyr_rel,1,nag,1,2000) //should make function of max(ncatch) but had issues making an index
-// vector rand_tag_prop_temp2(1,nt)
-// 3darray total_recap_temp(1,nps,1,tag_age,1,nr)
+
  matrix tags_avail_temp(1,nps,1,nr)
  3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
- //vector tag_prop_temp2(1,nt2)
-  //!! int nt=max_life_tags*sum(nregions)+1;
-  //!! int nt2=nt-1;
-  //!! int tag_age=max_life_tags;
-  
+   
  vector ntags_total(1,nyr_rel)
  4darray ntags(1,nps,1,nr,1,nyr_rel,1,nag)
  4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
@@ -1340,7 +1333,6 @@ FUNCTION get_SPR
      SSB_zero(k)=SPR(k)*R_ave(k);
       if(Rec_type==2) //BH recruitment
       {
-      //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
       alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       }
@@ -5444,8 +5436,6 @@ REPORT_SECTION
   report<<ph_T_pop<<endl;
   report<<"#ph_T_reg"<<endl;
   report<<ph_T_reg<<endl;
-  report<<"#ph_dummy"<<endl;
-  report<<ph_dummy<<endl;
   report<<"#wt_surv"<<endl;
   report<<wt_surv<<endl;
   report<<"#wt_catch"<<endl;

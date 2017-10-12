@@ -156,7 +156,6 @@ DATA_SECTION
   init_int ph_F_rho // if we want random walk F
   init_int phase_T_pop //use if mult pops
   init_int phase_T_reg //use if mult regs
-  init_int ph_dummy
   number ph_theta
  // !!if(do_tag_mult==0)
  // !! {
@@ -216,9 +215,9 @@ DATA_SECTION
 
 //Catch Prop
 //tagging data parameters
-  init_int nyrs_release //number of years with tag release events  //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
+  init_int nyrs_release //number of years with tag release events  
   !! int ny_rel=nyrs_release;
-  init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases //can probably automate calculation instead of enter via .dat file, just needs coding //JJD
+  init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases 
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
     !! int tag_age=max_life_tags;
   init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
@@ -246,7 +245,7 @@ DATA_SECTION
    vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each 
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
 
-   init_4darray init_abund2(1,np,1,np,1,nreg,1,na);  // need to calculate this or input it, we may want rec_devs before start of model? *dh
+   init_4darray init_abund2(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   //##########################################################################################################################################
 //#########################################################################################################################################
@@ -363,7 +362,6 @@ PARAMETER_SECTION
    matrix G_reg(1,parreg,1,parreg);
    vector G_temp_reg(1,parreg);
 
-   init_number dummy(ph_dummy)
  // selectivity parameters
 
    init_bounded_matrix log_sel_beta1(1,parpops,1,fishfleet,-10,5,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -385,7 +383,7 @@ PARAMETER_SECTION
   5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
 
   init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,15,ph_q)
- // init_matrix ln_q(1,parpops,1,survfleet,ph_q)
+ 
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
@@ -429,8 +427,7 @@ PARAMETER_SECTION
   // for now... not sure what these are used for in estimation model? Are they necessary?
   //YES..if we want to estimate recruit apportionment (typical in SS)..need to implement logit transform in later code
   init_3darray ln_rec_prop_year(1,parpops,1,parreg,1,nyr,-1) 
- // init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr,-40,40,ph_rec) //actual parameters (log scale devs)
-
+ 
  //#########################################################################################################################
  //## rec devs and initial devs for abundance...this approach will be problematic if we don't want to estimate recruit devs at any point (or fix them)
  //## because if rec_devs_switch==0 we set them to 1 so will need to turn off both rec_devs and initial_abund_devs
@@ -440,17 +437,17 @@ PARAMETER_SECTION
  //###################################################################################################################################
  
   matrix rec_devs(1,nps,1,nyr+nages-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,-10,30,ph_lmr) //estimated parameter Average Recruitment or R0 for B-H S-R curve
+  init_bounded_vector ln_R_ave(1,parpops,2,20,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
-  init_bounded_vector steep(1,parpops,-5,0,ph_steep) //B-H steepness //could be estimated parameter or input value
+  init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
   vector alpha(1,nps) //derived quantity
   vector beta(1,nps) //derived quantity
   
 //end recruitment parameters
 
 
- 4darray init_abund(1,nps,1,nps,1,nr,1,nag)  // need to calculate this or input it
+ 4darray init_abund(1,nps,1,nps,1,nr,1,nag)  //estimated as devs from exponential decline from R_ave
  
  // 6-d arrays
  6darray survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
@@ -459,30 +456,28 @@ PARAMETER_SECTION
  6darray catch_at_age_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  6darray catch_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  6darray yield_region_fleet_temp_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
-// stuff I tried to do in data section
+
  4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
- 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- matrix ave_mat(1,nps,1,nag) //to calc average maturity //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- matrix SPR_N(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- matrix SPR_SSB(1,nps,1,nag) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
- vector SPR(1,nps) //might need to retain depending on how we end up calculated ref points and SPR stuff //JJD
-
+ 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity 
+ matrix ave_mat(1,nps,1,nag) //to calc average maturity
+ matrix SPR_N(1,nps,1,nag) 
+ matrix SPR_SSB(1,nps,1,nag) 
+ vector SPR(1,nps) 
  
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr) //param
  3darray recruits_AM(1,nps,1,nr,1,nyr) //param
  3darray rec_index_BM(1,nps,1,nr,1,nyr)
  3darray rec_index_AM(1,nps,1,nr,1,nyr)
- 3darray rec_index_prop_BM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- 3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- 3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
- 3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //shouldn't need these because they were only used to parse simulated TAC among regions //JJD
+ 3darray rec_index_prop_BM(1,nps,1,nr,1,nyr) //
+ 3darray rec_index_BM_temp(1,nps,1,nyr,1,nr) //
+ 3darray rec_index_prop_AM(1,nps,1,nr,1,nyr) //
+ 3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //
  matrix rec_devs_randwalk(1,nps,1,nyr-1)
 
-  // not sure if we need these anymore
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp1(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp2(1,nps,1,nr,1,nyr)
@@ -507,8 +502,7 @@ PARAMETER_SECTION
 
  //yield & BRP calcs 
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
- 5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag) //move code to just calculate these proportions from input CAA in DAta section //JJD
-// 5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag) 
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
  4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
  4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
@@ -523,18 +517,18 @@ PARAMETER_SECTION
  matrix abundance_total(1,nyr,1,nag) //param
  matrix biomass_population(1,nps,1,nyr) //param
  vector biomass_total(1,nyr) //param
- matrix catch_at_age_total(1,nyr,1,nag) //move code to calculate in data section //JJD
- matrix catch_at_age_total_prop(1,nyr,1,nag) //move code to calculate in data section //JJD
- vector yield_total(1,nyr) //move code to calculate in data section //JJD
- 4darray harvest_rate_region_num(1,nps,1,nr,1,nyr,1,nag) //move code to calculate in data section //JJD
- 3darray harvest_rate_population_num(1,nps,1,nyr,1,nag) //move code to calculate in data section //JJD
- matrix harvest_rate_total_num(1,nyr,1,nag) //move code to calculate in data section //JJD
- 3darray harvest_rate_region_bio(1,nps,1,nr,1,nyr) //move code to calculate in data section //JJD
- matrix harvest_rate_population_bio(1,nps,1,nyr) //move code to calculate in data section //JJD
- vector harvest_rate_total_bio(1,nyr) //move code to calculate in data section //JJD
- 3darray depletion_region(1,nps,1,nr,1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
- matrix depletion_population(1,nps,1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
- vector depletion_total(1,nyr) //move code to calculate in data section, maybe param section if we want CIs //JJD
+ matrix catch_at_age_total(1,nyr,1,nag) //
+ matrix catch_at_age_total_prop(1,nyr,1,nag) //
+ vector yield_total(1,nyr) //
+ 4darray harvest_rate_region_num(1,nps,1,nr,1,nyr,1,nag) //
+ 3darray harvest_rate_population_num(1,nps,1,nyr,1,nag) //
+ matrix harvest_rate_total_num(1,nyr,1,nag) //
+ 3darray harvest_rate_region_bio(1,nps,1,nr,1,nyr) //
+ matrix harvest_rate_population_bio(1,nps,1,nyr) //
+ vector harvest_rate_total_bio(1,nyr) //
+ 3darray depletion_region(1,nps,1,nr,1,nyr) //
+ matrix depletion_population(1,nps,1,nyr) //
+ vector depletion_total(1,nyr) //
 
  5darray abundance_at_age_BM_overlap_region(1,nps,1,nps,1,nyr,1,nag,1,nr)
  4darray abundance_at_age_BM_overlap_population(1,nps,1,nps,1,nyr,1,nag)
@@ -560,7 +554,6 @@ PARAMETER_SECTION
  4darray SSB_population_temp_overlap(1,nps,1,nps,1,nyr,1,nr)
  5darray SSB_region_temp_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
 
-//initial abundance estimated parameters
 //survey index
  5darray survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
  4darray survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
@@ -656,23 +649,7 @@ PARAMETER_SECTION
  //  ln_rec_devs_RN 0;
 
 PROCEDURE_SECTION
- // initial calcs, can these types go to PRELIMINARY CALCS section?
  
-  // assign recaps to larger array
- // k=0;
- //   for(int i=1;i<=npops;i++) 
- //   {
- //   for (int r=1;r<=nregions(i);r++) //recap region
- //   {
- //    for(int j=1;j<=nyrs_release;j++) 
- //   {
- //  k=k+1;
- //     OBS_recaps(i,r,j)=OBS_recaps_temp(k);
- //   }
- //   } 
- //   }
-  // assign catchabilities to arithmetic scale
-
    get_movement();
    get_selectivity();
    get_F_age();
@@ -716,7 +693,7 @@ FUNCTION get_movement
   }
   if(move_switch!=0)
   {
- if(npops>1 && sum(nregions)>npops && phase_T_pop>0) //not coded to do multiple regions AND multiple populations
+ if(npops>1 && sum(nregions)>npops && phase_T_pop>0) //not coded to do multiple regions AND multiple populations 
   {
       cout << "model not setup to estimate T for this pop structure" << endl;
   }
@@ -886,7 +863,6 @@ FUNCTION get_selectivity
         for (int z=1;z<=nfleets(j);z++)                    
       {
  // get betas on their arithmetic scale
-
  sel_beta1(j,r,z)=mfexp(log_sel_beta1(j,z));
  sel_beta2(j,r,z)=mfexp(log_sel_beta2(j,z));
  sel_beta3(j,r,z)=mfexp(log_sel_beta3(j,z));
@@ -921,8 +897,7 @@ FUNCTION get_selectivity
                 }
                 if(select_switch==1) //two parameter logistic selectivity
                 {
-                selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z))));
-               // selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1(j,r,z)))/(sel_beta2(j,r,z)))); 
+                selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z)))); 
                 }
         //       if(select_switch==0) //input selectivity at age constant by year
            //     {
@@ -945,10 +920,7 @@ FUNCTION get_selectivity
             {
              for (int z=1;z<=nfleets_survey(j);z++)
                {
-           //  survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-log(19)*(a-(sel_beta1surv(j,r,z)))/(sel_beta2surv(j,r,z)))); 
-        
-  // survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
-                survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //change to logistic for EM //JJD
+                survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //
               }
              }
             }
@@ -976,7 +948,7 @@ FUNCTION get_F_age
               }
              if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
-               if(y==1) //year one separate because no y-1  *dh* this said y=1, needed to be y==1
+               if(y==1) //year one separate because no y-1  
                {
                F_year(j,r,y,z)=mfexp(ln_F(j,y,z));  
                }
@@ -988,11 +960,7 @@ FUNCTION get_F_age
                F_year(j,r,y,z)=F_rho(j,y,z)*mfexp(ln_F(j,y-1,z));  //took out fleet here *dh*
                }
               }             
-             F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);
-          
-            
-            // M(j,y,a)=input_M(j,a);
-    
+             F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
            }
                F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
            }
@@ -1045,22 +1013,7 @@ FUNCTION get_vitals
                   ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
                   wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
                 }
-               }
- //              if(maturity_switch_equil==1)
-   //            {// calculates the weighted average matruity based on equilibrium apportionment of SSB - allows for unequal influence of maturity/weight
-     //           if(SSB_type==1) //fecundity based SSB
-       //          {
-         //         ave_mat_temp(j,a,r)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a)*equil_ssb_apport(j,r);//rearranging for summing
-           //       ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
-             //     wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
-              //   }
-             //  if(SSB_type==2) //weight based SSB
-              //  {
-               //   ave_mat_temp(j,a,r)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);//rearranging for summing
-                 // ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
-               //   wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
-              //  }
-             //  }                        
+               }              
 
                if(SSB_type==1) //fecundity based SSB
                 {
@@ -1147,16 +1100,14 @@ FUNCTION get_SPR
      SSB_zero(k)=SPR(k)*R_ave(k);
       if(Rec_type==2) //BH recruitment
       {
-      //alpha(k)=SPR(k)*(1-steep(k))/(4*steep(k));
       alpha(k)=(SSB_zero(k)/R_ave(k))*((1-steep(k))/(4*steep(k)));//alternate parameterization
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       }
     }
 
-//JJD ende here on June 14, 2017.  Working top to bottom. Certaintly not making all the needed changes.
+
 
 FUNCTION get_abundance
-   // rec_devs=mfexp(ln_rec_devs_RN);  // gotta get this on the arithmetic scale yo...need to integrate this with switches, need to do it this way right now because of initial devs.;
 
        for (int y=1;y<=nyrs;y++)
         {
@@ -1179,7 +1130,7 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-                    init_abund(p,j,r,a)=R_ave(p)*rec_devs(j,a)*pow(mfexp(-(M(p,j,r,a))),a);  //not sure what this is doing....
+                    init_abund(p,j,r,a)=R_ave(p)*rec_devs(j,a)*pow(mfexp(-(M(p,j,r,a))),a);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
                     
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
@@ -2451,9 +2402,7 @@ FUNCTION get_abundance
  
                    abundance_spawn(j,r,y,a)=abundance_at_age_AM(j,r,y,a)*mfexp(-(M(j,r,y,a)+F(j,r,y,a))*tspawn(j));
                    catch_at_age_fleet(j,r,y,a,z)=abundance_at_age_AM(j,r,y,a)*(1.0-exp(-(F_fleet(j,r,y,a,z)+M(j,r,y,a))*(1-tspawn(j))))*(F_fleet(j,r,y,a,z))/(F(j,r,y,a)+M(j,r,y,a)); //account for time of spawning in catch (tspawn divides out in F/(F+M
-
-                   //catchsum(j,r,y,z)=sum(catch_at_age_fleet(j,r,y,z));
-                   
+                 
                    yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                    yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                    catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
@@ -3274,10 +3223,7 @@ REPORT_SECTION
   report<<recruits_BM<<endl;
   report<<"$F"<<endl;
   report<<F<<endl;
-//  report<<"$F_year (pre-selectivity)"<<endl;
-//  report<<F_year<<endl;
-//  report<<"Fishery Selectivity"<<endl;
-//  report<<selectivity<<endl;
+  
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"$biomass_population"<<endl;
@@ -3326,6 +3272,8 @@ REPORT_SECTION
   report<<recruits_BM_TRUE<<endl;
   report<<"$F_TRUE"<<endl;
   report<<F_TRUE<<endl;
+  report<<"$Init_Abund_TRUE"<<endl;
+  report<<init_abund2<<endl;
   report<<"$biomass_AM_TRUE"<<endl;
   report<<biomass_AM_TRUE<<endl;
   report<<"$biomass_population_TRUE"<<endl;
@@ -3380,18 +3328,18 @@ REPORT_SECTION
   report<<"$tag_prop_final"<<endl;
   report<<tag_prop_final<<endl;
 
-  report<<"likelihood components"<<endl;
-  report<<"tag_like"<<endl;
+  report<<"$likelihood components"<<endl;
+  report<<"$tag_like"<<endl;
   report<<tag_like<<endl;
-  report<<"fish_age_like"<<endl;
+  report<<"$fish_age_like"<<endl;
   report<<fish_age_like<<endl;
-  report<<"survey_age_like"<<endl;
+  report<<"$survey_age_like"<<endl;
   report<<survey_age_like<<endl;
-  report<<"survey_like"<<endl;
+  report<<"$survey_like"<<endl;
   report<<survey_like<<endl;
-  report<<"catch_like"<<endl;
+  report<<"$catch_like"<<endl;
   report<<catch_like<<endl;
-  report<<"rec_like"<<endl;
+  report<<"$rec_like"<<endl;
   report<<rec_like<<endl;
 
   save_gradients(gradients);
