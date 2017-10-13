@@ -396,7 +396,7 @@ PARAMETER_SECTION
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
   init_3darray ln_F(1,parpops,1,nyr,1,fishfleet,ph_F) //the actual parameters  
-  init_3darray F_rho(1,parpops,1,nyr,1,fishfleet,ph_F_rho) //random walk params*
+  init_bounded_matrix F_rho(1,parpops,1,fishfleet,0,2,ph_F_rho) //random walk params*
   5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
   4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
   4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
@@ -993,10 +993,7 @@ FUNCTION get_F_age
                }
                if(y>1)
                {
-               //DG
-               // IS THIS CORRECT or do we need a separate F_init and replace log_F with F_year here?-DG
-               //DG
-               F_year(j,r,y,z)=F_rho(j,y,z)*mfexp(ln_F(j,y-1,z));  //took out fleet here *dh*
+               F_year(j,r,y,z)=F_rho(j,z)*mfexp(ln_F(j,y-1,z));            
                }
               }
              } //end else for negative F phase
