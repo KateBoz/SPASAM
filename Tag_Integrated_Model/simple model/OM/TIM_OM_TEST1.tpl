@@ -402,6 +402,7 @@ DATA_SECTION
   init_int ph_sel_log
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
+  init_int ph_sel_dubl_surv
   init_int ph_q
   init_int ph_F_rho // if we want random walk F
   init_int ph_T_pop //use if mult pops
@@ -5380,6 +5381,8 @@ REPORT_SECTION
   report<<spawn_return_switch_EM<<endl;
   report<<"#select_switch"<<endl;
   report<<select_switch_EM<<endl;
+  report<<"#select_switch_survey"<<endl;
+  report<<select_switch_survey<<endl;
   report<<"#maturity_switch_equil"<<endl;
   report<<maturity_switch_equil_EM<<endl;
   report<<"#SSB_type"<<endl;
@@ -5428,6 +5431,8 @@ REPORT_SECTION
   report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
   report<<ph_sel_dubl<<endl;
+  report<<"#ph_sel_dubl_surv"<<endl;
+  report<<ph_sel_dubl_surv<<endl;
   report<<"#ph_q"<<endl;
   report<<ph_q<<endl;
   report<<"#ph_F_rho"<<endl;
@@ -5542,6 +5547,8 @@ REPORT_SECTION
   report<<recruits_BM<<endl;
   report<<"#F"<<endl;
   report<<F<<endl;
+  report<<"#Fyear"<<endl;
+  report<<F_year<<endl;
   report<<"#biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"#biomass_population"<<endl;

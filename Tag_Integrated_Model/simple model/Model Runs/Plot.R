@@ -1,7 +1,7 @@
 rm(list=(ls()))
 
 ###inputs
-direct<-"C:\\Spatial_SPASM_2016\\EM_Project2\\SPASAM-master\\SPASAM-master\\Tag_Integrated_Model\\simple model\\EM" #location of run(s)
+direct<-"C:\\Spatial_SPASM_2016\\EM_Project2\\SPASAM-master\\Tag_Integrated_Model\\simple model\\EM" #location of run(s)
 name<-"tim_hakeish" ###name of .dat, .tpl., .rep, etc.
 
 #packages
