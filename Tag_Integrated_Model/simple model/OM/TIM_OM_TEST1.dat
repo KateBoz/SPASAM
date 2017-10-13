@@ -549,16 +549,18 @@
 #ph_rec
  2
 #ph_F
- 3
+ -3
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
- 4
+ -4
  #ph_sel_log_surv
- 4
+ -4
 #ph_sel_dubl
+-1
+#ph_sel_dubl_surv
 -1
 #ph_q
  1

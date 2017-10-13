@@ -77,6 +77,7 @@ DATA_SECTION
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 /////////////////////////////////////////////////////
+init_number select_switch_survey
 
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
@@ -150,8 +151,9 @@ DATA_SECTION
   init_int ph_steep
   init_int ph_M
   init_int ph_sel_log
- init_int ph_sel_log_surv
+  init_int ph_sel_log_surv
   init_int ph_sel_dubl
+  init_int ph_sel_dubl_surv
   init_int ph_q
   init_int ph_F_rho // if we want random walk F
   init_int phase_T_pop //use if mult pops
@@ -270,6 +272,7 @@ DATA_SECTION
   init_3darray Rec_Prop_TRUE(1,np,1,nreg,1,ny)
   init_3darray recruits_BM_TRUE(1,np,1,nreg,1,ny)
   init_4darray F_TRUE(1,np,1,nreg,1,ny,1,na)
+  init_4darray F_year_TRUE(1,np,1,nreg,1,ny,1,nfs)
   init_3darray biomass_AM_TRUE(1,np,1,nreg,1,ny)
   init_matrix biomass_population_TRUE(1,np,1,ny)
   init_3darray harvest_rate_region_bio_TRUE(1,np,1,nreg,1,ny)
@@ -370,6 +373,8 @@ PARAMETER_SECTION
    init_bounded_matrix log_sel_beta4(1,parpops,1,fishfleet,-1,5,ph_sel_dubl) ;//selectivity inflection parameter 2 for double logistic selectivity
    init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
   
 
   3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -378,6 +383,9 @@ PARAMETER_SECTION
   3darray sel_beta4(1,nps,1,nr,1,nfl)  //selectivity inflection parameter 2 for double logistic selectivity
   3darray sel_beta1surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
   3darray sel_beta2surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta3surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta4surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+
 
   5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
   5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
@@ -854,8 +862,15 @@ FUNCTION get_movement
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 
-
-//ADD if_phase=-, parameter=input_parameter
+ if (ph_sel_log<0 && ph_sel_dubl<0)
+ {
+ sel_beta1=sel_beta1_TRUE;   //selectivity slope parameter 1 for logistic selectivity/double logistic
+ sel_beta2=sel_beta2_TRUE;   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+ sel_beta3=sel_beta3_TRUE;  //selectivity slope parameter 2 for double selectivity
+ sel_beta4=sel_beta4_TRUE;
+ }
+ else
+ {
     for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -868,7 +883,17 @@ FUNCTION get_selectivity
  sel_beta3(j,r,z)=mfexp(log_sel_beta3(j,z));
  sel_beta4(j,r,z)=mfexp(log_sel_beta4(j,z));
   }}}
+ } //close else for positive phase
 
+ if (ph_sel_log_surv<0 && ph_sel_dubl_surv<0)
+ {
+ sel_beta1surv=sel_beta1_survey_TRUE;
+ sel_beta2surv=sel_beta2_survey_TRUE;
+ sel_beta3surv=sel_beta3_survey_TRUE;
+ sel_beta4surv=sel_beta4_survey_TRUE;
+ }
+ else
+ {
      for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -878,9 +903,12 @@ FUNCTION get_selectivity
  // get betas on their arithmetic scale
  sel_beta1surv(j,r,z)=mfexp(log_sel_beta1surv(j,z));
  sel_beta2surv(j,r,z)=mfexp(log_sel_beta2surv(j,z));
+ sel_beta3surv(j,r,z)=mfexp(log_sel_beta3surv(j,z));
+ sel_beta4surv(j,r,z)=mfexp(log_sel_beta4surv(j,z));
   }}}
-
-//fishery selectivity
+ } //close else for survey select positive phase
+ 
+ //fishery selectivity
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -920,7 +948,14 @@ FUNCTION get_selectivity
             {
              for (int z=1;z<=nfleets_survey(j);z++)
                {
-                survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //
+                if(select_switch_survey==2) //4 parameter double logistic selectivity
+                {
+                 survey_selectivity(j,r,y,a,z)=1/((1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z))))*(1+mfexp(-sel_beta3surv(j,r,z)*(a-sel_beta4surv(j,r,z)))));
+                }
+                if(select_switch_survey==1) //two parameter logistic selectivity
+                {
+                 survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //
+                }
               }
              }
             }
@@ -930,7 +965,6 @@ FUNCTION get_selectivity
 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
-//ADD if_phase=-, parameter=input_parameter
 
   for (int j=1;j<=npops;j++)
    {
@@ -941,7 +975,12 @@ FUNCTION get_F_age
         for (int a=1;a<=nages;a++)
          {
           for (int z=1;z<=nfleets(j);z++)
-           { 
+           {
+             if(ph_F<0) //inefficient place for this because it'll reassign in all these loops but F_fleet needs to be in loops below...
+             {
+              F_year=F_year_TRUE;
+             }
+             else {
              if(F_switch==1) //estimate annual deviations
               {
                F_year(j,r,y,z)=mfexp(ln_F(j,y,z)); 
@@ -959,7 +998,8 @@ FUNCTION get_F_age
                //DG
                F_year(j,r,y,z)=F_rho(j,y,z)*mfexp(ln_F(j,y-1,z));  //took out fleet here *dh*
                }
-              }             
+              }
+             } //end else for negative F phase
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
            }
                F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
@@ -3209,6 +3249,10 @@ REPORT_SECTION
   report<<sel_beta1surv<<endl;
   report<<"$sel_beta2_survey"<<endl;
   report<<sel_beta2surv<<endl;
+  report<<"$sel_beta3_survey"<<endl;
+  report<<sel_beta3surv<<endl;
+  report<<"$sel_beta4_survey"<<endl;
+  report<<sel_beta4surv<<endl;
   report<<"$steep"<<endl;
   report<<steep<<endl;
   report<<"$R_ave"<<endl;
