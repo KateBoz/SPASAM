@@ -118,7 +118,7 @@
   #==7 F devs about input F based on sigma_F
   #==8 random walk in F
   #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
-1
+9
 
 #recruit_devs_switch
   #==0 use stock-recruit relationship directly
@@ -229,7 +229,7 @@
 #spawn_return_prob - probability of returning for spawning if overlap_switch==2
 1
 #phase_F - must be turned on (==1) if F_type==3
-1
+-1
 #phase_dummy - must be turned on (==1) if F_type!=3
 1
 #tspawn in proportion of year (0-1)
@@ -315,12 +315,12 @@
 1
 1
 #input_F
-0.5
-0.5
+0.15
+0.15
 #start year of fishery (F before this ==0) and min and max F for Dunce Cap F option ==9
 1  #start year
 0.1 #minF
-1.5  #maxF
+.35  #maxF
 #F_rho (degree of autocorrelation in F random walk
 1
 1
@@ -333,8 +333,8 @@
 #sigma_rec_prop #error around recruit apportionment
 0.2
 #sigma_F
-0.5
-0.5
+0.15
+0.15
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################
@@ -363,8 +363,8 @@
 0.5
 0.5
 #input_Rec_prop
-0.6
-0.4
+0.7
+0.3
 #Equil_ssb_apportion
 0.6
 0.4
@@ -446,18 +446,14 @@
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
 0
 #move_switch
-  #==0 no movement
-  #==1 input movement
-  #==2 movement within stock only based on residency (symmetric)
-  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
-  #==4 symmetric movement across all stocks and regions
-  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
-  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
-  #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
-  #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
-  #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
-  #//uses use_input_Bstar switch 
-1
+ # ///// Sets the type of adult movement pattern (sets age class>1 movements)
+ # //==0 no movement, set T phases=-1
+ # //==1 input movement, set T phases=-1
+ # //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
+ # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
+ # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
+ # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+5
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -547,29 +543,33 @@
 #ph_lmr
 1
 #ph_rec
-2
+4
 #ph_F
--3
+5
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
--4
+-6
  #ph_sel_log_surv
-4
+6
 #ph_sel_dubl
 -1
 #ph_sel_dubl_surv
 -1
 #ph_q
- 1
+1
 #ph_F_rho
 -1
 #ph_T_pop
 -5
 #ph_T_reg
-5
+-2
+#ph_T_CNST_pop
+-5
+#ph_T_CNST_reg
+2
 #ph_dummy
 -1
 
@@ -588,18 +588,29 @@
 1
 #wt_tag
 0
+#move_pen_switch
+ #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
+ #// ==0 no move pen in log space
+ #// ==1 include move pen in log space
+1
+#Tpen
+#value below which move_pen enacted (log space)
+-5
+#Tpen2
+#value above which move_pen enacted(log space)
+1
 #OBS_survey_fleet_se(1,np,1,nreg,1,ny,1,nf  #standard errors
-0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
-0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 #0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 #0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
 #OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf  #standard errors
-0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
-0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 #0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 #0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
 #OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) #number of survey ages
-50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
-50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
+50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 #50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
+50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 #50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
 #OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //fishery sample size ages
-100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
-100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 #100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 #100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
 #tag_N(1,np,1,nreg,1,ny_rel,1,na) //fishery sample size ages
 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100

@@ -322,16 +322,13 @@ DATA_SECTION
 
   init_number move_switch_EM
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
-  //==0 no movement
-  //==1 input movement
-  //==2 movement within population only based on input residency (symmetric off diagnol)
-  //==3 symmetric movement but only allow movement within a population (ie regions within a population) not across populations
-  //==4 symmetric movement across all populations and regions
-  //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off diagnol)
-  //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal population eg ontogenetic migration)
-  //==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
-  //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
-
+  //==0 no movement, set T phases=-1
+  //==1 input movement, set T phases=-1
+  //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
+  //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
+  //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
+  //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+  
 ////// Population Structure switches
   init_number natal_homing_switch_EM
   //==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -407,6 +404,8 @@ DATA_SECTION
   init_int ph_F_rho // if we want random walk F
   init_int ph_T_pop //use if mult pops
   init_int ph_T_reg //use if mult regs
+  init_int ph_T_CNST_pop //use if mult pops
+  init_int ph_T_CNST_reg //use if mult regs
   init_int ph_dummy
   init_number wt_surv
   init_number wt_catch
@@ -414,6 +413,9 @@ DATA_SECTION
   init_number wt_srv_age 
   init_number wt_rec
   init_number wt_tag
+  init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
+  init_number Tpen
+  init_number Tpen2
   
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs)
   init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
@@ -513,11 +515,13 @@ PARAMETER_SECTION
  
  // vitals
  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
+ 5darray T_year(1,nps,1,nr,1,nyr,1,nps,1,nr)
  6darray rel_bio(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
  matrix Bstar(1,nps,1,nr)
  matrix c(1,nps,1,nr)
  4darray Fract_Move_DD(1,nps,1,nr,1,nyr,1,nag)
  5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+ 4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
  4darray F_year(1,nps,1,nr,1,nyr,1,nfl)
  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  4darray F(1,nps,1,nr,1,nyr,1,nag)
@@ -611,6 +615,7 @@ PARAMETER_SECTION
 
  //survey index
  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)
  5darray survey_selectivity_temp(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -1107,7 +1112,23 @@ FUNCTION get_selectivity
           }
         }
 
-
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+          for (int a=1;a<=nages;a++)
+            {
+            for (int z=1;z<=nfleets(j);z++)
+              {
+                selectivity_age(j,r,a,z)=selectivity(j,r,nyrs,a,z);
+              }
+             for (int z=1;z<=nfleets_survey(j);z++)
+               {
+                survey_selectivity_age(j,r,a,z)=survey_selectivity(j,r,nyrs,a,z);
+               }
+              }
+             }
+            }
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
 
@@ -4874,6 +4895,23 @@ FUNCTION get_abundance
                  }
                 }
                }
+
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+      for(int y=1;y<=nyrs;y++)
+       {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              T_year(j,r,y,k,n)=T(j,r,y,4,k,n);            
+      } 
+     }
+    }
+   }
+  } 
 FUNCTION get_rand_survey_CAA_prop
  random_number_generator myrand_survey_age(myseed_survey_age);
  
@@ -5441,6 +5479,10 @@ REPORT_SECTION
   report<<ph_T_pop<<endl;
   report<<"#ph_T_reg"<<endl;
   report<<ph_T_reg<<endl;
+  report<<"#ph_T_CNST_pop"<<endl;
+  report<<ph_T_CNST_pop<<endl;
+  report<<"#ph_T_CNST_reg"<<endl;
+  report<<ph_T_CNST_reg<<endl;
   report<<"#wt_surv"<<endl;
   report<<wt_surv<<endl;
   report<<"#wt_catch"<<endl;
@@ -5453,6 +5495,13 @@ REPORT_SECTION
   report<<wt_rec<<endl;
   report<<"#wt_tag"<<endl;
   report<<wt_tag<<endl;
+  report<<"#move_pen_switch"<<endl;
+  report<<move_pen_switch<<endl;
+  report<<"#Tpen"<<endl;
+  report<<Tpen<<endl;
+  report<<"#Tpen2"<<endl;
+  report<<Tpen2<<endl;
+
   report<<"#input_Rec_prop"<<endl;
   report<<input_Rec_prop<<endl;
   report<<"#input_weight"<<endl;
@@ -5561,6 +5610,13 @@ REPORT_SECTION
   report<<SSB_region<<endl;
   report<<"#Bratio_population"<<endl;
   report<<Bratio_population<<endl;
+  report<<"#T_year"<<endl;
+  report<<T_year<<endl;
+  report<<"#selectivity_age"<<endl;
+  report<<selectivity_age<<endl;
+  report<<"#survey_selectivity_age"<<endl;
+  report<<survey_selectivity_age<<endl;
+  
   report<<"#debug"<<endl;
   report<<debug<<endl;
   

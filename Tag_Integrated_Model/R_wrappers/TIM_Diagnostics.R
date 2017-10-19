@@ -1,29 +1,54 @@
 ####################################################
 # Simple initial code for visuallizing model outputs
 # Created by JJD/KB
+{rm(list=(ls()))}
 ####################################################
 
-rm(list=(ls()))
+  ###inputs for running models
+  # Manually make changes in the OM .dat and run both OM and EM together if you want
+
+  
+######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
+multiple_reg<-1 #running model with multiple regions, 1==yes, 0==no
+multiple_pop<-0 #running model with multiple populations, 1==yes, 0==no
+
+#DO NOT RUN MODELS WITH MUTLIPLE REGIONS AND POPULATIONS, NOT EQUIPPED TO ESTIMATE MOVEMENT AMONG REGIONS AND POPULATIONS...YOU TRY CODING THAT ESTIMATED ARRAY
+
+#OM Location
+OM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\TIM_TEST\\Operating_Model"
+OM_name<-"TIM_OM" #name of the OM you are wanting to run
+
+#EM Location
+EM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\TIM_TEST\\Estimation_Model" #location of run(s)
+EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+########################################################################################################
 
 
+
+########### AUTOMATED...DO NOT CHANGE #########################################################################################################
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
 }
 load_libraries()
 
-
-###inputs for running models
-# Manually make changes in the OM .dat and run both OM and EM together if you want
-
-#OM Location
-OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
-
-#EM Location
-EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
-
+if(multiple_reg==1)
+   {  
+    EM_direct<-paste0(EM_direct,'\\Mult Regs',sep="")
+   }
+if(multiple_pop==1)
+{  
+  EM_direct<-paste0(EM_direct,'\\Mult Pops',sep="")
+}
+if(multiple_reg==0 & multiple_pop==0)
+{  
+  EM_direct<-paste0(EM_direct,'\\panmictic',sep="")
+}
+if(multiple_reg==1 & multiple_pop==1)
+{  
+  print("Can't Estimate Movement Among Multiple Populations and Regions Simultaneously")
+  stop()
+}
 
 #run the OM
 setwd(OM_direct)
@@ -38,7 +63,7 @@ file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
-invisible(shell(paste0(EM_name," -nohess"),wait=T))
+invisible(shell(paste0(EM_name),wait=T))
 
 #########################################################
 # Look at the outputs
@@ -82,11 +107,29 @@ out$q_survey_TRUE
 
 #sel params
 out$sel_beta1_survey
-out$sel_beta1_TRUE
+out$sel_beta1_survey_TRUE
 
 out$sel_beta2_survey
+out$sel_beta2_survey_TRUE
+
+out$sel_beta1
+out$sel_beta1_TRUE
+
+out$sel_beta2
 out$sel_beta2_TRUE
 
+out$selectivity_age
+out$selectivity_age_TRUE
+
+out$survey_selectivity_age
+out$survey_selectivity_age_TRUE
+
+out$R_ave
+out$R_ave_TRUE
+
+
+out$steep
+out$steep_TRUE
 
 #F
 F.temp<-out$F[1:yrs,]
@@ -96,6 +139,13 @@ plot(ages,F.mean, type = "l", col = "black", ylim=c(0,1), lwd = 2)
 #true
 F.true<-colMeans(out$F_TRUE[1:yrs,])
 points(ages,F.true, type = "b", col = "black", lwd = 1, lty = 2)
+
+#movement
+
+out$T_year
+out$T_year_TRUE
+
+
 
 
 #JJD plots
@@ -128,3 +178,4 @@ for(r in 1:output$nregions) {
   true.b<-TrueFs[r,]
   tsplot(true=true.b,est=esti,plotname="Fully Selected F")
 } #end r loop
+
