@@ -4,8 +4,8 @@
 {rm(list=(ls()))}
 ####################################################
 
-  ###inputs for running models
-  # Manually make changes in the OM .dat and run both OM and EM together if you want
+###inputs for running models
+# Manually make changes in the OM .dat and run both OM and EM together if you want
 
   
 ######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
@@ -15,17 +15,20 @@ multiple_pop<-0 #running model with multiple populations, 1==yes, 0==no
 #DO NOT RUN MODELS WITH MUTLIPLE REGIONS AND POPULATIONS, NOT EQUIPPED TO ESTIMATE MOVEMENT AMONG REGIONS AND POPULATIONS...YOU TRY CODING THAT ESTIMATED ARRAY
 
 #OM Location
-OM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\TIM_TEST\\Operating_Model"
+OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
-EM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\TIM_TEST\\Estimation_Model" #location of run(s)
+EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 ########################################################################################################
 
 
 
 ########### AUTOMATED...DO NOT CHANGE #########################################################################################################
+
+{ #run this section of code
+
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
@@ -64,6 +67,7 @@ file.copy(from = from,  to = to)
 #run the EM
 setwd(EM_direct)
 invisible(shell(paste0(EM_name),wait=T))
+}
 
 #########################################################
 # Look at the outputs
@@ -76,6 +80,8 @@ out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep fi
 #pull info about the model
 na<-out$nages
 yrs<-out$nyrs
+npops<-out$npops
+nreg<-out$nregions
 years<-seq(1:out$nyrs)
 ages<-seq(1:out$nages)
 
@@ -91,6 +97,13 @@ points(years,out$recruits_BM_TRUE[1,], type = "l", lty=2)
 points(years,out$recruits_BM_TRUE[2,], type = "l", col = "blue", lty = 2)
 #points(years,out$recruits_BM_TRUE[3,], type = "l", col = "red",lty = 2)
 
+legend("topright",legend = c("Estimated","True"),lty = c(1,2), lwd = 2)
+
+#rec devs
+plot(years,(out$rec_devs[na:length(out$rec_devs)]*out$R_ave), type = "l", lwd = 2, ylab="rec_devs")
+abline(h=out$R_ave,col="red")
+points(years,(out$rec_devs_TRUE*out$R_ave_TRUE), type="b", lty=2)
+abline(h=out$R_ave_TRUE,col="red", lty = 2)
 legend("topright",legend = c("Estimated","True"),lty = c(1,2), lwd = 2)
 
 #SSB
@@ -127,7 +140,6 @@ out$survey_selectivity_age_TRUE
 out$R_ave
 out$R_ave_TRUE
 
-
 out$steep
 out$steep_TRUE
 
@@ -141,11 +153,8 @@ F.true<-colMeans(out$F_TRUE[1:yrs,])
 points(ages,F.true, type = "b", col = "black", lwd = 1, lty = 2)
 
 #movement
-
 out$T_year
 out$T_year_TRUE
-
-
 
 
 #JJD plots
