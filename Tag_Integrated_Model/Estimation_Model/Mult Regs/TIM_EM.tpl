@@ -666,14 +666,16 @@ PARAMETER_SECTION
   number survey_like
   number Tpen_like
  // init_bounded_number  theta(1,100,ph_theta);   // for negbinomial -lnL
+
+ init_number dummy
   objective_function_value f;
   
   !! cout << "parameters set" << endl;
 
-INITIALIZATION_SECTION  //set initial values
-     steep .814;
-//   ln_q 0;
-//   ln_R_ave 7;
+ //INITIALIZATION_SECTION  //set initial values
+ //  steep .814;
+ //  ln_q 0;
+ //  ln_R_ave 7;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
@@ -1155,20 +1157,30 @@ FUNCTION get_F_age
        }
 
 FUNCTION get_vitals
-
+ //set q to true if neg phase
+   if(ph_q<0){
+      q_survey=q_survey_TRUE;
+      }
+      
+   else{
        for(int i=1;i<=npops;i++) 
     {
         for(int k=1;k<=nregions(i);k++) 
         {
           for(int j=1;j<=nfleets_survey(i);j++) 
           {
-           q_survey(i,k,j) = mfexp(ln_q(i,j));
+           q_survey(i,k,j) = mfexp(ln_q(i,j));}
     }
     }
     }
-  
+    
+//set R_ave to true if neg phase
+  if(ph_lmr<0){
+  R_ave=R_ave_TRUE;
+  }
+  else{
   R_ave=mfexp(ln_R_ave+square(sigma_recruit)*0.5);
-
+   }
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -1235,6 +1247,7 @@ FUNCTION get_vitals
          }
        }
      }
+     
     for (int j=1;j<=npops;j++)
      { 
         for (int y=1;y<=nyrs+nages-1;y++)
@@ -1247,7 +1260,12 @@ FUNCTION get_vitals
                 {
                  rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
 
-                 if(recruit_randwalk_switch==1)
+                  if(ph_rec<0){
+                   if(y>nages){
+                         rec_devs(j,y)=rec_devs_TRUE(j,y-(nages-1));
+                           }}
+                           
+             if(recruit_randwalk_switch==1)
                  {
                   rec_devs_randwalk(j,y)=rec_devs(j,y);
                   if(y>(nages+1)) //start random walk in year3 based on year 2 devs as starting point (don't use equilibrium devs from year 1)
@@ -1258,10 +1276,20 @@ FUNCTION get_vitals
                 }
                }
               }
+              
+// cout<<rec_devs<<endl;
+// cout<<rec_devs_TRUE<<endl;
+// cout<<init_abund2<<endl;
+ //exit(42);
              
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
+
+  if(ph_steep<0){
+       steep=steep_TRUE;
+       }
+       
       for (int k=1;k<=npops;k++)
      {
       for (int n=1;n<=nages;n++)
@@ -1290,8 +1318,6 @@ FUNCTION get_SPR
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       }
     }
-
-
 
 FUNCTION get_abundance
 
@@ -3231,6 +3257,7 @@ FUNCTION get_tag_recaptures
  }
 
 FUNCTION evaluate_the_objective_function
+   f=dummy; //in case all the estimated parameters are turned off
    f=0.0;
   Tpen_like.initialize();
  if(move_pen_switch==1)
