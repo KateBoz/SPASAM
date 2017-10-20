@@ -393,6 +393,7 @@ DATA_SECTION
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
   init_int ph_lmr
   init_int ph_rec
+  init_int ph_abund_devs
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -5453,10 +5454,12 @@ REPORT_SECTION
   report<<do_tag_mult<<endl;
   report<<"#sigma_recruit"<<endl;
   report<<sigma_recruit<<endl;
- report<<"#ph_lmr"<<endl;
+  report<<"#ph_lmr"<<endl;
   report<<ph_lmr<<endl;
-   report<<"#ph_rec"<<endl;
+  report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
+  report<<"#ph_abund_devs"<<endl;
+  report<<ph_abund_devs<<endl;
   report<<"#ph_F"<<endl;
   report<<ph_F<<endl;
   report<<"#ph_steep"<<endl;
@@ -5483,6 +5486,8 @@ REPORT_SECTION
   report<<ph_T_CNST_pop<<endl;
   report<<"#ph_T_CNST_reg"<<endl;
   report<<ph_T_CNST_reg<<endl;
+  report<<"#ph_dummy"<<endl;
+  report<<ph_dummy<<endl;
   report<<"#wt_surv"<<endl;
   report<<wt_surv<<endl;
   report<<"#wt_catch"<<endl;

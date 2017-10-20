@@ -15,11 +15,11 @@ multiple_pop<-0 #running model with multiple populations, 1==yes, 0==no
 #DO NOT RUN MODELS WITH MUTLIPLE REGIONS AND POPULATIONS, NOT EQUIPPED TO ESTIMATE MOVEMENT AMONG REGIONS AND POPULATIONS...YOU TRY CODING THAT ESTIMATED ARRAY
 
 #OM Location
-OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
+OM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
-EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
+EM_direct<-"C:\\Users\\DGOETHEL\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 ########################################################################################################
 
@@ -100,9 +100,9 @@ points(years,out$recruits_BM_TRUE[2,], type = "l", col = "blue", lty = 2)
 legend("topright",legend = c("Estimated","True"),lty = c(1,2), lwd = 2)
 
 #rec devs
-plot(years,(out$rec_devs[na:length(out$rec_devs)]*out$R_ave), type = "l", lwd = 2, ylab="rec_devs")
+plot(years[2:out$nyrs],(out$rec_devs*out$R_ave), type = "l", lwd = 2, ylab="rec_devs")
 abline(h=out$R_ave,col="red")
-points(years,(out$rec_devs_TRUE*out$R_ave_TRUE), type="b", lty=2)
+points(years[2:out$nyrs],(out$rec_devs_TRUE[2:out$nyrs]*out$R_ave_TRUE), type="b", lty=2)
 abline(h=out$R_ave_TRUE,col="red", lty = 2)
 legend("topright",legend = c("Estimated","True"),lty = c(1,2), lwd = 2)
 
@@ -142,6 +142,10 @@ out$R_ave_TRUE
 
 out$steep
 out$steep_TRUE
+
+out$init_abund
+out$Init_Abund_TRUE
+out$Init_Abund_Devs
 
 #F
 F.temp<-out$F[1:yrs,]
