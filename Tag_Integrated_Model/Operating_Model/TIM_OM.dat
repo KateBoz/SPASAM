@@ -366,8 +366,8 @@
 0.7
 0.3
 #Equil_ssb_apportion
-0.6
-0.4
+0.7
+0.3
 #init_abund
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
@@ -389,7 +389,7 @@
 #SIM_ncatch
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
-1000
+100
 #SIM_ncatch_overlap
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
@@ -468,7 +468,7 @@
 
 #select_switch
   #==0 input selectivity
-  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
 1
 
@@ -541,25 +541,27 @@
 ##### Phases for estimation ####
 ################################
 #ph_lmr
-1
+-1
 #ph_rec
-4
+-4
+#ph_init_abund
+-2
 #ph_F
-5
+-3
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
 -6
- #ph_sel_log_surv
-6
+#ph_sel_log_surv
+-5
 #ph_sel_dubl
 -1
 #ph_sel_dubl_surv
 -1
 #ph_q
-1
+-1
 #ph_F_rho
 -1
 #ph_T_pop
@@ -569,9 +571,9 @@
 #ph_T_CNST_pop
 -5
 #ph_T_CNST_reg
-2
+-2
 #ph_dummy
--1
+1
 
 ##################################
 ### likelihood weights
