@@ -111,14 +111,9 @@ init_number select_switch_survey
   //==0 calc  catch age comps by area (summed across natal population)
   //==1 calc  catch age comps by natal population within each area
    init_number F_switch
-  //==1 input F
-  //==2 input single overall F (FMSY)
-  //==3 Estimate F that minimizes difference in input and estimated total harvest rate
-  //==4 overall F (FMSY) is split evenly among populations (each fleet uses population F)
-  //==5 overall F (FMSY) is is split evenly among all regions (each fleet uses region F)
-  //==6 overall F (FMSY) is split evenly among fleets
-  //==7 F devs about input F based on sigma_F
-  //==8 random walk in F
+  //negative phase == use input_F_TRUE
+  //==1 estimate yearly F
+  //==2 random walk in F
  init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -149,6 +144,10 @@ init_number select_switch_survey
   init_int ph_steep
   init_int ph_M
   init_int ph_sel_log
+  init_number lb_sel_beta1
+  init_number ub_sel_beta1
+  init_number lb_sel_beta2
+  init_number ub_sel_beta2
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -175,6 +174,7 @@ init_number select_switch_survey
    init_number wt_srv_age 
    init_number wt_rec
    init_number wt_tag
+   init_int abund_pen_switch
    init_int move_pen_switch
    init_number Tpen
    init_number Tpen2
@@ -315,7 +315,7 @@ init_number select_switch_survey
   !!     }
   !!    if(j>r)
   !!     {
-  !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+  !!     nregions_temp(j,r)=nreg(r); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
   !!     }
   !!   }
   !!  }
@@ -389,10 +389,13 @@ PARAMETER_SECTION
    vector G_temp_reg(1,parreg);
    
   // selectivity parameters
-   init_3darray log_sel_beta1(1,parpops,1,nr,1,fishfleet,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_3darray log_sel_beta2(1,parpops,1,nr,1,fishfleet,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-   init_3darray log_sel_beta3(1,parpops,1,nr,1,fishfleet,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
-   init_3darray log_sel_beta4(1,parpops,1,nr,1,fishfleet,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
+
+   !! int sel_lgth=parpops*sum(nr);
+
+   init_bounded_matrix log_sel_beta1(1,sel_lgth,1,fishfleet,lb_sel_beta1,ub_sel_beta1,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
+   init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
    init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -419,7 +422,9 @@ PARAMETER_SECTION
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
-  init_3darray ln_F(1,parpops,1,nyr,1,fishfleet,ph_F) //the actual parameters  
+   !! int F_lgth=parpops*sum(nr)*nyr;
+
+  init_bounded_matrix ln_F(1,F_lgth,1,fishfleet,-7,2,ph_F) //the actual parameters  
   init_bounded_matrix F_rho(1,parpops,1,fishfleet,0,2,ph_F_rho) //random walk params*
   5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
   4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
@@ -468,7 +473,7 @@ PARAMETER_SECTION
   //init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages-1,-40,40,ph_rec) //actual parameters (log scale devs)
    !! int dev_lgth=nps*(nyr-1);
   init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-40,40,ph_abund_devs)
+  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs)
  //###############################################################################################################################
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
@@ -733,7 +738,7 @@ FUNCTION get_movement
   }
   }
 
- if(move_switch==1 || (phase_T_pop<0 && phase_T_reg<0 && phase_T_CNST_pop<0 && phase_T_CNST_reg<0)) // if T fixed set it to input T
+ if(move_switch==1 || (phase_T_pop<0 && phase_T_reg<0 && phase_T_CNST_pop<0 && phase_T_CNST_reg<0 && move_switch!=0)) // if T fixed set it to input T
   {
   for (int j=1;j<=npops;j++)
    {
@@ -1002,6 +1007,7 @@ FUNCTION get_movement
   } 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
+ nreg_temp=rowsum(nregions_temp);
 
  if (ph_sel_log<0 && ph_sel_dubl<0)
  {
@@ -1019,10 +1025,10 @@ FUNCTION get_selectivity
         for (int z=1;z<=nfleets(j);z++)                    
       {
  // get betas on their arithmetic scale
- sel_beta1(j,r,z)=mfexp(log_sel_beta1(j,r,z));
- sel_beta2(j,r,z)=mfexp(log_sel_beta2(j,r,z));
- sel_beta3(j,r,z)=mfexp(log_sel_beta3(j,r,z));
- sel_beta4(j,r,z)=mfexp(log_sel_beta4(j,r,z));
+ sel_beta1(j,r,z)=mfexp(log_sel_beta1(r+nreg_temp(j),z));
+ sel_beta2(j,r,z)=mfexp(log_sel_beta2(r+nreg_temp(j),z));
+ sel_beta3(j,r,z)=mfexp(log_sel_beta3(r+nreg_temp(j),z));
+ sel_beta4(j,r,z)=mfexp(log_sel_beta4(r+nreg_temp(j),z));
   }}}
  } //close else for positive phase
 
@@ -1140,17 +1146,14 @@ FUNCTION get_F_age
              else {
              if(F_switch==1) //estimate annual deviations
               {
-               F_year(j,r,y,z)=mfexp(ln_F(j,y,z)); 
+               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); 
               }
              if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
-               if(y==1) //year one separate because no y-1  
-               {
-               F_year(j,r,y,z)=mfexp(ln_F(j,y,z));  
-               }
+               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));  
                if(y>1)
                {
-               F_year(j,r,y,z)=F_rho(j,z)*mfexp(ln_F(j,y-1,z));            
+               F_year(j,r,y,z)=F_rho(j,z)*mfexp(((y-1)+nreg_temp(j)*nyrs+(r-1)*nyrs,z));            
                }
               }
              } //end else for negative F phase
@@ -3233,7 +3236,6 @@ FUNCTION get_tag_recaptures
  //can then use the fill.multinomial with that vector of probabilities
 
 
- nreg_temp=rowsum(nregions_temp);
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3505,8 +3507,10 @@ FUNCTION evaluate_the_objective_function
  if (current_phase()<last_phase()) f+= 1000*(norm2(mfexp(ln_F)));
 
  //may be better way to penalize....
- if (active(ln_abund_devs)) f+= norm2(ln_abund_devs); 
-  
+ if(abund_pen_switch==1)
+ {
+  if (active(ln_abund_devs)) f+= norm2(ln_abund_devs); 
+ } 
 // Sum objective function
    f           += survey_like*wt_srv;
    f           += catch_like*wt_catch;
@@ -3580,6 +3584,8 @@ REPORT_SECTION
   report<<recruits_BM<<endl;
   report<<"$F"<<endl;
   report<<F<<endl;
+  report<<"$F_year"<<endl;
+  report<<F_year<<endl;
   
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
@@ -3631,6 +3637,8 @@ REPORT_SECTION
   report<<recruits_BM_TRUE<<endl;
   report<<"$F_TRUE"<<endl;
   report<<F_TRUE<<endl;
+  report<<"$F_year_TRUE"<<endl;
+  report<<F_year_TRUE<<endl;
   report<<"$Init_Abund_TRUE"<<endl;
   report<<init_abund_TRUE<<endl;
   report<<"$Init_Abund"<<endl;

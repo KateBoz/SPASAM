@@ -235,7 +235,7 @@ DATA_SECTION
   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
-  init_vector dunce_F(1,3) //min and max F for dunce cap F alternative
+  init_3darray dunce_F(1,np,1,nreg,1,3) //min and max F for dunce cap F alternative
   init_3darray F_rho(1,np,1,nreg,1,nf) //degree of autocorrelation (0-1) if F switch = 8; random walk in F
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
@@ -398,6 +398,10 @@ DATA_SECTION
   init_int ph_steep
   init_int ph_M
   init_int ph_sel_log
+  init_number lb_sel_beta1 //lower bound on fishery selectivity parameters in ln space
+  init_number ub_sel_beta1 //upper bound on fishery selectivity parameters in ln space
+  init_number lb_sel_beta2 //lower bound on fishery selectivity parameters in ln space
+  init_number ub_sel_beta2 //upper bound on fishery selectivity parameters in ln space
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -414,6 +418,7 @@ DATA_SECTION
   init_number wt_srv_age 
   init_number wt_rec
   init_number wt_tag
+  init_number abund_pen_switch // include penalty (norm2) on init_abund_devs?  0==no, 1==yes
   init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
   init_number Tpen
   init_number Tpen2
@@ -466,7 +471,7 @@ DATA_SECTION
   !!     }
   !!    if(j>r)
   !!     {
-  !!     nregions_temp(j,r)=nreg(j-1); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+  !!     nregions_temp(j,r)=nreg(r); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
   !!     }
   !!   }
   !!  }
@@ -508,10 +513,10 @@ PARAMETER_SECTION
  init_matrix F_est(1,nps,1,nr,phase_F)
 
  //For dunce cap F
- number Fstartyr
- number minF
- number maxF
- number stepF
+ matrix Fstartyr(1,nps,1,nr)
+ matrix minF(1,nps,1,nr)
+ matrix maxF(1,nps,1,nr)
+ matrix stepF(1,nps,1,nr)
  vector R_ave(1,nps)
  
  // vitals
@@ -1177,27 +1182,27 @@ FUNCTION get_F_age
               }
              if(F_switch==9)  //Dunce cap F
               {
-               Fstartyr=dunce_F(1);
-               minF=dunce_F(2);
-               maxF=dunce_F(3);
-               stepF=(maxF-minF)/((nyrs-Fstartyr)/2);
-              if(y<Fstartyr)
+               Fstartyr(j,r)=dunce_F(j,r,1);
+               minF(j,r)=dunce_F(j,r,2);
+               maxF(j,r)=dunce_F(j,r,3);
+               stepF(j,r)=(maxF(j,r)-minF(j,r))/((nyrs-Fstartyr(j,r))/2);
+              if(y<Fstartyr(j,r))
                {
                 F_year(j,r,y,z)=0;
                }
-               if(y>=Fstartyr)
+               if(y>=Fstartyr(j,r))
                {
-               if(y<((nyrs-Fstartyr)/2+Fstartyr))
+               if(y<((nyrs-Fstartyr(j,r))/2+Fstartyr(j,r)))
                 {
-                 F_year(j,r,y,z)=minF+(y-Fstartyr)*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                 F_year(j,r,y,z)=minF(j,r)+(y-Fstartyr(j,r))*stepF(j,r)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
                 }
                }
-               if(y>=((nyrs-Fstartyr)/2+Fstartyr))
+               if(y>=((nyrs-Fstartyr(j,r))/2+Fstartyr(j,r)))
                 {
-                 F_year(j,r,y,z)=maxF-((y-Fstartyr)-((nyrs-Fstartyr)/2))*stepF*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                 F_year(j,r,y,z)=maxF(j,r)-((y-Fstartyr(j,r))-((nyrs-Fstartyr(j,r))/2))*stepF(j,r)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
                   if(F_year(j,r,y,z)<0) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
                   {
-                  F_year(j,r,y,z)=minF;
+                  F_year(j,r,y,z)=minF(j,r);
                   }
                 }
               }
@@ -5468,6 +5473,14 @@ REPORT_SECTION
   report<<ph_M<<endl;
   report<<"#ph_sel_log"<<endl;
   report<<ph_sel_log<<endl;
+  report<<"#lb_sel_beta1"<<endl;
+  report<<lb_sel_beta1<<endl;
+  report<<"#ub_sel_beta1"<<endl;
+  report<<ub_sel_beta1<<endl;
+  report<<"#lb_sel_beta2"<<endl;
+  report<<lb_sel_beta2<<endl;
+  report<<"#ub_sel_beta2"<<endl;
+  report<<ub_sel_beta2<<endl;
   report<<"#ph_sel_log_surv"<<endl;
   report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
@@ -5500,6 +5513,8 @@ REPORT_SECTION
   report<<wt_rec<<endl;
   report<<"#wt_tag"<<endl;
   report<<wt_tag<<endl;
+  report<<"#abund_pen_switch"<<endl;
+  report<<abund_pen_switch<<endl;
   report<<"#move_pen_switch"<<endl;
   report<<move_pen_switch<<endl;
   report<<"#Tpen"<<endl;
