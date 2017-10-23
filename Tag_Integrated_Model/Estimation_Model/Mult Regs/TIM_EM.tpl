@@ -752,7 +752,7 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=input_T(j,r,a,k,n);            
+              T(j,r,y,a,k,n)=T_year_TRUE(j,r,y,k,n);            
        }
       } 
      }
