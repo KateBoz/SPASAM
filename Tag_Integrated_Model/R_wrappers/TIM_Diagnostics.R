@@ -133,7 +133,7 @@ rec1<-ggplot(rec.total.plot,aes(Years,value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Recruitment")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -159,7 +159,7 @@ rec2<-ggplot(rec.total.plot,aes(Years,value))+
   theme_bw()+
   facet_wrap(~Reg)+
   scale_color_manual(values = c("black","grey60"),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   geom_hline(yintercept = out$R_ave, col = e.col)+
   geom_hline(yintercept = out$R_ave_TRUE,col=t.col,lty=2)+
   ylab("Recruitment")+
@@ -184,7 +184,7 @@ rec2<-ggplot(rec.devs.plot,aes(Years,value))+
     theme_bw()+
     #facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-    scale_linetype_manual(values=c(1,2),guide=FALSE)+
+    scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
     ylab("Recruitment")+
     geom_hline(yintercept = out$R_ave, col = e.col)+
     geom_hline(yintercept = out$R_ave_TRUE,col=t.col,lty=2)+
@@ -215,7 +215,7 @@ ssb.p<-ggplot(ssb.plot,aes(Years,value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("SSB")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -241,7 +241,7 @@ init.ab<-ggplot(init.abund.plot,aes(Age, value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Abundance")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -270,7 +270,7 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Selectivity")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -295,7 +295,7 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Selectivity")+
   theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -327,7 +327,7 @@ F.plot.p<-ggplot(F.plot,aes(Years,value))+
   theme_bw()+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
-  scale_linetype_manual(values=c(1,2),guide=FALSE)+
+  scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("F")+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -385,9 +385,59 @@ T.year.p<-ggplot(T.year.plot,aes(Years,value))+
 
 # Yields
 
+Y.year<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
+
+Y.year.plot<-melt(Y.year, id=c("Reg","Years"))
+
+yield.p<-ggplot(Y.year.plot,aes(Years,value,shape=variable))+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_point(size=2, alpha = 0.5)+
+  scale_shape_manual(values=c(NA,16),labels = c("Estimated","Observed"))+
+  facet_wrap(~Reg)+
+  scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","Observed"))+
+  scale_linetype_manual(values=c(1,0),labels = c("Estimated","Observed"))+
+  ylab("Yield")+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        legend.background = element_rect(fill="transparent"),
+        panel.border = element_rect(colour = "black"))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  theme(legend.position = c(1, 1), legend.justification = c(1,1))+
+  ggtitle("Yield")
+
+
 # Survey Index
 
-# age comps coming soon
+Survey.year<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), SI_Est=out$survey_fleet_bio,SI_True=out$OBS_survey_fleet_bio ) 
+
+Survey.year.plot<-melt(Survey.year, id=c("Reg","Years"))
+
+survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_point(size=2, alpha = 0.5)+
+  scale_shape_manual(values=c(NA,16),labels = c("Estimated","Observed"))+
+  facet_wrap(~Reg)+
+  scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","Observed"))+
+  scale_linetype_manual(values=c(1,0),labels = c("Estimated","Observed"))+
+  ylab("Survey Index")+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        legend.background = element_rect(fill="transparent"),
+        panel.border = element_rect(colour = "black"))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  theme(legend.position = c(1, 1), legend.justification = c(1,1))+
+  ggtitle("Survey Biomass")
+
+
+
+
+# age comps coming soon...
 
 
 #print these plots to pdf in the EM folder
@@ -403,6 +453,8 @@ print(s.select.p)
 print(f.select.p)
 print(F.plot.p)
 print(T.year.p)
+print(yield.p)
+print(survey.p)
 
 dev.off()
 
@@ -471,6 +523,18 @@ print(out$T_year)
 
 print("$T_year_TRUE")
 print(out$T_year_TRUE)
+
+print("$yield_fleet")
+print(out$yield_fleet)
+
+print("$OBS_yield_fleet")
+print(out$OBS_yield_fleet)
+
+print("$survey_fleet_bio")
+print(out$survey_fleet_bio)
+
+print("$OBS_survey_fleet_bio")
+print(out$OBS_survey_fleet_bio)
 
 sink()
 }
