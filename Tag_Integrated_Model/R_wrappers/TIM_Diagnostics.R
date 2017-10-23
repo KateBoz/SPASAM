@@ -463,6 +463,16 @@ dev.off()
 sink(file = "output.txt",
      append = F, type = "output")
 
+#model structure
+print("$nages")
+print(out$nages)
+print("nyrs")
+print(out$nyrs)
+print("npops")
+print(out$npops)
+print("nregions")
+print(out$nregions)
+
 #rec params
 print("$R_ave")
 print(out$R_ave)
