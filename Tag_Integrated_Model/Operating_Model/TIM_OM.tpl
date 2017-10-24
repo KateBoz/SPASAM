@@ -324,10 +324,7 @@ DATA_SECTION
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
   //==0 no movement, set T phases=-1
   //==1 input movement, set T phases=-1
-  //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
-  //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
-  //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
-  //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+  //>1 estimate movement among all regions/pops...set either of the movement phases to >0 
   
 ////// Population Structure switches
   init_number natal_homing_switch_EM
@@ -407,10 +404,8 @@ DATA_SECTION
   init_int ph_sel_dubl_surv
   init_int ph_q
   init_int ph_F_rho // if we want random walk F
-  init_int ph_T_pop //use if mult pops
-  init_int ph_T_reg //use if mult regs
-  init_int ph_T_CNST_pop //use if mult pops
-  init_int ph_T_CNST_reg //use if mult regs
+  init_int ph_T_YR //use if want to estimate yearly T
+  init_int ph_T_CNST //use if want to estimate time-invariant T
   init_int ph_dummy
   init_number wt_surv
   init_number wt_catch
@@ -5491,14 +5486,10 @@ REPORT_SECTION
   report<<ph_q<<endl;
   report<<"#ph_F_rho"<<endl;
   report<<ph_F_rho<<endl;
-  report<<"#ph_T_pop"<<endl;
-  report<<ph_T_pop<<endl;
-  report<<"#ph_T_reg"<<endl;
-  report<<ph_T_reg<<endl;
-  report<<"#ph_T_CNST_pop"<<endl;
-  report<<ph_T_CNST_pop<<endl;
-  report<<"#ph_T_CNST_reg"<<endl;
-  report<<ph_T_CNST_reg<<endl;
+  report<<"#ph_T_YR"<<endl;
+  report<<ph_T_YR<<endl;
+  report<<"#ph_T_CNST"<<endl;
+  report<<ph_T_CNST<<endl;
   report<<"#ph_dummy"<<endl;
   report<<ph_dummy<<endl;
   report<<"#wt_surv"<<endl;

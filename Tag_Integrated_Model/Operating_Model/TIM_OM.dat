@@ -452,11 +452,8 @@
  # ///// Sets the type of adult movement pattern (sets age class>1 movements)
  # //==0 no movement, set T phases=-1
  # //==1 input movement, set T phases=-1
- # //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
- # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
- # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
- # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
-5
+ # //>1 estimate movement among all regions/pops...set either of the movement phases to >0  
+2
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -575,13 +572,9 @@
 1
 #ph_F_rho
 -1
-#ph_T_pop
+#ph_T_YR
 -5
-#ph_T_reg
--2
-#ph_T_CNST_pop
--5
-#ph_T_CNST_reg
+#ph_T_CNST
 4
 #ph_dummy
 -1
