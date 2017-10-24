@@ -28,17 +28,20 @@ load_libraries()
 
   
 ######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
-multiple_reg<-1 #running model with multiple regions, 1==yes, 0==no
-multiple_pop<-0 #running model with multiple populations, 1==yes, 0==no
+
+#Key in 0,0 for panmictic population type
+
+multiple_reg<-0 #running model with multiple regions, 1==yes, 0==no
+multiple_pop<-1 #running model with multiple populations, 1==yes, 0==no
 
 #DO NOT RUN MODELS WITH MUTLIPLE REGIONS AND POPULATIONS, NOT EQUIPPED TO ESTIMATE MOVEMENT AMONG REGIONS AND POPULATIONS...YOU TRY CODING THAT ESTIMATED ARRAY
 
 #OM Location
-OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master (1)\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
+OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Alternate_runs\\Matching_multipop\\Operating_Model"
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
-EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master (1)\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
+EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Alternate_runs\\Matching_multipop\\Estimation_Model" #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 ########################################################################################################
 
@@ -50,7 +53,7 @@ t.col="black"
 e.col="blue"
 
 #set up the color that are wanted for movement plot - used a color ramp
-mycols=colorRampPalette(c("black", "cyan","blue"))
+mycols=colorRampPalette(c("blue", "cyan","black"))
 
 
 ########################################################################################################
@@ -358,8 +361,16 @@ T.year<-cbind(T.year,T_est,T_true)
 T.year.plot<-melt(T.year, id=c("Reg","Years"))
 
 T.year.plot$Reg<-as.factor(T.year.plot$Reg)
+
 T.lines<-c(rep(1,nreg),rep(2,nreg))
-T.col<-rep(mycols(nreg),nreg)
+
+#if multiple pops or multiple reg
+if(nreg>1 || npops>1){
+T.col<-rep(mycols(nreg),nreg)}
+
+#for panmictic
+if(nreg==1 && npops==1){
+  T.col<-mycols(2)}
 
 T.year.p<-ggplot(T.year.plot,aes(Years,value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
@@ -551,6 +562,11 @@ sink()
 
 
 make.plots()
+
+
+
+
+
 
 ###################################
 #JJD plots
