@@ -1,0 +1,593 @@
+##########PARAMETERS FOR HAKE-LIKE TEST###########
+#nages
+15
+#nyrs
+40 #10 JJD
+#npopulations
+1
+#nregions
+1
+#nfleets
+1
+#nfleets_survey
+1
+#model_type_switch
+  #==0 do not use TAC to set F
+  #==1 use TAC to set F, USE THIS IF calc_TAC_from_uMSY==1
+  #==2 use uMSY to set F
+0
+#do_tag
+  #==0 do not calculate tagging data
+  #==1 calculate tagging data
+1
+# parse_TAC
+  #==0 do not alter the input TAC or harvest rate
+  #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
+0
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////// USING calc_TAC_from_uMSY==1 IS PROBABLY ONLY CORRECT WAY TO PARSE u /////////////////////////////////////////////////
+#/////////////// IF PARSE input_u directly, then sum(u) unlikely to equal input_u because of differences in population sizes/////////
+#/////////////// ie applying less than the full uMSY to each area/region ////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# calc_TAC_from_uMSY
+###########################################################################################################################
+  #MUST HAVE MODEL_TYPE==1, even though uses input u (harvest rate)
+##############################################################################################################################
+  #==0 don't use
+  #==1 calculate a yearly TAC from uMSY(input)*biomass_population(j,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+  #==2 calculate a yearly TAC from uMSY(input)*biomass_region(j,r,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+0
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#parse_TAC_source
+  #==0 recruitment index_BM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==2 survey biomass
+  #==3 equal apportionment across all fleets in a given area
+2
+#TAC_survey_parse_timelag_switch
+ # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
+  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in  years where y<timelag
+0
+#TAC_survey_parse_timelag
+ # //whole number value to implement a time lag in year that use survey apportionment from
+1
+
+#tsurvey in proportion of year (0-1)
+0
+
+#larval_move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+0
+#move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+  #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
+  #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
+  #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  #//uses use_input_Bstar switch 
+0
+#use_input_Bstar
+  #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+  #==1 use input_Bstar
+0
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
+0
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#select_switch_survey
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#F_switch
+  #==1 input F
+  #==2 input single overall F (FMSY)
+  #==3 Estimate F that minimizes difference in input and estimated total harvest rate
+  #==4 overall F is split evenly among stocks (each fleet uses stock F)
+  #==5 overall F is is split evenly among all regions (each fleet uses region F)
+  #==6 overall F is split evenly among fleets
+  #==7 F devs about input F based on sigma_F
+  #==8 random walk in F
+  #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
+9
+
+#recruit_devs_switch
+  #==0 use stock-recruit relationship directly
+  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+1
+
+#recruit_randwalk_switch
+  #==0 no random walk recruitment deviations
+  #//==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
+0
+
+#maturity_switch_equil
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+0
+
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+  #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
+  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
+  #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
+1
+
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  #==3 cyclical (sine wave type)
+1
+
+#use_stock_comp_info_survey
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS survey age comps by area (summed across natal population)
+ #==1 calc OBS survey age comps by natal population within each area
+0
+#use_stock_comp_info_catch
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS catch age comps by area (summed across natal population)
+ #==1 calc OBS catch age comps by natal population within each area
+0
+
+#/////tagging data parameters
+#nyrs_release
+  #number of years with tag release events
+5
+#yrs_releases
+  #vector containing the model years with releases
+1
+3
+5
+7
+9
+#frac_total_abund_tagged
+  #proportion of total abundance that is tagged in each release year
+0.01
+0.01
+0.01
+0.01
+0.01
+
+#max_life_tags
+  #number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
+4
+#SIM_ntag
+  #the ESS used to simulate multinomial tagging dat
+500
+#report_rate(1,ny_rel,1,np,1,nreg)
+  #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
+1
+1
+1
+1
+1
+
+
+#//////Density-Dependent Movement parameters
+#input_Bstar(1,np,1,nreg)
+  #used with move_switch==8
+  #carrying capacity biomass term
+10000000
+
+
+#SSB_zero_appor(1,np,1,nreg)
+  #used with move_switch==8
+  #determines apportionment of SSB0 when multiple regions and use_input_Bstar==0
+0.5
+
+#A
+  #used with move_switch==8
+  #logistic parameter
+9
+
+
+#return_age - age of return migration for move_switch==6
+4
+#return_probability- probability of returning for move_switch==6
+1
+#spawn_return_prob - probability of returning for spawning if overlap_switch==2
+1
+#phase_F - must be turned on (==1) if F_type==3
+-1
+#phase_dummy - must be turned on (==1) if F_type!=3
+1
+#tspawn in proportion of year (0-1)
+0
+#steep
+0.814
+#R_ave - on the log scale please!
+7.35  #3.494850022 JJD
+#amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
+0.2
+#freq - period of ossilation for recruitment variation. Use when Rec_type ==3
+15
+#input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+
+#input_residency_larval
+1 
+#input_residency
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+#sel_beta1
+1
+#sel_beta2
+3.75
+#sel_beta3
+-0.6
+#sel_beta4
+20
+#sel_beta1_survey
+0.9
+#sel_beta2_survey
+5
+#sel_beta3_survey
+-0.6
+#sel_beta4_survey
+20
+#input_selectivity (1,ns,1,nreg,1,na,1,nf)
+0	0.12	0.54	0.71	0.87	1	1	1	1	1	1	1	1	1	1
+#input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
+0	0.12	0.54	0.71	0.87	1	1	1	1	1	1	1	1	1	1
+#q_survey(by population, area and fleet)
+0.8
+#input_F
+0.125
+#dunce F parameters (1,nps,1,nr,1,3)  for Dunce Cap F option ==9
+  # first column is start year of fishery (F before this ==0)
+  # second column is  min  F
+  # third column is max F
+1	0.225	0.7
+#F_rho (degree of autocorrelation in F random walk
+1
+#F_MSY
+0.5
+#input_M
+0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
+#sigma_recruit
+0.4
+#sigma_rec_prop #error around recruit apportionment
+0.2
+#sigma_F
+0.275
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+######### FOR NATAL HOMING THERE IS NO ACCOUNTING OF REGIONAL DIFFERENCES IN VITAL RATES ACROSS REGIONS WITHIN A POPULATION
+######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
+######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
+#########################################################################################################################################
+#input_weight
+0.101	0.273	0.377	0.473	0.545	0.622	0.674	0.754	0.805	0.833	0.909	0.952	0.938	0.918	0.982
+#input_catch_weight
+0.101	0.273	0.377	0.473	0.545	0.622	0.674	0.754	0.805	0.833	0.909	0.952	0.938	0.918	0.982
+#fecundity
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1 
+#maturity
+0 0.12 0.54 0.71 0.87 1 1 1 1 1 1 1 1 1 1
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+#prop_fem
+0.5
+#input_Rec_prop
+1
+#Equil_ssb_apportion
+1
+#init_abund
+3125	2492.869068	1988.60678	1586.347626	1265.458217	1009.478926	805.2796128	642.386124	512.4430394	408.7850886	326.0952648	260.1320956	207.5120816	165.5361437	132.0511783
+#rec_index_sigma
+0.5
+#sigma_survey
+0.2
+#sigma_survey_overlap
+0.2
+#sigma_catch
+0.05
+#sigma_catch_overlap
+0.05
+#SIM_ncatch
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+#SIM_ncatch_overlap
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+#SIM_nsurvey
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+#SIM_nsurvey_overlap
+#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+#input_TAC
+ #TAC that are matching if model_type_switch==1
+################################################################################################################
+################################################################################################################
+################################################################################################################
+### IF PARSE TAC OR U USING OBS DATA THEN MAKE SURE THAT FULL TAC OR U FOR THAT AREA IS INPUT FOR EACH FLEET IN THAT AREA ###
+########################################################################################################
+1
+#input_u 
+.0491
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#max_Fnew
+5
+#Fnew_start
+ #starting value for NR to match TAC
+0.1
+#NR_iterations
+ #NR iterations used to match TAC
+10
+#NR_dev
+ #NR deviations when calculating derivative
+0.001
+
+################################################################################################################
+################################################################################################################
+################################################################################################################
+## EM inputs
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#larval_move_switch
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+0
+#move_switch
+ # ///// Sets the type of adult movement pattern (sets age class>1 movements)
+ # //==0 no movement, set T phases=-1
+ # //==1 input movement, set T phases=-1
+ # //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
+ # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
+ # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
+ # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+0
+
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
+0
+
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#maturity_switch_equil
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+0
+
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  #==3 cyclical (sine wave type)
+1
+
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+  #==3 estimate time-invariant apportionment (needs coding)
+  #==4 estimate yearly apportionment (needs coding)
+1
+
+#use_stock_comp_info_survey
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS survey age comps by area (summed across natal population)
+ #==1 calc OBS survey age comps by natal population within each area
+0
+
+#use_stock_comp_info_catch
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS catch age comps by area (summed across natal population)
+ #==1 calc OBS catch age comps by natal population within each area
+0
+
+#F_switch ###THIS NEEDS WORK ###
+  #==1 estimate yearly F
+  #==2 random walk in F
+1
+
+#recruit_devs_switch
+ # //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
+ # //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+1
+
+#recruit_randwalk_switch
+ # //==0 no random walk recruitment deviations
+ # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
+ 0
+
+#do_tag
+  #==0 do not calculate tagging data
+  #==1 calculate tagging data
+1
+#do_tag_mult
+  #==0 assume neg binomial distribution for tagging data
+  #==1 assume multinomial distribution (same as OM)
+1
+
+################################
+##### Phases for estimation ####
+################################
+#ph_lmr
+1
+#ph_rec
+2
+#ph_init_abund
+1
+#ph_F
+3
+#ph_steep
+-1
+#ph_M
+-1
+#ph_sel_log
+6
+#lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
+-10 
+#ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
+2
+#lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
+-10 
+#ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
+2 
+#ph_sel_log_surv
+5
+#ph_sel_dubl
+-1
+#ph_sel_dubl_surv
+-1
+#ph_q
+1
+#ph_F_rho
+-1
+#ph_T_pop
+-5
+#ph_T_reg
+-2
+#ph_T_CNST_pop
+-5
+#ph_T_CNST_reg
+-4
+#ph_dummy
+-1
+
+##################################
+### likelihood weights
+#################################
+#wt_surv
+1
+#wt_catch
+1
+#wt_fish_age
+1
+#wt_srv_age
+1
+#wt_rec
+1
+#wt_tag
+0
+#abund_pen_switch
+ #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
+ #//==0 no move pen in log space
+ #// ==1 include move pen in log space
+0
+#move_pen_switch
+ #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
+ #// ==0 no move pen in log space
+ #// ==1 include move pen in log space
+1
+#Tpen
+#value below which move_pen enacted (log space)
+-5
+#Tpen2
+#value above which move_pen enacted(log space)
+1
+#OBS_survey_fleet_se(1,np,1,nreg,1,ny,1,nf  #standard errors
+0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2 0.2
+#OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf  #standard errors
+0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
+#OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) #number of survey ages
+50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
+#OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //fishery sample size ages
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+#tag_N(1,np,1,nreg,1,ny_rel,1,na) //fishery sample size ages
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#debug
+1541
+#myseed_yield
+1
+#myseed_survey
+100000
+#myseed_F
+200000
+#myseed_rec_devs
+300000
+#myseed_rec_apport
+400000
+#myseed_rec_index
+500000
+#myseed_survey_age
+600000
+#myseed_catch_age
+700000
+#myseed_tag
+800000
