@@ -4,8 +4,29 @@
 ####################################################
 
 #remove junk from workspace
-{rm(list=(ls()))
+rm(list=(ls()))
 
+  
+  #################################################################################
+  ########### INPUTS FOR RUNNING MODELS ###########################################
+  #################################################################################
+  
+  # Manually make changes in the OM .dat and run both OM and EM together if you want
+  
+  
+  ######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
+  
+  #OM Location
+  OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Operating_Model"
+  OM_name<-"TIM_OM" #name of the OM you are wanting to run
+  
+  #EM Location
+  EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Estimation_Model" #location of run(s)
+  EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+  ########################################################################################################
+  
+  
+  
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
@@ -17,33 +38,9 @@ load_libraries<-function() {
   library(RColorBrewer)
 }
 load_libraries()
-}
 
 
-#################################################################################
-########### INPUTS FOR RUNNING MODELS ###########################################
-#################################################################################
 
-# Manually make changes in the OM .dat and run both OM and EM together if you want
-
-  
-######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
-
-#Key in 0,0 for panmictic population type
-
-multiple_reg<-0 #running model with multiple regions, 1==yes, 0==no
-multiple_pop<-1 #running model with multiple populations, 1==yes, 0==no
-
-#DO NOT RUN MODELS WITH MUTLIPLE REGIONS AND POPULATIONS, NOT EQUIPPED TO ESTIMATE MOVEMENT AMONG REGIONS AND POPULATIONS...YOU TRY CODING THAT ESTIMATED ARRAY
-
-#OM Location
-OM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Alternate_runs\\Matching_multipop\\Operating_Model"
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
-
-#EM Location
-EM_direct<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Tag_Integrated_Model\\Alternate_runs\\Matching_multipop\\Estimation_Model" #location of run(s)
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
-########################################################################################################
 
 ##############################################
 #plot color set up if what something different
@@ -61,23 +58,6 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 ########################################################################################################
 { #run this section of code
 
-if(multiple_reg==1)
-   {  
-    EM_direct<-paste0(EM_direct,'\\Mult Regs',sep="")
-   }
-if(multiple_pop==1)
-{  
-  EM_direct<-paste0(EM_direct,'\\Mult Pops',sep="")
-}
-if(multiple_reg==0 & multiple_pop==0)
-{  
-  EM_direct<-paste0(EM_direct,'\\panmictic',sep="")
-}
-if(multiple_reg==1 & multiple_pop==1)
-{  
-  print("Can't Estimate Movement Among Multiple Populations and Regions Simultaneously")
-  stop()
-}
 
 #run the OM
 setwd(OM_direct)
