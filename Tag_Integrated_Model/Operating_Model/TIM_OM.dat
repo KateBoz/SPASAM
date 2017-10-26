@@ -440,6 +440,23 @@
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
+
+#EM_structure - for setting up .rep
+  # ==0 the RM is panmictic
+  # ==1 the EM is metamictic
+  # ==2 the EM is metapop
+2
+
+#npops_EM
+2
+#nregions_EM
+1 1
+#nfleets_EM
+1 1
+#nfleets_survey_EM
+1 1
+#tsurvey_EM
+0 0
 #larval_move_switch
   #==0 no movement
   #==1 input movement
@@ -526,7 +543,16 @@
 #recruit_randwalk_switch
  # //==0 no random walk recruitment deviations
  # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
-  0
+ 0
+
+#tspawn_EM(1,np_em)
+0 0
+
+#return_probability_EM(1,np_em)
+1 1
+
+#spawn_return_prob_EM(1,np_em)
+1 1
 
 #do_tag
   #==0 do not calculate tagging data
@@ -536,6 +562,9 @@
   #==0 assume neg binomial distribution for tagging data
   #==1 assume multinomial distribution (same as OM)
 1
+
+#sigma_rec_em(1,np_em)
+0.4 0.4
 
 ################################
 ##### Phases for estimation ####

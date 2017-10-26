@@ -311,6 +311,25 @@ DATA_SECTION
  //###################################################################################################################################
  //###################################################################################################################################
 
+  //population structure for formatting inputs for EM
+  init_number EM_structure //
+  // ==0 the RM is panmictic
+  // ==1 the EM is metamictic
+  // ==2 the EM is metapop
+  
+  init_number npops_EM
+  !! int np_em=npops_EM;
+  
+//////////////////////////////////////////////////////
+  init_ivector nregions_EM(1,np_em) //number of regions within a population - for metamictic regions = areas, populations = 1
+  !! ivector nreg_em=nregions_EM;
+  init_ivector nfleets_EM(1,np_em) //number of fleets in each region by each population
+  !! ivector nf_em=nfleets_EM;
+  init_ivector nfleets_survey_EM(1,np_em) //number of fleets in each region by each population
+  !! ivector nfs_em=nfleets_survey_EM;
+
+  init_vector tsurvey_EM(1,np_em)
+
   init_number larval_move_switch_EM
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
   //==0 no movement
@@ -385,9 +404,17 @@ DATA_SECTION
    init_number recruit_randwalk_switch_EM
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
-  
+
+
+  init_vector tspawn_EM(1,np_em) //timing of spawn for EM needs to match npops_EM
+  init_vector return_probability_EM(1,np_em)
+  init_vector spawn_return_prob_EM(1,np_em)
+
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
+
+  init_vector sigma_recruit_EM(1,np_em) //needs to match npops_EM
+
   init_int ph_lmr
   init_int ph_rec
   init_int ph_abund_devs
@@ -417,7 +444,7 @@ DATA_SECTION
   init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
   init_number Tpen
   init_number Tpen2
-  
+
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs)
   init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
@@ -804,22 +831,23 @@ PARAMETER_SECTION
 
  init_number dummy(phase_dummy)
 
-///////////////////////////////////////////////////////////////////////////////////////////////
-//Temporary (reorganized) 6d arrary parameters 
-//Reorganize so that region is the second dimension. 
-//////////////////////////////////////////////////////////////////////////////////////////////
-//survey index  
- 6darray ro_true_survey_fleet_overlap_age(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
- 6darray ro_survey_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag) 
- 6darray ro_SIM_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
- 6darray ro_OBS_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
- 6darray ro_true_survey_fleet_overlap_age_bio(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
-//yield & BRP calcs 
- 6darray ro_catch_at_age_region_fleet_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
- 6darray ro_catch_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag)
- 6darray ro_SIM_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
- 6darray ro_OBS_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
-
+ //Setting up parameters for export to mismatch EM model
+ 3darray input_weight_region_temp(1,nps,1,nag,1,nr)
+ matrix input_weight_region(1,nps,1,nag)
+ matrix input_weight_population_temp(1,nag,1,nps)
+ vector input_weight_population(1,nag)
+ 3darray input_catch_weight_region_temp(1,nps,1,nag,1,nr)
+ matrix input_catch_weight_region(1,nps,1,nag)
+ matrix input_catch_weight_population_temp(1,nag,1,nps)
+ vector input_catch_weight_population(1,nag)
+ 3darray fecundity_region_temp(1,nps,1,nag,1,nr)
+ matrix fecundity_region(1,nps,1,nag)
+ matrix fecundity_population_temp(1,nag,1,nps)
+ vector fecundity_population(1,nag)
+ 3darray maturity_region_temp(1,nps,1,nag,1,nr)
+ matrix maturity_region(1,nps,1,nag)
+ matrix maturity_population_temp(1,nag,1,nps)
+ vector maturity_population(1,nag)
 
   objective_function_value f
 
@@ -5399,17 +5427,17 @@ REPORT_SECTION
   report<<nages<<endl;
   report<<"#nyrs"<<endl;
   report<<nyrs<<endl;
-  report<<"#npops"<<endl;
-  report<<npops<<endl;
-  report<<"#nregions"<<endl;
-  report<<nregions<<endl;
-  report<<"#nfleets"<<endl;
-  report<<nfleets<<endl;
-  report<<"#nfleets_survey"<<endl;
-  report<<nfleets_survey<<endl;
+  report<<"#npops_EM"<<endl;
+  report<<npops_EM<<endl;
+  report<<"#nregions_EM"<<endl;
+  report<<nregions_EM<<endl;
+  report<<"#nfleets_EM"<<endl;
+  report<<nfleets_EM<<endl;
+  report<<"#nfleets_survey_EM"<<endl;
+  report<<nfleets_survey_EM<<endl;
   
-  report<<"#tsurvey"<<endl;
-  report<<tsurvey<<endl;
+  report<<"#tsurvey_EM"<<endl;
+  report<<tsurvey_EM<<endl;
   report<<"#larval_move_switch"<<endl;
   report<<larval_move_switch_EM<<endl;
   report<<"#move_switch"<<endl;
@@ -5440,20 +5468,21 @@ REPORT_SECTION
   report<<recruit_devs_switch_EM<<endl;
   report<<"#recruit_randwalk_switch"<<endl;
   report<<recruit_randwalk_switch_EM<<endl;
-  report<<"#tspawn"<<endl;
-  report<<tspawn<<endl;
+  report<<"#tspawn_EM"<<endl;
+  report<<tspawn_EM<<endl;
+
   report<<"#return_age"<<endl;
   report<<return_age<<endl;
   report<<"#return_probability"<<endl;
-  report<<return_probability<<endl;
+  report<<return_probability_EM<<endl;
   report<<"#spawn_return_prob"<<endl;
-  report<<spawn_return_prob<<endl;
+  report<<spawn_return_prob_EM<<endl;
   report<<"#do_tag"<<endl;
   report<<do_tag_EM<<endl;
   report<<"#do_tag_mult"<<endl;
   report<<do_tag_mult<<endl;
-  report<<"#sigma_recruit"<<endl;
-  report<<sigma_recruit<<endl;
+  report<<"#sigma_recruit_EM"<<endl;
+  report<<sigma_recruit_EM<<endl;
   report<<"#ph_lmr"<<endl;
   report<<ph_lmr<<endl;
   report<<"#ph_rec"<<endl;
@@ -5513,16 +5542,68 @@ REPORT_SECTION
   report<<"#Tpen2"<<endl;
   report<<Tpen2<<endl;
 
-  report<<"#input_Rec_prop"<<endl;
-  report<<input_Rec_prop<<endl;
-  report<<"#input_weight"<<endl;
-  report<<input_weight<<endl;
-  report<<"#input_catch_weight"<<endl;
-  report<<input_catch_weight<<endl;
-  report<<"#fecundity"<<endl;
-  report<<fecundity<<endl;
-  report<<"#maturity"<<endl;
-  report<<maturity<<endl;
+ 
+  //setting up aggregated values for panmictic
+   for (int p=1;p<=npops;p++)
+    {
+    for (int r=1;r<=nregions(p);r++)
+      {
+      for(int a=1;a<=nages;a++)
+       {
+       //aggregating weight at age
+        input_weight_region_temp(p,a,r)=input_weight(p,r,a);//sum by region
+        input_weight_region(p,a)=sum(input_weight_region_temp(p,a))/nregions(p);
+        input_weight_population_temp(a,p)=input_weight_region(p,a);
+        input_weight_population(a)=sum(input_weight_population_temp(a))/npops;
+
+        //aggregating catch weight at age
+        input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a);//sum by region
+        input_catch_weight_region(p,a)=sum(input_catch_weight_region_temp(p,a))/nregions(p);
+        input_catch_weight_population_temp(a,p)=input_catch_weight_region(p,a);
+        input_catch_weight_population(a)=sum(input_catch_weight_population_temp(a))/npops;
+
+        //aggregating fecundity
+        fecundity_region_temp(p,a,r)=fecundity(p,r,a);//sum by region
+        fecundity_region(p,a)=sum(fecundity_region_temp(p,a))/nregions(p);
+        fecundity_population_temp(a,p)=fecundity_region(p,a);
+        fecundity_population(a)=sum(fecundity_population_temp(a))/npops;
+
+        //aggregating maturity
+        maturity_region_temp(p,a,r)=maturity(p,r,a);//sum by region
+        maturity_region(p,a)=sum(maturity_region_temp(p,a))/nregions(p);
+        maturity_population_temp(a,p)=maturity_region(p,a);
+        maturity_population(a)=sum(maturity_population_temp(a))/npops;
+         
+       }}}
+
+  ///report the correct rec prop
+   if(EM_structure==0){
+      report<<"#input_Rec_prop"<<endl;
+      report<<1<<endl;
+      report<<"#input_weight"<<endl;
+      report<<input_weight_population<<endl;
+      report<<"#input_catch_weight"<<endl;
+      report<<input_catch_weight_population<<endl;
+      report<<"#fecundity"<<endl;
+      report<<fecundity_population<<endl;
+      report<<"#maturity"<<endl;
+      report<<maturity_population<<endl;
+      
+      }
+
+   if(EM_structure>0){
+      report<<"#input_Rec_prop"<<endl;
+      report<<input_Rec_prop<<endl;
+      report<<"#input_weight"<<endl;
+      report<<input_weight<<endl;
+      report<<"#input_catch_weight"<<endl;
+      report<<input_catch_weight<<endl;
+      report<<"#fecundity"<<endl;
+      report<<fecundity<<endl;
+      report<<"#maturity"<<endl;
+      report<<maturity<<endl;
+      }
+
   report<<"#prop_fem"<<endl;
   report<<prop_fem<<endl;
 
