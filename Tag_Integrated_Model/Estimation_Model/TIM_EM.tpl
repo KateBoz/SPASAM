@@ -663,6 +663,7 @@ PARAMETER_SECTION
  // init_bounded_number  theta(1,100,ph_theta);   // for negbinomial -lnL
 
  init_number dummy(ph_dummy)
+
   objective_function_value f;
   
   !! cout << "parameters set" << endl;
@@ -3393,10 +3394,10 @@ REPORT_SECTION
   report<<M<<endl;
 
  //EST values
-  report<<"$T_terminal"<<endl;
-  report<<T_terminal<<endl;
-  report<<"$T_year"<<endl;
-  report<<T_year<<endl;
+
+  //report<<"$T_terminal"<<endl; ///need to fix this for reporting out the 6D array
+  //report<<T_terminal<<endl;
+
   report<<"$init_abund"<<endl;
   report<<init_abund<<endl;
   report<<"$alpha"<<endl;
@@ -3520,8 +3521,6 @@ REPORT_SECTION
   report<<OBS_survey_fleet_bio_se<<endl;
   report<<"$OBS_survey_prop"<<endl;
   report<<OBS_survey_prop<<endl;
-  report<<"$survey_prop"<<endl;
-  report<<survey_at_age_fleet_prop<<endl;
 
   report<<"$OBS_yield_fleet"<<endl;
   report<<OBS_yield_fleet<<endl;
@@ -3531,8 +3530,7 @@ REPORT_SECTION
   report<<OBS_yield_fleet_se<<endl;
   report<<"$OBS_catch_prop"<<endl;
   report<<OBS_catch_at_age_fleet_prop<<endl;
-  report<<"$catch_at_age_fleet_prop"<<endl;
-  report<<catch_at_age_fleet_prop<<endl;
+
 
 /// TAG INFORMATION
   report<<"$nyrs_release"<<endl;
@@ -3549,9 +3547,7 @@ REPORT_SECTION
   report<<ntags<<endl;
   report<<"$OBS_tag_prop_final"<<endl;
   report<<OBS_tag_prop_final<<endl;
-  report<<"$tag_prop_final"<<endl;
-  report<<tag_prop_final<<endl;
-
+ 
   report<<"$likelihood components"<<endl;
   report<<"$tag_like"<<endl;
   report<<tag_like<<endl;
@@ -3579,7 +3575,37 @@ REPORT_SECTION
   report<<total_recruits<<endl;
   report<<"$SR"<<endl;
   report<<SR<<endl;
-  
+
+
+ //////////////////////////////////////////////////////////////////////
+ //Printing 5D and 6D arrays by population for metapop example 
+ /////////////////////////////////////////////////////////////////////
+
+ if(npops>1) //more than one population or if one population, more than 1 region within that population
+  {
+  region_counter=1;
+    for (int p=1;p<=npops;p++)
+     {
+     // for (int r=1;r<=nregions(p);r++)
+       // {
+          //reordered 6 d arrays go here. Will fix that later if neede
+       //}
+
+      // 5D arrays by population go here
+        report<<"$alt_T_year"<<p<<endl;
+        report<<T_year[p]<<endl;
+        report<<"$survey_prop"<<p<<endl;
+        report<<survey_at_age_fleet_prop[p]<<endl;
+        report<<"$catch_at_age_fleet_prop"<<p<<endl;
+        report<<catch_at_age_fleet_prop[p]<<endl;
+        report<<"$tag_prop_final"<<p<<endl;
+        report<<tag_prop_final[p]<<endl;
+
+     }
+   }
+
+
+
   save_gradients(gradients);
 RUNTIME_SECTION
   convergence_criteria .001,.0001, 1.0e-4, 1.0e-7
