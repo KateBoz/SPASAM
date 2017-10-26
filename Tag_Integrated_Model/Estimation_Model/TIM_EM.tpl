@@ -451,10 +451,6 @@ PARAMETER_SECTION
   init_3darray ln_rec_prop_year(1,parpops,1,nr,1,nyr,-1) 
  
  //#########################################################################################################################
- //## rec devs and initial devs for abundance...this approach will be problematic if we don't want to estimate recruit devs at any point (or fix them)
- //## because if rec_devs_switch==0 we set them to 1 so will need to turn off both rec_devs and initial_abund_devs
- //############################################################################################################################
-  //init_bounded_matrix ln_rec_devs_RN(1,parpops,1,nyr+nages-1,-40,40,ph_rec) //actual parameters (log scale devs)
    !! int dev_lgth=nps*(nyr-1);
   init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
   init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs)
@@ -1249,7 +1245,14 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-                    init_abund(p,j,r,a)=R_ave(p)*abund_devs(j,a)*pow(mfexp(-(M(j,r,y,a))),a);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                    if(p==j)
+                     {
+                      init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                     }
+                    if(p!=j)
+                     {
+                      init_abund(p,j,r,a)=0;
+                     }
                     if(ph_abund_devs<0)
                      {
                       init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
