@@ -35,6 +35,20 @@ DATA_SECTION
   ivector nfs(1,np)
   !! nfs=nfleets_survey;
 
+/////////////////////////////////////////////////////
+//OM MODEL STRUCTURE for reporting true values
+///////////////////////////////////////////////////
+  init_number npops_OM
+  !! int np_om=npops_OM;
+  
+//////////////////////////////////////////////////////
+  init_ivector nregions_OM(1,np_om) //number of regions within a population - for metamictic regions = areas, populations = 1
+  !! ivector nreg_om=nregions_OM;
+  init_ivector nfleets_OM(1,np_om) //number of fleets in each region by each population
+  !! ivector nf_om=nfleets_OM;
+  init_ivector nfleets_survey_OM(1,np_om) //number of fleets in each region by each population
+  !! ivector nfs_om=nfleets_survey_OM;
+ 
 ////////////////////////////////////////////////////////////////////////////////////
 //////////////SWITCHES//////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -74,10 +88,10 @@ DATA_SECTION
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 /////////////////////////////////////////////////////
-init_number select_switch_survey
-
+  init_number select_switch_survey
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
-  init_number maturity_switch_equil
+
+ init_number maturity_switch_equil
   //==0 for equal by area or average
   //==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
   //SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
@@ -114,7 +128,7 @@ init_number select_switch_survey
   //negative phase == use input_F_TRUE
   //==1 estimate yearly F
   //==2 random walk in F
- init_number recruit_devs_switch
+  init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
 
@@ -176,6 +190,7 @@ init_number select_switch_survey
    init_int move_pen_switch
    init_number Tpen
    init_number Tpen2
+
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -210,7 +225,7 @@ init_number select_switch_survey
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs) //survey standard erros
   init_5darray OBS_survey_prop(1,np,1,nreg,1,ny,1,nfs,1,na)  
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs)   //sample size
-
+  
 //Catch and age compos
  init_4darray OBS_yield_fleet(1,np,1,nreg,1,ny,1,nf)
  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)  // standard error on catch
@@ -249,41 +264,43 @@ init_number select_switch_survey
    vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each 
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
 
-   init_4darray init_abund_TRUE(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
-   init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
+  init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
+
+//##########################################################################################################################################
+//#########################################################################################################################################
+//##########################################################################################################################################
+// TRUE VALUES - BE SURE TO USE THE dimesions of the OM
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
- // TRUE VALUES
-  //##########################################################################################################################################
-//#########################################################################################################################################
-//##########################################################################################################################################
-  init_3darray q_survey_TRUE(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
-  init_3darray sel_beta1_TRUE(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta2_TRUE(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta3_TRUE(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
-  init_3darray sel_beta4_TRUE(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_3darray sel_beta1_survey_TRUE(1,np,1,nreg,1,nfs)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta2_survey_TRUE(1,np,1,nreg,1,nfs)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta3_survey_TRUE(1,np,1,nreg,1,nfs)  //selectivity slope parameter 2 for double selectivity
-  init_3darray sel_beta4_survey_TRUE(1,np,1,nreg,1,nfs)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_vector steep_TRUE(1,np) //B-H steepness
-  init_vector R_ave_TRUE(1,np) //Average Recruitment or R0 for B-H S-R curve
-  init_vector SSB_zero_TRUE(1,np)
-  init_matrix rec_devs_TRUE(1,np,1,ny)
-  init_3darray Rec_Prop_TRUE(1,np,1,nreg,1,ny)
-  init_3darray recruits_BM_TRUE(1,np,1,nreg,1,ny)
-  init_4darray F_TRUE(1,np,1,nreg,1,ny,1,na)
-  init_4darray F_year_TRUE(1,np,1,nreg,1,ny,1,nfs)
-  init_3darray biomass_AM_TRUE(1,np,1,nreg,1,ny)
-  init_matrix biomass_population_TRUE(1,np,1,ny)
-  init_3darray harvest_rate_region_bio_TRUE(1,np,1,nreg,1,ny)
-  init_3darray depletion_region_TRUE(1,np,1,nreg,1,ny)
-  init_3darray SSB_region_TRUE(1,np,1,nreg,1,ny)
-  init_matrix Bratio_population_TRUE(1,np,1,ny)
-  init_5darray T_year_TRUE(1,np,1,nreg,1,ny,1,np,1,nreg)
-  init_4darray selectivity_age_TRUE(1,np,1,nreg,1,na,1,nf)
-  init_4darray survey_selectivity_age_TRUE(1,np,1,nreg,1,na,1,nfs)
+  init_4darray init_abund_TRUE(1,np_om,1,np_om,1,nreg_om,1,na);  //input true initial abundance; just used for reporting
+  init_3darray q_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om) // catchability for different surveys(fleets)operating in different areas
+  init_3darray sel_beta1_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_TRUE(1,np_om,1,nreg_om,1,nf_om)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_TRUE(1,np_om,1,nreg_om,1,nf_om)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_3darray sel_beta1_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_vector steep_TRUE(1,np_om) //B-H steepness
+  init_vector R_ave_TRUE(1,np_om) //Average Recruitment or R0 for B-H S-R curve
+  init_vector SSB_zero_TRUE(1,np_om)
+  init_matrix rec_devs_TRUE(1,np_om,1,ny)
+  init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
+  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
+  init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix biomass_population_TRUE(1,np_om,1,ny)
+  init_3darray harvest_rate_region_bio_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray depletion_region_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix Bratio_population_TRUE(1,np_om,1,ny)
+  init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
+  init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
+  init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
+
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -449,7 +466,7 @@ PARAMETER_SECTION
   // for now... not sure what these are used for in estimation model? Are they necessary?
   //YES..if we want to estimate recruit apportionment (typical in SS)..need to implement logit transform in later code
   init_3darray ln_rec_prop_year(1,parpops,1,nr,1,nyr,-1) 
- 
+
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
@@ -467,7 +484,6 @@ PARAMETER_SECTION
   matrix SR(1,nps,1,nyr-1)
   matrix total_recruits(1,nps,1,nyr-1)
 //end recruitment parameters
-
 
  4darray init_abund(1,nps,1,nps,1,nr,1,nag)  //estimated as devs from exponential decline from R_ave
  
@@ -487,7 +503,7 @@ PARAMETER_SECTION
  matrix ave_mat(1,nps,1,nag) //to calc average maturity
  matrix SPR_N(1,nps,1,nag) 
  matrix SPR_SSB(1,nps,1,nag) 
- vector SPR(1,nps) 
+ vector SPR(1,nps)
  
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr) //param
@@ -677,7 +693,7 @@ PARAMETER_SECTION
 
 PROCEDURE_SECTION
  
-   get_movement();
+   get_movement();   
    get_selectivity();
    get_F_age();
    get_vitals();
@@ -688,6 +704,7 @@ PROCEDURE_SECTION
    get_tag_recaptures();
    evaluate_the_objective_function();
 ///////BUILD MOVEMENT MATRIX////////
+
 FUNCTION get_movement
  nreg_temp=rowsum(nregions_temp);
 
@@ -1190,7 +1207,7 @@ FUNCTION get_vitals
 FUNCTION get_SPR
 
   if(ph_steep<0){
-       steep=steep_TRUE;
+       steep=steep_TRUE(1);//quick fix to run this code..should be the average
        }
        
       for (int k=1;k<=npops;k++)
@@ -3390,25 +3407,31 @@ REPORT_SECTION
   report<<"$nfleets_survey"<<endl;
   report<<nfleets_survey<<endl;
   
+///OM structure
+  report<<"$npops_OM"<<endl;
+  report<<npops_OM<<endl;
+  report<<"$nregions_OM"<<endl;
+  report<<nregions_OM<<endl;
+  report<<"$nfleets_OM"<<endl;
+  report<<nfleets_OM<<endl;
+  report<<"$nfleets_survey_OM"<<endl;
+  report<<nfleets_survey_OM<<endl;
+
+//future estimated parameters
   report<<"$sigma_recruit"<<endl;
   report<<sigma_recruit<<endl;
 
   report<<"$M"<<endl;
   report<<M<<endl;
 
+
  //EST values
-
-  //report<<"$T_terminal"<<endl; ///need to fix this for reporting out the 6D array
-  //report<<T_terminal<<endl;
-
   report<<"$init_abund"<<endl;
   report<<init_abund<<endl;
   report<<"$alpha"<<endl;
   report<<alpha<<endl;
   report<<"$beta"<<endl;
   report<<beta<<endl;
-  report<<"$input_T"<<endl;
-  report<<input_T<<endl;
   report<<"$q_survey"<<endl;
   report<<q_survey<<endl;
   report<<"$sel_beta1"<<endl;
@@ -3584,8 +3607,8 @@ REPORT_SECTION
  //Printing 5D and 6D arrays by population for metapop example 
  /////////////////////////////////////////////////////////////////////
 
- if(npops>1) //more than one population or if one population, more than 1 region within that population
-  {
+ //if(npops>1) //more than one population or if one population, more than 1 region within that population
+//  {
   region_counter=1;
     for (int p=1;p<=npops;p++)
      {
@@ -3603,9 +3626,11 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop[p]<<endl;
         report<<"$tag_prop_final"<<p<<endl;
         report<<tag_prop_final[p]<<endl;
+        report<<"$T_terminal"<<p<<endl; 
+        report<<T_terminal[p]<<endl;
 
      }
-   }
+//   }
 
 
 
