@@ -35,6 +35,8 @@ DATA_SECTION
   ivector nfs(1,np)
   !! nfs=nfleets_survey;
 
+
+  //!!cout<<nregions<<endl;
 /////////////////////////////////////////////////////
 //OM MODEL STRUCTURE for reporting true values
 ///////////////////////////////////////////////////
@@ -1207,9 +1209,16 @@ FUNCTION get_vitals
 FUNCTION get_SPR
 
   if(ph_steep<0){
-       steep=steep_TRUE(1);//quick fix to run this code..should be the average
-       }
-       
+      if(npops==1 && sum(nregions)==1){//fix to apply function to only the panmictic
+     for (int p=1;p<=npops;p++)
+     {
+       steep=sum(steep_TRUE)/npops;//average steepness for mismatch to panmictic EM
+       }}
+     else{
+       steep=steep_TRUE; //otherwise input true steepness
+     }
+     }
+     
       for (int k=1;k<=npops;k++)
      {
       for (int n=1;n<=nages;n++)
