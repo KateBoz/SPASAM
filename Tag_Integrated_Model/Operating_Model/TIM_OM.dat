@@ -442,19 +442,19 @@
 ################################################################################################################
 
 #EM_structure - for setting up .rep
-  # ==0 the RM is panmictic
+  # ==0 the EM is panmictic
   # ==1 the EM is metamictic
   # ==2 the EM is metapop
-2
+1
 
 #npops_EM
-2
+1
 #nregions_EM
-1 1
+2
 #nfleets_EM
-1 1
+1
 #nfleets_survey_EM
-1 1
+1
 #tsurvey_EM
 0 0
 #larval_move_switch
@@ -543,16 +543,16 @@
 #recruit_randwalk_switch
  # //==0 no random walk recruitment deviations
  # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
- 0
+0
 
 #tspawn_EM(1,np_em)
-0 0
+0
 
 #return_probability_EM(1,np_em)
-1 1
+1
 
 #spawn_return_prob_EM(1,np_em)
-1 1
+1
 
 #do_tag
   #==0 do not calculate tagging data
@@ -564,19 +564,19 @@
 1
 
 #sigma_rec_em(1,np_em)
-0.4 0.4
+0.4 
 
 ################################
 ##### Phases for estimation ####
 ################################
 #ph_lmr
-1
+-1
 #ph_rec
-2
+-2
 #ph_init_abund
-1
+-1
 #ph_F
-3
+-3
 #ph_steep
 -1
 #ph_M
@@ -604,9 +604,9 @@
 #ph_T_YR
 -5
 #ph_T_CNST
-4
+-4
 #ph_dummy
--1
+1
 
 ##################################
 ### likelihood weights

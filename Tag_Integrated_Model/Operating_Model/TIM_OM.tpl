@@ -290,7 +290,7 @@ DATA_SECTION
 //NR parameters
   init_number max_Fnew //
   init_number Fnew_start
-  init_number NR_iterationp
+  init_number NR_iterations
   init_number NR_dev
   
  //###################################################################################################################################
@@ -323,12 +323,14 @@ DATA_SECTION
 //////////////////////////////////////////////////////
   init_ivector nregions_EM(1,np_em) //number of regions within a population - for metamictic regions = areas, populations = 1
   !! ivector nreg_em=nregions_EM;
+  
   init_ivector nfleets_EM(1,np_em) //number of fleets in each region by each population
   !! ivector nf_em=nfleets_EM;
+  
   init_ivector nfleets_survey_EM(1,np_em) //number of fleets in each region by each population
   !! ivector nfs_em=nfleets_survey_EM;
 
-  init_vector tsurvey_EM(1,np_em)
+  init_matrix tsurvey_EM(1,np_em,1,nreg_em) //matrix of survey times
 
   init_number larval_move_switch_EM
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
@@ -405,7 +407,7 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
 
-
+ 
   init_vector tspawn_EM(1,np_em) //timing of spawn for EM needs to match npops_EM
   init_vector return_probability_EM(1,np_em)
   init_vector spawn_return_prob_EM(1,np_em)
@@ -414,7 +416,7 @@ DATA_SECTION
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
   init_vector sigma_recruit_EM(1,np_em) //needs to match npops_EM
-
+  
   init_int ph_lmr
   init_int ph_rec
   init_int ph_abund_devs
@@ -444,7 +446,7 @@ DATA_SECTION
   init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
   init_number Tpen
   init_number Tpen2
-
+  
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs)
   init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
@@ -848,6 +850,21 @@ PARAMETER_SECTION
  matrix maturity_region(1,nps,1,nag)
  matrix maturity_population_temp(1,nag,1,nps)
  vector maturity_population(1,nag)
+ number prop_fem_tot
+ vector prop_fem_population(1,nps)
+ matrix rec_index_BM_population(1,nps,1,nyr)
+ vector rec_index_tot(1,nyr)
+ 3darray rec_index_temp(1,nps,1,nyr,1,nr)
+ matrix rec_index_temp2(1,nyr,1,nps)
+ //3darray OBS_survey_pop_bio_se_pop(1,np,1,ny,1,nfs)
+ //matrix OBS_survey_tot_bio_se_tot(1,np,1,ny,1,nfs)
+
+
+ //init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
+ //init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
+ //init_4darray OBS_catch_prop_N(1,np,1,nreg,1,ny,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+ //init_4darray tag_N(1,np,1,nreg,1,ny_rel,1,na)
+
 
   objective_function_value f
 
@@ -1969,7 +1986,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2208,7 +2225,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2312,7 +2329,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2412,7 +2429,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -3979,7 +3996,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4218,7 +4235,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4322,7 +4339,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4422,7 +4439,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -5423,10 +5440,13 @@ FUNCTION evaluate_the_objective_function
 
 
 REPORT_SECTION
+//model structure parameters
   report<<"#nages"<<endl;
   report<<nages<<endl;
   report<<"#nyrs"<<endl;
   report<<nyrs<<endl;
+
+//EM parameters for EM .dat
   report<<"#npops_EM"<<endl;
   report<<npops_EM<<endl;
   report<<"#nregions_EM"<<endl;
@@ -5435,7 +5455,7 @@ REPORT_SECTION
   report<<nfleets_EM<<endl;
   report<<"#nfleets_survey_EM"<<endl;
   report<<nfleets_survey_EM<<endl;
-  
+
   report<<"#tsurvey_EM"<<endl;
   report<<tsurvey_EM<<endl;
   report<<"#larval_move_switch"<<endl;
@@ -5543,7 +5563,9 @@ REPORT_SECTION
   report<<Tpen2<<endl;
 
  
-  //setting up aggregated values for panmictic
+  //setting up aggregated values for panmictic mismatch
+  for (int y=1;y<=nyrs;y++)
+   {
    for (int p=1;p<=npops;p++)
     {
     for (int r=1;r<=nregions(p);r++)
@@ -5573,10 +5595,30 @@ REPORT_SECTION
         maturity_region(p,a)=sum(maturity_region_temp(p,a))/nregions(p);
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a))/npops;
-         
-       }}}
 
-  ///report the correct rec prop
+
+        } //end age loop
+       
+        prop_fem_population(p)=sum(prop_fem(p))/nregions(p); //average proportions
+        rec_index_temp(p,y,r)=rec_index_BM(p,r,y);
+       } //end reg loop
+
+        rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));///nregions(p); combined by region
+        rec_index_temp2(y,p)=rec_index_BM_population(p,y);
+        rec_index_tot(y)=sum(rec_index_temp2(y));//npops; combined by populations  
+      } //end pop loop
+        
+        prop_fem_tot=sum(prop_fem_population)/npops;
+        
+          
+     } //end year loop
+
+//////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+///REPORTING THE CORRECT EM PARAMETERS///////////////
+////////////////////////////////////////////////////
+////////////////////////////////////////////////////
+
    if(EM_structure==0){
       report<<"#input_Rec_prop"<<endl;
       report<<1<<endl;
@@ -5588,7 +5630,14 @@ REPORT_SECTION
       report<<fecundity_population<<endl;
       report<<"#maturity"<<endl;
       report<<maturity_population<<endl;
-      
+      report<<"#prop_fem"<<endl; 
+      report<<prop_fem_tot<<endl;
+      report<<"#OBS_rec_index_BM"<<endl;
+      report<<rec_index_tot<<endl;
+      report<<"#OBS_survey_fleet"<<endl;
+      report<<OBS_survey_total_bio<<endl;
+      report<<"#OBS_survey_fleet_bio_se"<<endl;
+      report<<OBS_survey_fleet_bio_se<<endl;
       }
 
    if(EM_structure>0){
@@ -5602,17 +5651,18 @@ REPORT_SECTION
       report<<fecundity<<endl;
       report<<"#maturity"<<endl;
       report<<maturity<<endl;
+      report<<"#prop_fem"<<endl; 
+      report<<prop_fem<<endl;
+      report<<"#OBS_rec_index_BM"<<endl;
+      report<<rec_index_BM<<endl;
+      report<<"#OBS_survey_fleet_bio"<<endl;
+      report<<OBS_survey_fleet_bio<<endl;
+      report<<"#OBS_survey_fleet_bio_se"<<endl;
+      report<<OBS_survey_fleet_bio_se<<endl;
       }
 
-  report<<"#prop_fem"<<endl;
-  report<<prop_fem<<endl;
 
-  report<<"#OBS_rec_index_BM"<<endl;
-  report<<rec_index_BM<<endl;
-  report<<"#OBS_survey_fleet_bio"<<endl;
-  report<<OBS_survey_fleet_bio<<endl;
-  report<<"#OBS_survey_fleet_bio_se"<<endl;
-  report<<OBS_survey_fleet_bio_se<<endl;
+
   report<<"#OBS_survey_prop"<<endl;
   report<<OBS_survey_prop<<endl;
   report<<"#OBS_survey_prop_N"<<endl;
@@ -5647,13 +5697,28 @@ REPORT_SECTION
   report<<"#OBS_tag_prop_final"<<endl;
   report<<OBS_tag_prop_final<<endl;
 
+
   report<<"#init_abund"<<endl;
   report<<init_abund<<endl;
+
+
   report<<"#input_M"<<endl;
   report<<input_M<<endl;
+  
 
 
  /// TRUE VALUES
+
+//////OM parameters for .rep
+ // report<<"#npops_OM"<<endl;
+ // report<<npops<<endl;
+  //report<<"#nregions_OM"<<endl;
+  //report<<nregions<<endl;
+  //report<<"#nfleets_OM"<<endl;
+  //report<<nfleets<<endl;
+  //report<<"#nfleets_survey_OM"<<endl;
+  //report<<nfleets_survey<<endl;
+
   report<<"#q_survey"<<endl;
   report<<q_survey<<endl;
   report<<"#sel_beta1"<<endl;
