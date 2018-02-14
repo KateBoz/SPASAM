@@ -191,8 +191,11 @@ if(pop.type==3) {
 msy_results[1,]<-temp
 
 write.csv(msy_results,"true_msy_greatdana.csv")
-write.csv(out$biomass_AM_age[c(1,201),], "biomass_at_age.csv")
 
+#generalized output
+write.csv(out$biomass_AM_age[seq(nyrs,nrow(out$biomass_AM_age),nyrs)], "biomass_at_age.csv")
+
+                             
 } #end code
 
 
