@@ -4683,8 +4683,8 @@ REPORT_SECTION
 //  report<<"$biomass_BM_age"<<endl;
 //  report<<biomass_BM_age<<endl;
 
-//  report<<"$biomass_AM_age"<<endl;
-//  report<<biomass_AM_age<<endl;
+    report<<"$biomass_AM_age"<<endl;
+    report<<biomass_AM_age<<endl;
 
 //  report<<"$bio_in"<<endl;
 //  report<<bio_in<<endl;
