@@ -12,7 +12,7 @@ rm(list = ls())
 library(PBSmodelling)
 
 #set wd
-wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\NEW_SEARCH\\MENHADEN\\ThreeArea_high_residency"
+wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MY DOCS\\SPASAM STUFF_MS1\\MS1_results\\HAKE\\_Bridge5.1_update_new_move_new_apport_unfished_equal"
 
 setwd(wd)
 
@@ -128,7 +128,7 @@ invisible(shell("GreatDana_MSY_search -nohess",wait=T))
 
 #invisible(shell("Spatial_BRP",wait=T))
 
-out=PBSmodelling::readList("GreatdDana_MSY_search.rep")
+out=PBSmodelling::readList("GreatDana_MSY_search.rep")
 
 
 
@@ -191,6 +191,7 @@ if(pop.type==3) {
 msy_results[1,]<-temp
 
 write.csv(msy_results,"true_msy_greatdana.csv")
+write.csv(out$biomass_AM_age[c(1,201),], "biomass_at_age.csv")
 
 } #end code
 
