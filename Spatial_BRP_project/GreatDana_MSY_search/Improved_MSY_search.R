@@ -12,7 +12,7 @@ rm(list = ls())
 library(PBSmodelling)
 
 #set wd
-wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MY DOCS\\SPASAM STUFF_MS1\\MS1_results\\HAKE\\_Bridge5.1_update_new_move_new_apport_unfished_equal"
+wd<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MY DOCS\\SPASAM STUFF_MS1\\MS1_results\\HAKE\\Move_high_residency"
 
 setwd(wd)
 
@@ -193,7 +193,8 @@ msy_results[1,]<-temp
 write.csv(msy_results,"true_msy_greatdana.csv")
 
 #generalized output
-write.csv(out$biomass_AM_age[seq(nyrs,nrow(out$biomass_AM_age),nyrs)], "biomass_at_age.csv")
+write.csv(out$biomass_AM_age[seq(nyrs,nrow(out$biomass_AM_age),nyrs),], "biomass_at_age.csv")
+write.csv(out$abundance_at_age_AM[seq(nyrs,nrow(out$abundance_at_age_AM),nyrs),], "abund_at_age.csv")
 
                              
 } #end code
