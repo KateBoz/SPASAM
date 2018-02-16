@@ -4660,8 +4660,8 @@ REPORT_SECTION
 
 //  report<<"$abundance_at_age_BM"<<endl;
 //  report<<abundance_at_age_BM<<endl;
-//  report<<"$abundance_at_age_AM"<<endl;
-//  report<<abundance_at_age_AM<<endl;
+    report<<"$abundance_at_age_AM"<<endl;
+    report<<abundance_at_age_AM<<endl;
 //  report<<"T"<<endl;
 //  report<<T<<endl;
 //  report<<"$abundance_AM_overlap_region_all_natal"<<endl;
