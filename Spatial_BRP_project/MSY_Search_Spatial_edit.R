@@ -29,20 +29,28 @@ load_libraries()
 #need to reset the working directory to the folder with the MSY__search files
 ####################################################################
 #if not looping over the different folders
-WD<-"C:\\Users\\katelyn.bosley\\Desktop\\Hake_runs\\_Bridge4_update_movement_G&B_apport"
+WD<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MY DOCS\\SPASAM STUFF_MS1\\MS1_results\\HAKE\\BASE_Alt_Done\\MSY Results_grid"
 setwd(WD)
 WD<<-WD  
 
 #to bypass MSY_search to edit
 wd<-WD
 
-
 ###################################################################  
 #Setting up the F values to iterate over for all the runs
+
+#hake
 F.name<-"input_F"
 F.start<-0
-F.end<-2.6
+F.end<-2.3
 it<-0.025
+
+#sablefish
+#F.name<-"input_F"
+#F.start<-0
+#F.end<-2.3
+#it<-0.025
+
 
 # select the population type
 # 1 - panmictic
@@ -51,6 +59,12 @@ it<-0.025
 # 4 - natal homing
 pop.type<-2
 
+
+# select the Recruitment calculation type
+# 1 - R_ave
+# 2 - BH
+# 3 - Cyclical
+rec.type<-2
 
 ################################################################
 
@@ -104,7 +118,7 @@ names(msy_results)<-c("trial","F","biomass_total_start","biomass_total_end","yie
 # multi-area
 if(pop.type==2){
 
-N_par_reg<-6 # number of parameters with regional values # need to fix this up..
+N_par_reg<-8 # number of parameters with regional values # need to fix this up..
 N_par_pop<-9 # number of parameters for stock
 
 #picking out only the values I want.
@@ -117,19 +131,21 @@ names(msy_results)[1]<-c("perm")
 for(i in 1:nregions) 
 {
   names(msy_results)[1+i]<-paste0("F.",i)
-  names(msy_results)[2+nregions]<-"biomass_total_start"
-  names(msy_results)[3+nregions]<-"biomass_total_end"
-  names(msy_results)[3+nregions+i]<-paste("yield_region.",i,sep = "")
-  names(msy_results)[4+nregions*2]<-"yield_total"
-  names(msy_results)[4+nregions*2+i]<-paste("u_region.",i,sep = "")
-  names(msy_results)[5+nregions*3]<-"u_region_total"
-  names(msy_results)[5+(nregions*3)+i]<-paste("depletion_region.",i,sep="")
-  names(msy_results)[6+(nregions*4)]<-"depletion_total"
-  names(msy_results)[6+(nregions*4)+i]<-paste("SSB_start_region.",i,sep="")
-  names(msy_results)[7+nregions*5]<-"SSB_total_start"
-  names(msy_results)[7+(nregions*5)+i]<-paste("SSB_end_region.",i,sep="")
-  names(msy_results)[8+nregions*6]<-"SSB_total_end"
-  names(msy_results)[9+nregions*6]<-"Bratio_total"
+  names(msy_results)[1+nregions+i]<-paste("biomass_start_region.",i,sep = "")
+  names(msy_results)[2+nregions*2]<-"biomass_total_start"
+  names(msy_results)[2+nregions*2+i]<-paste("biomass_end_region.",i,sep = "")
+  names(msy_results)[3+nregions*3]<-"biomass_total_end"
+  names(msy_results)[3+nregions*3+i]<-paste("yield_region.",i,sep = "")
+  names(msy_results)[4+nregions*4]<-"yield_total"
+  names(msy_results)[4+nregions*4+i]<-paste("u_region.",i,sep = "")
+  names(msy_results)[5+nregions*5]<-"u_region_total"
+  names(msy_results)[5+(nregions*5)+i]<-paste("depletion_region.",i,sep="")
+  names(msy_results)[6+(nregions*6)]<-"depletion_total"
+  names(msy_results)[6+(nregions*6)+i]<-paste("SSB_start_region.",i,sep="")
+  names(msy_results)[7+nregions*7]<-"SSB_total_start"
+  names(msy_results)[7+(nregions*7)+i]<-paste("SSB_end_region.",i,sep="")
+  names(msy_results)[8+nregions*8]<-"SSB_total_end"
+  names(msy_results)[9+nregions*8]<-"Bratio_total"
  }
 }
 
@@ -251,7 +267,7 @@ for(i in 1:ntrial){
 
 
 
-# run paralell for other spatial structures
+# run parallel for other spatial structures
 if(pop.type>1) {
   
 #do the parallel processing over the loops
@@ -287,7 +303,9 @@ stime <- system.time({
   # multi-area  
     if(pop.type==2) {
     temp<-c(i,permutation[i,],
+            out$biomass_AM[,1],
             out$biomass_total[1],
+            out$biomass_AM[,nyrs],
             out$biomass_total[nyrs],
             out$yield_region[,nyrs],
             out$yield_total[nyrs],
@@ -357,6 +375,9 @@ write.csv(msy_results,"MSY_results.csv")
 # Getting the MSY vals
 t<-which(msy_results$yield_total==max(msy_results$yield_total))
 msy_true<-msy_results[t,]
+
+msy_true$SSB_ratio<-msy_true$SSB_total_start/msy_true$SSB_total_end
+
 write.csv(msy_true,"MSY_true.csv")
 
 #move over full report also for fun
@@ -368,8 +389,10 @@ invisible(file.copy(from=paste0(wd_results,"\\Report",t,".rep",sep=""),to=paste0
 ############################################
 
 #simple plotting function
-
+if(rec.type==1 || rec.type ==3){
 MSY_plots<-function() {
+  
+  #add some more if statements to fix the R_ave and BH _ plots...
   
   if(pop.type==1){
     msy_results<-read.csv("msy_results.csv") #read in the data again if there were changes above
@@ -378,7 +401,7 @@ MSY_plots<-function() {
     
     #SSB Ratio vs. Yield
     options(scipen = 50, digits = 4) # fix sci notation
-    plot(msy_results$Bratio_total,msy_results$yield_total, type = 'b',ylab='Yield',xlab = " Equilibruim SSB Ratio", lwd = 2)
+    plot(msy_results$SSB_ratio,msy_results$yield_total, type = 'b',ylab='Yield',xlab = " Equilibruim SSB Ratio", lwd = 2)
     
     #Harvest Rate vs Yield
     plot(msy_results$harvest_rate_total_bio,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Harvest Rate", lwd = 2)
@@ -399,6 +422,9 @@ MSY_plots<-function() {
   #SSB Ratio vs. Yield
   options(scipen = 50, digits = 4) # fix sci notation
   
+  
+  
+  
   plot(msy_results$Bratio_total,msy_results$yield_total, type = 'p',ylab='Yield',xlab = " Equilibruim SSB Ratio", lwd = 2)
   
   #Harvest Rate vs Yield
@@ -411,6 +437,56 @@ MSY_plots<-function() {
   plot(msy_results$u_region_total, msy_results$biomass_total_end,type = 'p',xlab='Harvest Rate',ylab = "Equilibrium Biomass",     lwd = 2)
   }
   
+ } 
+}
+
+
+if(rec.type==2) {
+  MSY_plots<-function() {
+    
+    #add some more if statements to fix the R_ave and BH _ plots...
+    
+    if(pop.type==1){
+      msy_results<-read.csv("msy_results.csv") #read in the data again if there were changes above
+      
+      par(mfrow = c(2,2))
+      
+      #SSB Ratio vs. Yield
+      options(scipen = 50, digits = 4) # fix sci notation
+      plot(msy_results$Bratio,msy_results$yield_total, type = 'b',ylab='Yield',xlab = " Equilibruim SSB Ratio", lwd = 2)
+      
+      #Harvest Rate vs Yield
+      plot(msy_results$harvest_rate_total_bio,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Harvest Rate", lwd = 2)
+      
+      #Equilibruim Biomass vs Yield
+      plot(msy_results$biomass_total_end,msy_results$yield_total, type = 'b',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
+      
+      #Harvest rate vs biomass
+      plot(msy_results$biomass_total_end,msy_results$harvest_rate_total_bio, type = 'b',ylab='Harvest Rate',xlab = "Equilibrium Biomass", lwd = 2)
+    }
+    
+    
+    if(pop.type>1) {
+      msy_results<-read.csv("MSY_results.csv") #read in the data again if there were changes above
+      
+      par(mfrow = c(2,2))
+      
+      #SSB Ratio vs. Yield
+      options(scipen = 50, digits = 4) # fix sci notation
+      
+      
+      plot(msy_results$Bratio_total,msy_results$yield_total, type = 'p',ylab='Yield',xlab = " Equilibruim SSB Ratio", lwd = 2)
+      
+      #Harvest Rate vs Yield
+      plot(msy_results$u_region_total,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Harvest Rate", lwd = 2)
+      
+      #Equilibruim Biomass vs Yield
+      plot(msy_results$biomass_total_end,msy_results$yield_total, type = 'p',ylab='Yield',xlab = "Equilibrium Biomass", lwd = 2)
+      
+      #Harvest rate vs biomass
+      plot(msy_results$u_region_total, msy_results$biomass_total_end,type = 'p',xlab='Harvest Rate',ylab = "Equilibrium Biomass",     lwd = 2)
+    }
+  } 
 }
 
 
