@@ -4660,8 +4660,8 @@ REPORT_SECTION
 
 //  report<<"$abundance_at_age_BM"<<endl;
 //  report<<abundance_at_age_BM<<endl;
-//  report<<"$abundance_at_age_AM"<<endl;
-//  report<<abundance_at_age_AM<<endl;
+    report<<"$abundance_at_age_AM"<<endl;
+    report<<abundance_at_age_AM<<endl;
 //  report<<"T"<<endl;
 //  report<<T<<endl;
 //  report<<"$abundance_AM_overlap_region_all_natal"<<endl;
@@ -4683,8 +4683,8 @@ REPORT_SECTION
 //  report<<"$biomass_BM_age"<<endl;
 //  report<<biomass_BM_age<<endl;
 
-//  report<<"$biomass_AM_age"<<endl;
-//  report<<biomass_AM_age<<endl;
+    report<<"$biomass_AM_age"<<endl;
+    report<<biomass_AM_age<<endl;
 
 //  report<<"$bio_in"<<endl;
 //  report<<bio_in<<endl;
