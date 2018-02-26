@@ -290,7 +290,7 @@ DATA_SECTION
 //NR parameters
   init_number max_Fnew //
   init_number Fnew_start
-  init_number NR_iterations
+  init_number NR_iterationp
   init_number NR_dev
   
  //###################################################################################################################################
@@ -323,14 +323,12 @@ DATA_SECTION
 //////////////////////////////////////////////////////
   init_ivector nregions_EM(1,np_em) //number of regions within a population - for metamictic regions = areas, populations = 1
   !! ivector nreg_em=nregions_EM;
-  
   init_ivector nfleets_EM(1,np_em) //number of fleets in each region by each population
   !! ivector nf_em=nfleets_EM;
-  
   init_ivector nfleets_survey_EM(1,np_em) //number of fleets in each region by each population
   !! ivector nfs_em=nfleets_survey_EM;
 
-  init_matrix tsurvey_EM(1,np_em,1,nreg_em) //matrix of survey times
+  init_vector tsurvey_EM(1,np_em)
 
   init_number larval_move_switch_EM
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
@@ -407,16 +405,17 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
 
- 
+
   init_vector tspawn_EM(1,np_em) //timing of spawn for EM needs to match npops_EM
   init_vector return_probability_EM(1,np_em)
   init_vector spawn_return_prob_EM(1,np_em)
-
+  
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
   init_vector sigma_recruit_EM(1,np_em) //needs to match npops_EM
-  
+
+
   init_int ph_lmr
   init_int ph_rec
   init_int ph_abund_devs
@@ -436,6 +435,7 @@ DATA_SECTION
   init_int ph_T_YR //use if want to estimate yearly T
   init_int ph_T_CNST //use if want to estimate time-invariant T
   init_int ph_dummy
+ 
   init_number wt_surv
   init_number wt_catch
   init_number wt_fish_age
@@ -452,6 +452,8 @@ DATA_SECTION
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray OBS_catch_prop_N(1,np,1,nreg,1,ny,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray tag_N(1,np,1,nreg,1,ny_rel,1,na)
+
+  
 //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -658,6 +660,16 @@ PARAMETER_SECTION
  matrix true_survey_natal_bio_overlap(1,nyr,1,nps)
  vector true_survey_total_bio_overlap(1,nyr)
  5darray true_survey_fleet_age(1,nps,1,nr,1,nyr,1,nfls,1,nag)
+ 
+ // some new data stuff to do true survey abundances for tag releases
+ 5darray true_survey_fleet_age_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 4darray true_survey_region_abundance(1,nps,1,nyr,1,nr,1,nag)
+ 4darray true_survey_region_abundance_temp(1,nps,1,nyr,1,nag,1,nr) 
+ 3darray true_survey_population_abundance(1,nyr,1,nps,1,nag)
+ 3darray true_survey_population_abundance_temp(1,nyr,1,nag,1,nps)
+ matrix true_survey_total_abundance(1,nyr,1,nag)
+ // end new tag stuff
+
  5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
  5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -833,7 +845,7 @@ PARAMETER_SECTION
 
  init_number dummy(phase_dummy)
 
- //Setting up parameters for export to mismatch EM model
+   //Setting up parameters for export to mismatch EM model
  3darray input_weight_region_temp(1,nps,1,nag,1,nr)
  matrix input_weight_region(1,nps,1,nag)
  matrix input_weight_population_temp(1,nag,1,nps)
@@ -854,16 +866,33 @@ PARAMETER_SECTION
  vector prop_fem_population(1,nps)
  matrix rec_index_BM_population(1,nps,1,nyr)
  vector rec_index_tot(1,nyr)
+ 
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
- //3darray OBS_survey_pop_bio_se_pop(1,np,1,ny,1,nfs)
- //matrix OBS_survey_tot_bio_se_tot(1,np,1,ny,1,nfs)
+ 
+ //3darray OBS_survey_pop_bio_se_pop(1,nps,1,nyr,1,nfs)
+ //matrix OBS_survey_tot_bio_se_tot(1,nps,1,nyr,1,nfs)
 
 
- //init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
- //init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
- //init_4darray OBS_catch_prop_N(1,np,1,nreg,1,ny,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
- //init_4darray tag_N(1,np,1,nreg,1,ny_rel,1,na)
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//Temporary (reorganized) 6d arrary parameters 
+//Reorganize so that region is the second dimension. 
+//////////////////////////////////////////////////////////////////////////////////////////////
+//survey index  
+ //6darray ro_true_survey_fleet_overlap_age(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
+ //6darray ro_survey_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag) 
+// 6darray ro_SIM_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
+// 6darray ro_OBS_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
+// 6darray ro_true_survey_fleet_overlap_age_bio(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
+
+
+//yield & BRP calcs 
+// 6darray ro_catch_at_age_region_fleet_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
+// 6darray ro_catch_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag)
+// 6darray ro_SIM_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
+// 6darray ro_OBS_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
 
 
   objective_function_value f
@@ -1741,6 +1770,14 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
+                         // calculate true survey abundance for tagging simulation **dh**
+                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                  true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                  true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+                   // end abundance for tagging *dh
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -1986,7 +2023,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2225,7 +2262,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2329,7 +2366,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2429,7 +2466,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -2653,6 +2690,16 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
+                  
+                   // calculate true survey abundance for tagging simulation **dh**
+                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                  true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                  true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+             // end abundance for tagging *dh
+
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -3749,6 +3796,16 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
+             // calculate true survey abundance for tagging simulation **dh**
+                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                  true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                  true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+                 // end abundance for tagging *dh
+
+     
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -3996,7 +4053,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4235,7 +4292,7 @@ FUNCTION get_abundance
                                      if(TAC(j,r,x,y)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4339,7 +4396,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4439,7 +4496,7 @@ FUNCTION get_abundance
                                      if(u(j,r,x)>0) //iterationp have trouble finding F=0 when target=0; but they work great for >0 values.  This prevents those issues
                                       {
                                         Fnew=Fnew_start;
-                                        for(int i=1;i<=NR_iterations;i++)  //newton-raphson iterationp
+                                        for(int i=1;i<=NR_iterationp;i++)  //newton-raphson iterationp
                                          {
                                           delt=Fnew*NR_dev;  // NR_dev~0.001
                                            for(int s=1;s<=nages;s++)
@@ -4882,6 +4939,9 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
+                  // calculate true survey abundance for tagging simulation **dh**
+                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                  true_survey_region_abundance(j,y,r)=sum(true_survey_fleet_age_temp(j,r,y,a));
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -5176,8 +5236,9 @@ FUNCTION get_tag_recaptures
         {
           survey_selectivity_temp(i,n,xx,1,a)=survey_selectivity(i,n,xx,a,1);
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
-        }
+         // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+          }
        }
       }
      }
@@ -5446,7 +5507,7 @@ REPORT_SECTION
   report<<"#nyrs"<<endl;
   report<<nyrs<<endl;
 
-//EM parameters for EM .dat
+//EM 
   report<<"#npops_EM"<<endl;
   report<<npops_EM<<endl;
   report<<"#nregions_EM"<<endl;
@@ -5455,7 +5516,18 @@ REPORT_SECTION
   report<<nfleets_EM<<endl;
   report<<"#nfleets_survey_EM"<<endl;
   report<<nfleets_survey_EM<<endl;
+//OM  for .rep
+  report<<"#npops_OM"<<endl;
+  report<<npops<<endl;
+  report<<"#nregions_OM"<<endl;
+  report<<nregions<<endl;
+  report<<"#nfleets_OM"<<endl;
+  report<<nfleets<<endl;
+  report<<"#nfleets_survey_OM"<<endl;
+  report<<nfleets_survey<<endl;
 
+
+//EM parameters  
   report<<"#tsurvey_EM"<<endl;
   report<<tsurvey_EM<<endl;
   report<<"#larval_move_switch"<<endl;
@@ -5697,28 +5769,13 @@ REPORT_SECTION
   report<<"#OBS_tag_prop_final"<<endl;
   report<<OBS_tag_prop_final<<endl;
 
-
-  report<<"#init_abund"<<endl;
-  report<<init_abund<<endl;
-
-
   report<<"#input_M"<<endl;
   report<<input_M<<endl;
   
-
+  report<<"#init_abund"<<endl;
+  report<<init_abund<<endl;
 
  /// TRUE VALUES
-
-//////OM parameters for .rep
- // report<<"#npops_OM"<<endl;
- // report<<npops<<endl;
-  //report<<"#nregions_OM"<<endl;
-  //report<<nregions<<endl;
-  //report<<"#nfleets_OM"<<endl;
-  //report<<nfleets<<endl;
-  //report<<"#nfleets_survey_OM"<<endl;
-  //report<<nfleets_survey<<endl;
-
   report<<"#q_survey"<<endl;
   report<<q_survey<<endl;
   report<<"#sel_beta1"<<endl;
@@ -5777,6 +5834,28 @@ REPORT_SECTION
   report<<"#debug"<<endl;
   report<<debug<<endl;
   
+ // Some stuff for looking at tag calculations 
+  /*
+  report<<"#OBS_tag_prop_final"<<endl;
+  report<<OBS_tag_prop_final(1,1,1)<<endl;
+  report<<"nt"<<endl;
+  report<<"true_survey_population_bio"<<true_survey_population_bio<<endl;
+  report<<"true_survey_region_bio"<<true_survey_region_bio<<endl;
+  report<<"abundance_total"<<abundance_total<<endl<<"abundance_population"<<abundance_population<<endl;
+  report<<"true fleet_age"<<true_survey_fleet_age<<endl;
+  report<<"survey_abundance"<<endl<<true_survey_region_abundance<<endl;
+  report<<"temp_fleet_age"<<endl<<true_survey_fleet_age_temp<<endl;
+
+
+  report<<"ntags(1,1,1,1)"<<endl<<ntags(1,1,1,9)<<endl<<"ntags_total(x)"<<endl<<ntags_total(1)<<endl;
+  report<<"true_survey_population_abundance(xx,i,a)"<<endl<<true_survey_population_abundance(1,1,9)<<endl;
+  report<<"true_survey_total_abundance(xx,a)"<<endl<<sum(true_survey_total_abundance(1))<<endl;
+  report<<"true_survey_region_abundance(i,xx,n,a)"<<endl<<true_survey_region_abundance(1,1,1,9)<<endl;
+  report<<"true_survey_population_abundance(xx,i,a)"<<endl<<true_survey_population_abundance(1,1,9)<<endl;
+  report<<"survey_selectivity(i,n,xx,a,1)"<<endl<<survey_selectivity(1,1,1,9,1)<<endl;
+  report<<"sum(survey_selectivity_temp(i,n,xx,1)))"<<endl<<sum(survey_selectivity_temp(1,1,1,1))<<endl;
+ */
+
 RUNTIME_SECTION
   convergence_criteria .001,.0001, 1.0e-4, 1.0e-7
   maximum_function_evaluations 100000
