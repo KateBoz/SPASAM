@@ -4,12 +4,15 @@
 #nyrs
 40 #10 JJD
 #npopulations
-1
-#nregions
 2
+#nregions
+1
+1
 #nfleets
 1
+1
 #nfleets_survey
+1
 1
 #model_type_switch
   #==0 do not use TAC to set F
@@ -183,18 +186,18 @@
 9
 #frac_total_abund_tagged
   #proportion of total abundance that is tagged in each release year
-0.01
-0.01
-0.01
-0.01
-0.01
+0.2
+0.2
+0.2
+0.2
+0.2
 
 #max_life_tags
   #number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
 4
 #SIM_ntag
   #the ESS used to simulate multinomial tagging dat
-500
+100
 #report_rate(1,ny_rel,1,np,1,nreg)
   #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
 1	1
@@ -226,7 +229,9 @@
 4
 #return_probability- probability of returning for move_switch==6
 1
+1
 #spawn_return_prob - probability of returning for spawning if overlap_switch==2
+1
 1
 #phase_F - must be turned on (==1) if F_type==3
 -1
@@ -234,45 +239,51 @@
 1
 #tspawn in proportion of year (0-1)
 0
+0
 #steep
 0.814
+0.814
 #R_ave - on the log scale please!
-7.35  #3.494850022 JJD
+6.656849
+6.656849
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
+0.2
 0.2
 #freq - period of ossilation for recruitment variation. Use when Rec_type ==3
 15
+15
+
 #input_T  (1,ns,1,nreg,1,na,1,ns,1,nreg)
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
-0.1	0.9
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.7 0.3
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
+0.1 0.9
 
 #input_residency_larval
 1 
@@ -331,9 +342,12 @@
 0.5
 #input_M
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
+0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 #sigma_recruit
 0.4
+0.4
 #sigma_rec_prop #error around recruit apportionment
+0.2
 0.2
 #sigma_F
 0.35
@@ -366,13 +380,15 @@
 0.5
 0.5
 #input_Rec_prop
-0.6
-0.4
+1
+1
 #Equil_ssb_apportion
 0.6
 0.4
 #init_abund
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
+0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
 #rec_index_sigma
 0.5
@@ -383,10 +399,14 @@
 #sigma_survey_overlap
 0.2
 0.2
+0.2
+0.2
 #sigma_catch
 0.05
 0.05
 #sigma_catch_overlap
+0.05
+0.05
 0.05
 0.05
 #SIM_ncatch
@@ -397,12 +417,16 @@
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
 100
+100
+100
 #SIM_nsurvey
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
 100
 #SIM_nsurvey_overlap
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+100
+100
 100
 100
 #input_TAC
@@ -445,18 +469,22 @@
   # ==0 the EM is panmictic
   # ==1 the EM is metamictic
   # ==2 the EM is metapop
-1
+2
 
 #npops_EM
-1
-#nregions_EM
 2
+#nregions_EM
+1
+1
 #nfleets_EM
+1
 1
 #nfleets_survey_EM
 1
+1
 #tsurvey_EM
-0 0
+0
+0
 #larval_move_switch
   #==0 no movement
   #==1 input movement
@@ -469,8 +497,11 @@
  # ///// Sets the type of adult movement pattern (sets age class>1 movements)
  # //==0 no movement, set T phases=-1
  # //==1 input movement, set T phases=-1
- # //>1 estimate movement among all regions/pops...set either of the movement phases to >0  
-2
+ # //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
+ # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
+ # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
+ # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+4
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -547,11 +578,14 @@
 
 #tspawn_EM(1,np_em)
 0
+0
 
 #return_probability_EM(1,np_em)
 1
+1
 
 #spawn_return_prob_EM(1,np_em)
+1
 1
 
 #do_tag
@@ -564,19 +598,19 @@
 1
 
 #sigma_rec_em(1,np_em)
-0.4 
-
+0.4
+0.4
 ################################
 ##### Phases for estimation ####
 ################################
 #ph_lmr
--1
+1
 #ph_rec
--2
+2
 #ph_init_abund
--1
+1
 #ph_F
--3
+3
 #ph_steep
 -1
 #ph_M
@@ -604,9 +638,9 @@
 #ph_T_YR
 -5
 #ph_T_CNST
--4
+4
 #ph_dummy
-1
+-1
 
 ##################################
 ### likelihood weights
@@ -622,7 +656,7 @@
 #wt_rec
 1
 #wt_tag
-0
+1
 #abund_pen_switch
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
  #//==0 no move pen in log space
@@ -646,8 +680,8 @@
 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05
 #OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) #number of survey ages
-50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
-50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50 50
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
+100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
 #OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //fishery sample size ages
 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100
@@ -677,7 +711,7 @@
 #myseed_survey
 100000
 #myseed_F
-200000
+200002
 #myseed_rec_devs
 300000
 #myseed_rec_apport
