@@ -5707,6 +5707,8 @@ REPORT_SECTION
         //prop_fem_population(p)=sum(prop_fem_temp(p))/nregions(p); //average proportions
         
         rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*abund_frac_region_year(p,r,y); //rearrange and weight for summing
+
+        //OBS_survey_fleet_bio_se_temp(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y));
         
        } //end reg loop
 
@@ -5714,7 +5716,7 @@ REPORT_SECTION
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
         rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
         
-        OBS_survey_fleet_bio_se_temp(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y))
+   
 
 
       } //end pop loop
@@ -5724,14 +5726,7 @@ REPORT_SECTION
           
      } //end year loop
 
-   report<<"abund_frac"<<endl;
-   report<<abund_frac_region<<endl;
-   report<<"abund_frac_reg_year"<<endl;
-   report<<abund_frac_region_year<<endl;
-
-   report<<OBS_survey_fleet_bio_se_temp2<<endl;
   
-
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
 ///REPORTING THE CORRECT EM PARAMETERS///////////////
