@@ -292,7 +292,7 @@ DATA_SECTION
   init_number Fnew_start
   init_number NR_iterationp
   init_number NR_dev
-  
+
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -415,7 +415,6 @@ DATA_SECTION
 
   init_vector sigma_recruit_EM(1,np_em) //needs to match npops_EM
 
-
   init_int ph_lmr
   init_int ph_rec
   init_int ph_abund_devs
@@ -446,7 +445,8 @@ DATA_SECTION
   init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
   init_number Tpen
   init_number Tpen2
-  
+
+ //error for the EM
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs)
   init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
@@ -846,6 +846,11 @@ PARAMETER_SECTION
  init_number dummy(phase_dummy)
 
    //Setting up parameters for export to mismatch EM model
+
+ 4darray abund_frac_age_region(1,nps,1,nr,1,nyr,1,nag)
+ 3darray abund_frac_region_year(1,nps,1,nr,1,nyr)
+ matrix abund_frac_region(1,nps,1,nr)
+
  3darray input_weight_region_temp(1,nps,1,nag,1,nr)
  matrix input_weight_region(1,nps,1,nag)
  matrix input_weight_population_temp(1,nag,1,nps)
@@ -862,13 +867,21 @@ PARAMETER_SECTION
  matrix maturity_region(1,nps,1,nag)
  matrix maturity_population_temp(1,nag,1,nps)
  vector maturity_population(1,nag)
- number prop_fem_tot
- vector prop_fem_population(1,nps)
- matrix rec_index_BM_population(1,nps,1,nyr)
- vector rec_index_tot(1,nyr)
  
+ number prop_fem_pan
+ matrix prop_fem_temp(1,nps,1,nr)
+  //vector prop_fem_population(1,nps)
+
+ matrix rec_index_BM_population(1,nps,1,nyr)
+ vector rec_index_pan(1,nyr)
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
+
+
+ 4darray OBS_survey_fleet_bio_se_temp(1,nps,1,nr,1,nyr,1,nfl)
+ 3darray OBS_survey_fleet_bio_se_temp2(1,nps,1,nr,1,nyr)
+
+
  
  //3darray OBS_survey_pop_bio_se_pop(1,nps,1,nyr,1,nfs)
  //matrix OBS_survey_tot_bio_se_tot(1,nps,1,nyr,1,nfs)
@@ -5017,7 +5030,12 @@ FUNCTION get_abundance
      }
     }
    }
-  } 
+  }
+
+
+    
+
+
 FUNCTION get_rand_survey_CAA_prop
  random_number_generator myrand_survey_age(myseed_survey_age);
  
@@ -5642,48 +5660,77 @@ REPORT_SECTION
     {
     for (int r=1;r<=nregions(p);r++)
       {
-      for(int a=1;a<=nages;a++)
-       {
+      for (int z=1;z<=nfleets(p);z++)
+        {
+         for(int a=1;a<=nages;a++)
+          {
+
+        //calculate the abundance fraction by region/population
+        abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
+        abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
+        abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
+
        //aggregating weight at age
-        input_weight_region_temp(p,a,r)=input_weight(p,r,a);//sum by region
-        input_weight_region(p,a)=sum(input_weight_region_temp(p,a))/nregions(p);
+        input_weight_region_temp(p,a,r)=input_weight(p,r,a)*abund_frac_region(p,r);//rearrange to summarize and weight for output
+        input_weight_region(p,a)=sum(input_weight_region_temp(p,a));
         input_weight_population_temp(a,p)=input_weight_region(p,a);
-        input_weight_population(a)=sum(input_weight_population_temp(a))/npops;
+        input_weight_population(a)=sum(input_weight_population_temp(a));
 
         //aggregating catch weight at age
-        input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a);//sum by region
-        input_catch_weight_region(p,a)=sum(input_catch_weight_region_temp(p,a))/nregions(p);
+        input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*abund_frac_region(p,r);//sum by region
+        input_catch_weight_region(p,a)=sum(input_catch_weight_region_temp(p,a));
         input_catch_weight_population_temp(a,p)=input_catch_weight_region(p,a);
-        input_catch_weight_population(a)=sum(input_catch_weight_population_temp(a))/npops;
+        input_catch_weight_population(a)=sum(input_catch_weight_population_temp(a));
 
         //aggregating fecundity
-        fecundity_region_temp(p,a,r)=fecundity(p,r,a);//sum by region
-        fecundity_region(p,a)=sum(fecundity_region_temp(p,a))/nregions(p);
+        fecundity_region_temp(p,a,r)=fecundity(p,r,a)*abund_frac_region(p,r);//sum by region
+        fecundity_region(p,a)=sum(fecundity_region_temp(p,a));
         fecundity_population_temp(a,p)=fecundity_region(p,a);
-        fecundity_population(a)=sum(fecundity_population_temp(a))/npops;
+        fecundity_population(a)=sum(fecundity_population_temp(a));
 
         //aggregating maturity
-        maturity_region_temp(p,a,r)=maturity(p,r,a);//sum by region
-        maturity_region(p,a)=sum(maturity_region_temp(p,a))/nregions(p);
+        maturity_region_temp(p,a,r)=maturity(p,r,a)*abund_frac_region(p,r);//sum by region
+        maturity_region(p,a)=sum(maturity_region_temp(p,a));
         maturity_population_temp(a,p)=maturity_region(p,a);
-        maturity_population(a)=sum(maturity_population_temp(a))/npops;
+        maturity_population(a)=sum(maturity_population_temp(a));
 
 
         } //end age loop
-       
-        prop_fem_population(p)=sum(prop_fem(p))/nregions(p); //average proportions
-        rec_index_temp(p,y,r)=rec_index_BM(p,r,y);
+
+       OBS_survey_fleet_bio_se_temp(p,r,y,z)=OBS_survey_fleet_bio_se(p,r,y,z)*abund_frac_region_year(p,r,y);
+       OBS_survey_fleet_bio_se_temp2(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y));
+ 
+        } //end fleets loop
+
+        prop_fem_temp(p,r)= prop_fem(p,r)*abund_frac_region(p,r); 
+        prop_fem_pan=sum(prop_fem_temp);
+        //prop_fem_population(p)=sum(prop_fem_temp(p))/nregions(p); //average proportions
+        
+        rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*abund_frac_region_year(p,r,y); //rearrange and weight for summing
+        
        } //end reg loop
 
-        rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));///nregions(p); combined by region
+        rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));// combined by region
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
-        rec_index_tot(y)=sum(rec_index_temp2(y));//npops; combined by populations  
-      } //end pop loop
+        rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
         
-        prop_fem_tot=sum(prop_fem_population)/npops;
+        OBS_survey_fleet_bio_se_temp(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y))
+
+
+      } //end pop loop
+
+
         
           
      } //end year loop
+
+   report<<"abund_frac"<<endl;
+   report<<abund_frac_region<<endl;
+   report<<"abund_frac_reg_year"<<endl;
+   report<<abund_frac_region_year<<endl;
+
+   report<<OBS_survey_fleet_bio_se_temp2<<endl;
+  
 
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
@@ -5703,9 +5750,9 @@ REPORT_SECTION
       report<<"#maturity"<<endl;
       report<<maturity_population<<endl;
       report<<"#prop_fem"<<endl; 
-      report<<prop_fem_tot<<endl;
+      report<<prop_fem_pan<<endl;
       report<<"#OBS_rec_index_BM"<<endl;
-      report<<rec_index_tot<<endl;
+      report<<rec_index_pan<<endl;
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
       report<<"#OBS_survey_fleet_bio_se"<<endl;
