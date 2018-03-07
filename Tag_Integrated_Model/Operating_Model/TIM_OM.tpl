@@ -293,6 +293,10 @@ DATA_SECTION
   init_number NR_iterationp
   init_number NR_dev
 
+
+
+
+
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -413,7 +417,11 @@ DATA_SECTION
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
-  init_vector sigma_recruit_EM(1,np_em) //needs to match npops_EM
+  init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
+  init_vector sigma_recruit_EM(1,np_em) 
+  init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
+  init_matrix input_M_EM(1,np_em,1,na)
+  init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
   init_int ph_lmr
   init_int ph_rec
@@ -447,12 +455,12 @@ DATA_SECTION
   init_number Tpen2
 
  //error for the EM
-  init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs)
-  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)
-  init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
-  init_4darray OBS_catch_prop_N(1,np,1,nreg,1,ny,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
-  init_4darray tag_N(1,np,1,nreg,1,ny_rel,1,na)
-
+  init_4darray OBS_survey_fleet_bio_se_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em)
+  init_4darray OBS_yield_fleet_se_EM(1,np_em,1,nreg_em,1,ny,1,nf_em)
+  init_4darray OBS_survey_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_4darray OBS_catch_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nf_em) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_4darray tag_N_EM(1,np_em,1,nreg_em,1,ny_rel,1,na)
+  //summing tag prop array
   
 //###################################################################################################################################
  //###################################################################################################################################
@@ -870,24 +878,45 @@ PARAMETER_SECTION
  
  number prop_fem_pan
  matrix prop_fem_temp(1,nps,1,nr)
-  //vector prop_fem_population(1,nps)
 
  matrix rec_index_BM_population(1,nps,1,nyr)
  vector rec_index_pan(1,nyr)
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
 
+//weighted average of age comps
+ 5darray OBS_survey_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 4darray OBS_survey_prop_temp2(1,nps,1,nr,1,nyr,1,nag)
+ 4darray OBS_survey_prop_temp3(1,nps,1,nr,1,nyr,1,nag)
+ 4darray OBS_survey_prop_temp4(1,nps,1,nyr,1,nag,1,nr)
+ 3darray OBS_survey_prop_population(1,nps,1,nyr,1,nag)
+ 3darray OBS_survey_prop_pan_temp(1,nyr,1,nag,1,nps)
+ matrix  OBS_survey_prop_pan(1,nyr,1,nag)
 
- 4darray OBS_survey_fleet_bio_se_temp(1,nps,1,nr,1,nyr,1,nfl)
- 3darray OBS_survey_fleet_bio_se_temp2(1,nps,1,nr,1,nyr)
+ 5darray OBS_catch_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
+ 4darray OBS_catch_prop_temp2(1,nps,1,nr,1,nyr,1,nag)
+ 4darray OBS_catch_prop_temp3(1,nps,1,nr,1,nyr,1,nag)
+ 4darray OBS_catch_prop_temp4(1,nps,1,nyr,1,nag,1,nr)
+ 3darray OBS_catch_prop_population(1,nps,1,nyr,1,nag)
+ 3darray OBS_catch_prop_pan_temp(1,nyr,1,nag,1,nps)
+ matrix  OBS_catch_prop_pan(1,nyr,1,nag)
 
 
- 
- //3darray OBS_survey_pop_bio_se_pop(1,nps,1,nyr,1,nfs)
- //matrix OBS_survey_tot_bio_se_tot(1,nps,1,nyr,1,nfs)
+//summing ntags
+ 4darray ntags_temp1(1,nps,1,nyr_rel,1,nag,1,nr)
+ 3darray ntags_population(1,nps,1,nyr_rel,1,nag)
+ 3darray ntags_pan_temp(1,nyr_rel,1,nag,1,nps)
+ matrix  ntags_pan(1,nyr_rel,1,nag)
 
 
-
+//summing OBS tag prop 
+5darray OBS_tag_prop_population_temp(1,nps,1,nyr_rel,1,nag,1,nt,1,nr)
+4darray OBS_tag_prop_population_temp2(1,nps,1,nyr_rel,1,nag,1,nt)
+4darray OBS_tag_prop_population_final(1,nps,1,nyr_rel,1,nag,1,nt)
+4darray OBS_tag_prop_pan_temp(1,nyr_rel,1,nag,1,nt,1,nps)
+3darray OBS_tag_prop_pan_temp2(1,nyr_rel,1,nag,1,nt)
+3darray OBS_tag_prop_pan_final_temp(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
+3darray OBS_tag_prop_pan_final(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //Temporary (reorganized) 6d arrary parameters 
@@ -5004,10 +5033,10 @@ FUNCTION get_abundance
                    SSB_population_overlap(p,j,y)=sum(SSB_population_temp_overlap(p,j,y));
                    SSB_natal_overlap_temp(p,y,j)=SSB_population_overlap(p,j,y);
                    SSB_natal_overlap(p,y)=sum(SSB_natal_overlap_temp(p,y));
-                Bratio_population_overlap(p,j,y)=SSB_population_overlap(p,j,y)/SSB_zero(p);
-                Bratio_natal_overlap(p,y)=SSB_natal_overlap(p,y)/SSB_zero(p);
-                Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
-                Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
+                   Bratio_population_overlap(p,j,y)=SSB_population_overlap(p,j,y)/SSB_zero(p);
+                   Bratio_natal_overlap(p,y)=SSB_natal_overlap(p,y)/SSB_zero(p);
+                   Bratio_population(j,y)=SSB_population(j,y)/SSB_zero(j);
+                   Bratio_total(y)=SSB_total(y)/sum(SSB_zero);
                     }
                    }
                   }
@@ -5026,11 +5055,11 @@ FUNCTION get_abundance
             for (int n=1;n<=nregions(k);n++)
              {
               T_year(j,r,y,k,n)=T(j,r,y,4,k,n);            
-      } 
-     }
-    }
-   }
-  }
+              } 
+             }
+            }
+           }
+          }
 
 
     
@@ -5230,6 +5259,9 @@ FUNCTION get_rand_CAA_prop
      }
     }
    }
+
+
+
 FUNCTION get_tag_recaptures
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
@@ -5256,7 +5288,16 @@ FUNCTION get_tag_recaptures
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
          // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
           ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
-          }
+
+
+ // for the EM .dat
+        ntags_temp1(i,x,a,n)=ntags(i,n,x,a);
+        ntags_population(i,x,a)=sum(ntags_temp1(i,x,a));
+        ntags_pan_temp(x,a,i)=ntags_population(i,x,a);
+        ntags_pan(x,a)=sum(ntags_pan_temp(x,a));
+
+
+        }
        }
       }
      }
@@ -5493,12 +5534,27 @@ FUNCTION get_observed_tag_recaptures
                {                   
                 OBS_tag_prop_final(i,n,x,a,s)=0; 
                }
-          }
-        }
-       }
-      }
-     }
- }
+           //summarize by population for panmictic EM
+             OBS_tag_prop_population_temp(i,x,a,s,n)=SIM_tag_prop(i,n,x,a,s);
+             OBS_tag_prop_population_temp2(i,x,a,s)=sum(OBS_tag_prop_population_temp(i,x,a,s));
+             OBS_tag_prop_population_final(i,x,a,s)=OBS_tag_prop_population_temp2(i,x,a,s)/(nregions(i)*SIM_ntag);
+             OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
+             OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
+
+                   for (int k=1;k<=max_life_tags+1;k++)
+                      {
+                       OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
+                       OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
+                      //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
+                       OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+
 FUNCTION evaluate_the_objective_function
    f=0.0;
 
@@ -5517,7 +5573,7 @@ FUNCTION evaluate_the_objective_function
                }
               }
 
-
+ 
 REPORT_SECTION
 //model structure parameters
   report<<"#nages"<<endl;
@@ -5694,24 +5750,38 @@ REPORT_SECTION
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a));
 
+        //aggregating the age comps
+
+        //survey
+        OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
+        OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
+        OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
+        OBS_survey_prop_temp4(p,y,a,r)=OBS_survey_prop_temp3(p,r,y,a);
+        OBS_survey_prop_population(p,y,a)=sum(OBS_survey_prop_temp4(p,y,a));
+        OBS_survey_prop_pan_temp(y,a,p)= OBS_survey_prop_population(p,y,a);
+        OBS_survey_prop_pan(y,a)=sum(OBS_survey_prop_pan_temp(y,a));
+
+        //catch
+        OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
+        OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
+        OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
+        OBS_catch_prop_temp4(p,y,a,r)= OBS_catch_prop_temp3(p,r,y,a);
+        OBS_catch_prop_population(p,y,a)=sum(OBS_catch_prop_temp4(p,y,a));
+        OBS_catch_prop_pan_temp(y,a,p)= OBS_catch_prop_population(p,y,a);
+        OBS_catch_prop_pan(y,a)=sum(OBS_catch_prop_pan_temp(y,a));
+
 
         } //end age loop
-
-       OBS_survey_fleet_bio_se_temp(p,r,y,z)=OBS_survey_fleet_bio_se(p,r,y,z)*abund_frac_region_year(p,r,y);
-       OBS_survey_fleet_bio_se_temp2(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y));
- 
         } //end fleets loop
 
+        //proportion female
         prop_fem_temp(p,r)= prop_fem(p,r)*abund_frac_region(p,r); 
         prop_fem_pan=sum(prop_fem_temp);
-        //prop_fem_population(p)=sum(prop_fem_temp(p))/nregions(p); //average proportions
-        
         rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*abund_frac_region_year(p,r,y); //rearrange and weight for summing
 
-        //OBS_survey_fleet_bio_se_temp(p,r,y)=sum(OBS_survey_fleet_bio_se_temp(p,r,y));
-        
        } //end reg loop
 
+       //rec index
         rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));// combined by region
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
         rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
@@ -5719,21 +5789,17 @@ REPORT_SECTION
    
 
 
-      } //end pop loop
-
-
-        
-          
+      } //end pop loop          
      } //end year loop
 
-  
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
 ///REPORTING THE CORRECT EM PARAMETERS///////////////
 ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 
-   if(EM_structure==0){
+//panmictic EM inputs
+   if(EM_structure==0){ 
       report<<"#input_Rec_prop"<<endl;
       report<<1<<endl;
       report<<"#input_weight"<<endl;
@@ -5750,10 +5816,24 @@ REPORT_SECTION
       report<<rec_index_pan<<endl;
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
-      report<<"#OBS_survey_fleet_bio_se"<<endl;
-      report<<OBS_survey_fleet_bio_se<<endl;
+      report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
+      report<<OBS_survey_fleet_bio_se_EM<<endl;
+      report<<"#OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop_pan<<endl;
+      report<<"#OBS_survey_prop_N_EM"<<endl;
+      report<<OBS_survey_prop_N_EM<<endl;
+      report<<"#OBS_yield_fleet"<<endl;
+      report<<OBS_yield_total<<endl;
+      report<<"#OBS_yield_fleet_se_EM"<<endl;
+      report<<OBS_yield_fleet_se_EM<<endl;    
+      report<<"#OBS_catch_prop"<<endl;
+      report<<OBS_catch_prop_pan<<endl; 
+      report<<"#OBS_catch_prop_N_EM"<<endl;
+      report<<OBS_catch_prop_N_EM<<endl;
       }
 
+
+//spatial EM inputs
    if(EM_structure>0){
       report<<"#input_Rec_prop"<<endl;
       report<<input_Rec_prop<<endl;
@@ -5771,53 +5851,75 @@ REPORT_SECTION
       report<<rec_index_BM<<endl;
       report<<"#OBS_survey_fleet_bio"<<endl;
       report<<OBS_survey_fleet_bio<<endl;
-      report<<"#OBS_survey_fleet_bio_se"<<endl;
-      report<<OBS_survey_fleet_bio_se<<endl;
+      report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
+      report<<OBS_survey_fleet_bio_se_EM<<endl;
+      report<<"#OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop<<endl;
+      report<<"#OBS_survey_prop_N_EM"<<endl;
+      report<<OBS_survey_prop_N_EM<<endl;
+      report<<"#OBS_yield_fleet"<<endl;
+      report<<OBS_yield_fleet<<endl;
+      report<<"#OBS_yield_fleet_se_EM"<<endl;
+      report<<OBS_yield_fleet_se_EM<<endl;
+      report<<"#OBS_catch_prop"<<endl;
+      report<<OBS_catch_prop<<endl;
+      report<<"#OBS_catch_prop_N_EM"<<endl;
+      report<<OBS_catch_prop_N_EM<<endl;
       }
-
-
-
-  report<<"#OBS_survey_prop"<<endl;
-  report<<OBS_survey_prop<<endl;
-  report<<"#OBS_survey_prop_N"<<endl;
-  report<<OBS_survey_prop_N<<endl;
-
-  report<<"#OBS_yield_fleet"<<endl;
-  report<<OBS_yield_fleet<<endl;
-  report<<"#OBS_yield_fleet_se"<<endl;
-  report<<OBS_yield_fleet_se<<endl;
-  report<<"#OBS_catch_prop"<<endl;
-  report<<OBS_catch_prop<<endl;
-  report<<"#OBS_catch_prop_N"<<endl;
-  report<<OBS_catch_prop_N<<endl;
-
+      
+//////////////////////////////////
 /// TAG INFORMATION
+/////////////////////////////////
   report<<"#nyrs_release"<<endl;
   report<<nyrs_release<<endl;
   report<<"#years_of_tag_releases "<<endl;
   report<<yrs_releases<<endl;
   report<<"#max_life_tags"<<endl;
   report<<max_life_tags<<endl;
-  report<<"#report_rate"<<endl;
-  report<<report_rate<<endl;
+  report<<"#report_rate_EM"<<endl;
+  report<<report_rate_EM<<endl;
+
+//ntags
+ if(EM_structure==0){ 
+  report<<"#ntags"<<endl;
+  report<<ntags_pan<<endl;
+  }
+  
+ if(EM_structure>0){ 
   report<<"#ntags"<<endl;
   report<<ntags<<endl;
+  }
+
   report<<"#ntags_total"<<endl;
   report<<ntags_total<<endl;
-  report<<"#tag_N"<<endl;
-  report<<tag_N<<endl;
-  report<<"#input_T"<<endl;
-  report<<input_T<<endl;  
+  report<<"#tag_N_EM"<<endl;
+  report<<tag_N_EM<<endl;
+  report<<"#input_T_EM"<<endl;
+  report<<input_T_EM<<endl;
+
+
+ if(EM_structure==0){
+  report<<"#OBS_tag_prop_pan_final"<<endl;
+  report<<OBS_tag_prop_pan_final<<endl;
+ }
+
+ if(EM_structure>0){ 
   report<<"#OBS_tag_prop_final"<<endl;
   report<<OBS_tag_prop_final<<endl;
+  }
 
-  report<<"#input_M"<<endl;
+//Additional inputs for EM
+  report<<"#input_M_EM"<<endl;
+  report<<input_M_EM<<endl;
+  report<<"#init_abund_EM"<<endl;
+  report<<init_abund_EM<<endl;
+
+
+/// TRUE VALUES FROM OM
+  report<<"#input_M_TRUE"<<endl;
   report<<input_M<<endl;
-  
-  report<<"#init_abund"<<endl;
+  report<<"#init_abund_TRUE"<<endl;
   report<<init_abund<<endl;
-
- /// TRUE VALUES
   report<<"#q_survey"<<endl;
   report<<q_survey<<endl;
   report<<"#sel_beta1"<<endl;
