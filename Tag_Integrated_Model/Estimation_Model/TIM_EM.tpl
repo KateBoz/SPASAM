@@ -147,10 +147,7 @@ DATA_SECTION
   init_int do_tag
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
   init_vector sigma_recruit(1,np)
-
-  !!cout<<sigma_recruit<<endl;
   
-
 ///////////////////////////////////////////////////////////////////////////////
 ////////READ IN THE SPECS  //////////////////////////////////
 //////////////////////////////////
@@ -262,57 +259,60 @@ DATA_SECTION
   !!    xy(x)=min(max_life_tags,nyrs-xx+1);
   !!    nt(x)=xy(x)*sum(nregions)+1;
   !!   }
-  !! cout<<"nt"<<endl<<nt<<endl;
+  //!! cout<<"nt"<<endl<<nt<<endl;
    init_5darray OBS_tag_prop_final(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
    matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
    3darray input_residency(1,np,1,nreg,1,na) //
 // probably need to calculate quantity below  or omit *dh
    vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each 
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
-
+  
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
-   init_4darray init_abund_TRUE(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
-   
+   init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+
+
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
- // TRUE VALUES
+ // TRUE VALUES IN OM DIMENSIONS
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
-  init_3darray q_survey_TRUE(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
-  init_3darray sel_beta1_TRUE(1,np,1,nreg,1,nf)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta2_TRUE(1,np,1,nreg,1,nf)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta3_TRUE(1,np,1,nreg,1,nf)  //selectivity slope parameter 2 for double selectivity
-  init_3darray sel_beta4_TRUE(1,np,1,nreg,1,nf)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_3darray sel_beta1_survey_TRUE(1,np,1,nreg,1,nfs)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta2_survey_TRUE(1,np,1,nreg,1,nfs)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  init_3darray sel_beta3_survey_TRUE(1,np,1,nreg,1,nfs)  //selectivity slope parameter 2 for double selectivity
-  init_3darray sel_beta4_survey_TRUE(1,np,1,nreg,1,nfs)  //selectivity inflection parameter 2 for double logistic selectivity
-  init_vector steep_TRUE(1,np) //B-H steepness
-  init_vector R_ave_TRUE(1,np) //Average Recruitment or R0 for B-H S-R curve
-  init_vector SSB_zero_TRUE(1,np)
-  init_matrix rec_devs_TRUE(1,np,1,ny)
-  init_3darray Rec_Prop_TRUE(1,np,1,nreg,1,ny)
-  init_3darray recruits_BM_TRUE(1,np,1,nreg,1,ny)
-  init_4darray F_TRUE(1,np,1,nreg,1,ny,1,na)
-  init_4darray F_year_TRUE(1,np,1,nreg,1,ny,1,nfs)
-  init_3darray biomass_AM_TRUE(1,np,1,nreg,1,ny)
-  init_matrix biomass_population_TRUE(1,np,1,ny)
-  init_3darray harvest_rate_region_bio_TRUE(1,np,1,nreg,1,ny)
-  init_3darray depletion_region_TRUE(1,np,1,nreg,1,ny)
-  init_3darray SSB_region_TRUE(1,np,1,nreg,1,ny)
-  init_matrix Bratio_population_TRUE(1,np,1,ny)
-  init_5darray T_year_TRUE(1,np,1,nreg,1,ny,1,np,1,nreg)
-  init_4darray selectivity_age_TRUE(1,np,1,nreg,1,na,1,nf)
-  init_4darray survey_selectivity_age_TRUE(1,np,1,nreg,1,na,1,nfs)
+  init_matrix input_M_TRUE(1,np_om,1,na); // input for now, if we estimate we will want to limit how many Ms
+  init_4darray init_abund_TRUE(1,np_om,1,np_om,1,nreg_om,1,na);  //input true initial abundance; just used for reporting
+  init_3darray q_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om) // catchability for different surveys(fleets)operating in different areas
+  init_3darray sel_beta1_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_TRUE(1,np_om,1,nreg_om,1,nf_om)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_TRUE(1,np_om,1,nreg_om,1,nf_om)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_3darray sel_beta1_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta2_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  init_3darray sel_beta3_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)  //selectivity slope parameter 2 for double selectivity
+  init_3darray sel_beta4_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om)  //selectivity inflection parameter 2 for double logistic selectivity
+  init_vector steep_TRUE(1,np_om) //B-H steepness
+  init_vector R_ave_TRUE(1,np_om) //Average Recruitment or R0 for B-H S-R curve
+  init_vector SSB_zero_TRUE(1,np_om)
+  init_matrix rec_devs_TRUE(1,np_om,1,ny)
+  init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
+  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
+  init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix biomass_population_TRUE(1,np_om,1,ny)
+  init_3darray harvest_rate_region_bio_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray depletion_region_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix Bratio_population_TRUE(1,np_om,1,ny)
+  init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
+  init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
+  init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
 
 // end of file marker
    init_int debug;
-  
+
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -366,6 +366,9 @@ DATA_SECTION
  !! cout << "input read" << endl;
 
  !! cout << "end setup of containers" << endl;
+
+
+  !!exit(54);
 
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
