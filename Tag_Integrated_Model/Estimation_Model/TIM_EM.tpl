@@ -368,7 +368,7 @@ DATA_SECTION
  !! cout << "end setup of containers" << endl;
 
 
-  !!exit(54);
+ // !!exit(54);
 
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
