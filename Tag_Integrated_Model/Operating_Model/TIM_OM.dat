@@ -1,18 +1,23 @@
-##########PARAMETERS FOR HAKE-LIKE TEST###########
+####TIM TESTS#####
+
+#OM_structure
+#   // ==0 the OM is panmictic
+#   // ==1 the OM is metamictic
+#   // ==2 the OM is metapop
+#   // ==3 the OM is natal homing - not there yet...
+1
+
 #nages
 15
 #nyrs
 40 #10 JJD
 #npopulations
-2
+1
 #nregions
-1
-1
+2
 #nfleets
 1
-1
 #nfleets_survey
-1
 1
 #model_type_switch
   #==0 do not use TAC to set F
@@ -229,9 +234,7 @@
 4
 #return_probability- probability of returning for move_switch==6
 1
-1
 #spawn_return_prob - probability of returning for spawning if overlap_switch==2
-1
 1
 #phase_F - must be turned on (==1) if F_type==3
 -1
@@ -239,18 +242,13 @@
 1
 #tspawn in proportion of year (0-1)
 0
-0
 #steep
-0.814
 0.814
 #R_ave - on the log scale please!
 6.656849
-6.656849
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
 0.2
-0.2
 #freq - period of ossilation for recruitment variation. Use when Rec_type ==3
-15
 15
 
 #input_T (1,np,1,nreg,1,na,1,np,1,nreg)
@@ -342,12 +340,9 @@
 0.5
 #input_M
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
-0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 #sigma_recruit
 0.4
-0.4
 #sigma_rec_prop #error around recruit apportionment
-0.2
 0.2
 #sigma_F
 0.35
@@ -380,15 +375,13 @@
 0.6
 0.4
 #input_Rec_prop
-1
-1
+0.6
+0.4
 #Equil_ssb_apportion
 0.6
 0.4
 #init_abund
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
-0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
 #rec_index_sigma
 0.005
@@ -399,14 +392,10 @@
 #sigma_survey_overlap
 0.002
 0.002
-0.002
-0.002
 #sigma_catch
 0.0005
 0.0005
 #sigma_catch_overlap
-0.0005
-0.0005
 0.0005
 0.0005
 #SIM_ncatch
@@ -417,8 +406,6 @@
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 1000
 1000
-1000
-1000
 #SIM_nsurvey
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 1000
@@ -427,8 +414,7 @@
 #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 1000
 1000
-1000
-1000
+
 #input_TAC
  #TAC that are matching if model_type_switch==1
 ################################################################################################################
@@ -469,18 +455,15 @@
   # ==0 the EM is panmictic
   # ==1 the EM is metamictic
   # ==2 the EM is metapop
-2
+1
 
 #npops_EM
-2
+1
 #nregions_EM
-1
-1
+2
 #nfleets_EM
 1
-1
 #nfleets_survey_EM
-1
 1
 #tsurvey_EM
 0
@@ -578,14 +561,11 @@
 
 #tspawn_EM(1,np_em)
 0
-0
 
 #return_probability_EM(1,np_em)
 1
-1
 
 #spawn_return_prob_EM(1,np_em)
-1
 1
 
 #do_tag
@@ -631,17 +611,12 @@
 
 #sigma_rec_em(1,np_em)
 0.4
-0.4
 
 #init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
-0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
 
-
 #input_M_EM(1,np_em,1,na)
-0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 
 #report_rate(1,ny_rel,1,np_em,1,nreg_em)

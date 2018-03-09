@@ -21,6 +21,12 @@ DATA_SECTION
 ////////////////////////////////////////////////////////////////////////////////////
 /////MODEL STRUCTURE INPUTS/////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
+ init_number OM_structure //
+  // ==0 the OM is panmictic
+  // ==1 the OM is metamictic
+  // ==2 the OM is metapop
+  // ==3 the OM is natal homing - not there yet...
+
   init_int nages //number of ages
   init_int nyrs //number of years for simulation
   init_int npops //number of populations
@@ -202,7 +208,8 @@ DATA_SECTION
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
   init_number SIM_ntag //the ESS used to simulate multinomial tagging dat
   init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
-  
+
+
 ///////////
 ///////Density-dependent movement parameters
   init_matrix input_Bstar(1,np,1,nreg) //used with move_switch==8
@@ -242,6 +249,7 @@ DATA_SECTION
   init_vector sigma_recruit(1,np)
   init_vector sigma_rec_prop(1,np) //error around recruit apportionment
   init_3darray sigma_F(1,np,1,nreg,1,nf)
+
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -273,7 +281,7 @@ DATA_SECTION
   init_3darray SIM_ncatch(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray SIM_ncatch_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_3darray SIM_nsurvey(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
-  init_4darray SIM_nsurvey_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_4darray SIM_nsurvey_overlap(1,np,1,np,1,nreg,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
 
 //################################################################################################################
 //################################################################################################################
@@ -332,7 +340,7 @@ DATA_SECTION
   init_ivector nfleets_survey_EM(1,np_em) //number of fleets in each region by each population
   !! ivector nfs_em=nfleets_survey_EM;
 
-  init_vector tsurvey_EM(1,np_em)
+  init_matrix tsurvey_EM(1,np_em,1,nreg_em)
 
   init_number larval_move_switch_EM
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
@@ -422,6 +430,10 @@ DATA_SECTION
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
+
+  //!!cout<<input_T_EM<<endl;
+  //!!exit(43);
+
 
   init_int ph_lmr
   init_int ph_rec
@@ -5575,141 +5587,9 @@ FUNCTION evaluate_the_objective_function
 
  
 REPORT_SECTION
-//model structure parameters
-  report<<"#nages"<<endl;
-  report<<nages<<endl;
-  report<<"#nyrs"<<endl;
-  report<<nyrs<<endl;
 
-//EM 
-  report<<"#npops_EM"<<endl;
-  report<<npops_EM<<endl;
-  report<<"#nregions_EM"<<endl;
-  report<<nregions_EM<<endl;
-  report<<"#nfleets_EM"<<endl;
-  report<<nfleets_EM<<endl;
-  report<<"#nfleets_survey_EM"<<endl;
-  report<<nfleets_survey_EM<<endl;
-//OM  for .rep
-  report<<"#npops_OM"<<endl;
-  report<<npops<<endl;
-  report<<"#nregions_OM"<<endl;
-  report<<nregions<<endl;
-  report<<"#nfleets_OM"<<endl;
-  report<<nfleets<<endl;
-  report<<"#nfleets_survey_OM"<<endl;
-  report<<nfleets_survey<<endl;
-
-
-//EM parameters  
-  report<<"#tsurvey_EM"<<endl;
-  report<<tsurvey_EM<<endl;
-  report<<"#larval_move_switch"<<endl;
-  report<<larval_move_switch_EM<<endl;
-  report<<"#move_switch"<<endl;
-  report<<move_switch_EM<<endl;
-  report<<"#natal_homing_switch"<<endl;
-  report<<natal_homing_switch_EM<<endl;
-  report<<"#spawn_return_switch"<<endl;
-  report<<spawn_return_switch_EM<<endl;
-  report<<"#select_switch"<<endl;
-  report<<select_switch_EM<<endl;
-  report<<"#select_switch_survey"<<endl;
-  report<<select_switch_survey<<endl;
-  report<<"#maturity_switch_equil"<<endl;
-  report<<maturity_switch_equil_EM<<endl;
-  report<<"#SSB_type"<<endl;
-  report<<SSB_type_EM<<endl;
-  report<<"#Rec_type"<<endl;
-  report<<Rec_type_EM<<endl;
-  report<<"#apportionment_type"<<endl;
-  report<<apportionment_type_EM<<endl;
-  report<<"#use_stock_comp_info_survey"<<endl;
-  report<<use_stock_comp_info_survey_EM<<endl;
-  report<<"#use_stock_comp_info_catch"<<endl;
-  report<<use_stock_comp_info_catch_EM<<endl;
-  report<<"#F_switch"<<endl;
-  report<<F_switch_EM<<endl;
-  report<<"#recruit_devs_switch"<<endl;
-  report<<recruit_devs_switch_EM<<endl;
-  report<<"#recruit_randwalk_switch"<<endl;
-  report<<recruit_randwalk_switch_EM<<endl;
-  report<<"#tspawn_EM"<<endl;
-  report<<tspawn_EM<<endl;
-
-  report<<"#return_age"<<endl;
-  report<<return_age<<endl;
-  report<<"#return_probability"<<endl;
-  report<<return_probability_EM<<endl;
-  report<<"#spawn_return_prob"<<endl;
-  report<<spawn_return_prob_EM<<endl;
-  report<<"#do_tag"<<endl;
-  report<<do_tag_EM<<endl;
-  report<<"#do_tag_mult"<<endl;
-  report<<do_tag_mult<<endl;
-  report<<"#sigma_recruit_EM"<<endl;
-  report<<sigma_recruit_EM<<endl;
-  report<<"#ph_lmr"<<endl;
-  report<<ph_lmr<<endl;
-  report<<"#ph_rec"<<endl;
-  report<<ph_rec<<endl;
-  report<<"#ph_abund_devs"<<endl;
-  report<<ph_abund_devs<<endl;
-  report<<"#ph_F"<<endl;
-  report<<ph_F<<endl;
-  report<<"#ph_steep"<<endl;
-  report<<ph_steep<<endl;
-  report<<"#ph_M"<<endl;
-  report<<ph_M<<endl;
-  report<<"#ph_sel_log"<<endl;
-  report<<ph_sel_log<<endl;
-  report<<"#lb_sel_beta1"<<endl;
-  report<<lb_sel_beta1<<endl;
-  report<<"#ub_sel_beta1"<<endl;
-  report<<ub_sel_beta1<<endl;
-  report<<"#lb_sel_beta2"<<endl;
-  report<<lb_sel_beta2<<endl;
-  report<<"#ub_sel_beta2"<<endl;
-  report<<ub_sel_beta2<<endl;
-  report<<"#ph_sel_log_surv"<<endl;
-  report<<ph_sel_log_surv<<endl;
-  report<<"#ph_sel_dubl"<<endl;
-  report<<ph_sel_dubl<<endl;
-  report<<"#ph_sel_dubl_surv"<<endl;
-  report<<ph_sel_dubl_surv<<endl;
-  report<<"#ph_q"<<endl;
-  report<<ph_q<<endl;
-  report<<"#ph_F_rho"<<endl;
-  report<<ph_F_rho<<endl;
-  report<<"#ph_T_YR"<<endl;
-  report<<ph_T_YR<<endl;
-  report<<"#ph_T_CNST"<<endl;
-  report<<ph_T_CNST<<endl;
-  report<<"#ph_dummy"<<endl;
-  report<<ph_dummy<<endl;
-  report<<"#wt_surv"<<endl;
-  report<<wt_surv<<endl;
-  report<<"#wt_catch"<<endl;
-  report<<wt_catch<<endl;
-  report<<"#wt_fish_age"<<endl;
-  report<<wt_fish_age<<endl;
-  report<<"#wt_srv_age"<<endl;
-  report<<wt_srv_age<<endl;
-  report<<"#wt_rec"<<endl;
-  report<<wt_rec<<endl;
-  report<<"#wt_tag"<<endl;
-  report<<wt_tag<<endl;
-  report<<"#abund_pen_switch"<<endl;
-  report<<abund_pen_switch<<endl;
-  report<<"#move_pen_switch"<<endl;
-  report<<move_pen_switch<<endl;
-  report<<"#Tpen"<<endl;
-  report<<Tpen<<endl;
-  report<<"#Tpen2"<<endl;
-  report<<Tpen2<<endl;
-
+ //Aggregating OBS values for panmictic mismatch
  
-  //setting up aggregated values for panmictic mismatch
   for (int y=1;y<=nyrs;y++)
    {
    for (int p=1;p<=npops;p++)
@@ -5785,21 +5665,152 @@ REPORT_SECTION
         rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));// combined by region
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
         rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
-        
-   
-
 
       } //end pop loop          
      } //end year loop
 
+
+//Additional model structure parameters
+  report<<"#nages"<<endl;
+  report<<nages<<endl;
+  report<<"#nyrs"<<endl;
+  report<<nyrs<<endl;
+
+//EM structure 
+  report<<"#npops_EM"<<endl;
+  report<<npops_EM<<endl;
+  report<<"#nregions_EM"<<endl;
+  report<<nregions_EM<<endl;
+  report<<"#nfleets_EM"<<endl;
+  report<<nfleets_EM<<endl;
+  report<<"#nfleets_survey_EM"<<endl;
+  report<<nfleets_survey_EM<<endl;
+  
+//OM structure 
+  report<<"#npops_OM"<<endl;
+  report<<npops<<endl;
+  report<<"#nregions_OM"<<endl;
+  report<<nregions<<endl;
+  report<<"#nfleets_OM"<<endl;
+  report<<nfleets<<endl;
+  report<<"#nfleets_survey_OM"<<endl;
+  report<<nfleets_survey<<endl;
+
+//EM parameters input from OM .dat
+  report<<"#tsurvey_EM"<<endl;
+  report<<tsurvey_EM<<endl;
+  report<<"#larval_move_switch"<<endl;
+  report<<larval_move_switch_EM<<endl;
+  report<<"#move_switch"<<endl;
+  report<<move_switch_EM<<endl;
+  report<<"#natal_homing_switch"<<endl;
+  report<<natal_homing_switch_EM<<endl;
+  report<<"#spawn_return_switch"<<endl;
+  report<<spawn_return_switch_EM<<endl;
+  report<<"#select_switch"<<endl;
+  report<<select_switch_EM<<endl;
+  report<<"#select_switch_survey"<<endl;
+  report<<select_switch_survey<<endl;
+  report<<"#maturity_switch_equil"<<endl;
+  report<<maturity_switch_equil_EM<<endl;
+  report<<"#SSB_type"<<endl;
+  report<<SSB_type_EM<<endl;
+  report<<"#Rec_type"<<endl;
+  report<<Rec_type_EM<<endl;
+  report<<"#apportionment_type"<<endl;
+  report<<apportionment_type_EM<<endl;
+  report<<"#use_stock_comp_info_survey"<<endl;
+  report<<use_stock_comp_info_survey_EM<<endl;
+  report<<"#use_stock_comp_info_catch"<<endl;
+  report<<use_stock_comp_info_catch_EM<<endl;
+  report<<"#F_switch"<<endl;
+  report<<F_switch_EM<<endl;
+  report<<"#recruit_devs_switch"<<endl;
+  report<<recruit_devs_switch_EM<<endl;
+  report<<"#recruit_randwalk_switch"<<endl;
+  report<<recruit_randwalk_switch_EM<<endl;
+  report<<"#tspawn_EM"<<endl;
+  report<<tspawn_EM<<endl;
+  report<<"#return_age"<<endl;
+  report<<return_age<<endl;
+  report<<"#return_probability"<<endl;
+  report<<return_probability_EM<<endl;
+  report<<"#spawn_return_prob"<<endl;
+  report<<spawn_return_prob_EM<<endl;
+  report<<"#do_tag"<<endl;
+  report<<do_tag_EM<<endl;
+  report<<"#do_tag_mult"<<endl;
+  report<<do_tag_mult<<endl;
+  report<<"#sigma_recruit_EM"<<endl;
+  report<<sigma_recruit_EM<<endl;
+  report<<"#ph_lmr"<<endl;
+  report<<ph_lmr<<endl;
+  report<<"#ph_rec"<<endl;
+  report<<ph_rec<<endl;
+  report<<"#ph_abund_devs"<<endl;
+  report<<ph_abund_devs<<endl;
+  report<<"#ph_F"<<endl;
+  report<<ph_F<<endl;
+  report<<"#ph_steep"<<endl;
+  report<<ph_steep<<endl;
+  report<<"#ph_M"<<endl;
+  report<<ph_M<<endl;
+  report<<"#ph_sel_log"<<endl;
+  report<<ph_sel_log<<endl;
+  report<<"#lb_sel_beta1"<<endl;
+  report<<lb_sel_beta1<<endl;
+  report<<"#ub_sel_beta1"<<endl;
+  report<<ub_sel_beta1<<endl;
+  report<<"#lb_sel_beta2"<<endl;
+  report<<lb_sel_beta2<<endl;
+  report<<"#ub_sel_beta2"<<endl;
+  report<<ub_sel_beta2<<endl;
+  report<<"#ph_sel_log_surv"<<endl;
+  report<<ph_sel_log_surv<<endl;
+  report<<"#ph_sel_dubl"<<endl;
+  report<<ph_sel_dubl<<endl;
+  report<<"#ph_sel_dubl_surv"<<endl;
+  report<<ph_sel_dubl_surv<<endl;
+  report<<"#ph_q"<<endl;
+  report<<ph_q<<endl;
+  report<<"#ph_F_rho"<<endl;
+  report<<ph_F_rho<<endl;
+  report<<"#ph_T_YR"<<endl;
+  report<<ph_T_YR<<endl;
+  report<<"#ph_T_CNST"<<endl;
+  report<<ph_T_CNST<<endl;
+  report<<"#ph_dummy"<<endl;
+  report<<ph_dummy<<endl;
+  report<<"#wt_surv"<<endl;
+  report<<wt_surv<<endl;
+  report<<"#wt_catch"<<endl;
+  report<<wt_catch<<endl;
+  report<<"#wt_fish_age"<<endl;
+  report<<wt_fish_age<<endl;
+  report<<"#wt_srv_age"<<endl;
+  report<<wt_srv_age<<endl;
+  report<<"#wt_rec"<<endl;
+  report<<wt_rec<<endl;
+  report<<"#wt_tag"<<endl;
+  report<<wt_tag<<endl;
+  report<<"#abund_pen_switch"<<endl;
+  report<<abund_pen_switch<<endl;
+  report<<"#move_pen_switch"<<endl;
+  report<<move_pen_switch<<endl;
+  report<<"#Tpen"<<endl;
+  report<<Tpen<<endl;
+  report<<"#Tpen2"<<endl;
+  report<<Tpen2<<endl;
+
+ 
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
 ///REPORTING THE CORRECT EM PARAMETERS///////////////
 ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 
-//panmictic EM inputs
-   if(EM_structure==0){ 
+//Spatial to panmictic EM inputs
+   if(EM_structure==0 && OM_structure>0){ 
       report<<"#input_Rec_prop"<<endl;
       report<<1<<endl;
       report<<"#input_weight"<<endl;
@@ -5830,11 +5841,32 @@ REPORT_SECTION
       report<<OBS_catch_prop_pan<<endl; 
       report<<"#OBS_catch_prop_N_EM"<<endl;
       report<<OBS_catch_prop_N_EM<<endl;
+      
+//tagging information
+      report<<"#nyrs_release"<<endl;
+      report<<nyrs_release<<endl;
+      report<<"#years_of_tag_releases "<<endl;
+      report<<yrs_releases<<endl;
+      report<<"#max_life_tags"<<endl;
+      report<<max_life_tags<<endl;
+      report<<"#report_rate_EM"<<endl;
+      report<<report_rate_EM<<endl;
+      report<<"#ntags"<<endl;
+      report<<ntags_pan<<endl;
+      report<<"#ntags_total"<<endl;
+      report<<ntags_total<<endl;
+      report<<"#tag_N_EM"<<endl;
+      report<<tag_N_EM<<endl;
+      report<<"#input_T_EM"<<endl;
+      report<<input_T_EM<<endl;
+
+      report<<"#OBS_tag_prop_pan_final"<<endl;
+      report<<OBS_tag_prop_pan_final<<endl;
       }
 
 
-//spatial EM inputs
-   if(EM_structure>0){
+//spatial to spatial EM inputs
+     if(EM_structure>0 && OM_structure>0){
       report<<"#input_Rec_prop"<<endl;
       report<<input_Rec_prop<<endl;
       report<<"#input_weight"<<endl;
@@ -5865,50 +5897,34 @@ REPORT_SECTION
       report<<OBS_catch_prop<<endl;
       report<<"#OBS_catch_prop_N_EM"<<endl;
       report<<OBS_catch_prop_N_EM<<endl;
+
+//tagging information
+      report<<"#nyrs_release"<<endl;
+      report<<nyrs_release<<endl;
+      report<<"#years_of_tag_releases "<<endl;
+      report<<yrs_releases<<endl;
+      report<<"#max_life_tags"<<endl;
+      report<<max_life_tags<<endl;
+      report<<"#report_rate_EM"<<endl;
+      report<<report_rate_EM<<endl;
+      report<<"#ntags"<<endl;
+      report<<ntags<<endl;
+      report<<"#ntags_total"<<endl;
+      report<<ntags_total<<endl;
+      report<<"#tag_N_EM"<<endl;
+      report<<tag_N_EM<<endl;
+      report<<"#input_T_EM"<<endl;
+      report<<input_T_EM<<endl;
+      report<<"#OBS_tag_prop_final"<<endl;
+      report<<OBS_tag_prop_final<<endl;
       }
-      
-//////////////////////////////////
-/// TAG INFORMATION
-/////////////////////////////////
-  report<<"#nyrs_release"<<endl;
-  report<<nyrs_release<<endl;
-  report<<"#years_of_tag_releases "<<endl;
-  report<<yrs_releases<<endl;
-  report<<"#max_life_tags"<<endl;
-  report<<max_life_tags<<endl;
-  report<<"#report_rate_EM"<<endl;
-  report<<report_rate_EM<<endl;
-
-//ntags
- if(EM_structure==0){ 
-  report<<"#ntags"<<endl;
-  report<<ntags_pan<<endl;
-  }
-  
- if(EM_structure>0){ 
-  report<<"#ntags"<<endl;
-  report<<ntags<<endl;
-  }
-
-  report<<"#ntags_total"<<endl;
-  report<<ntags_total<<endl;
-  report<<"#tag_N_EM"<<endl;
-  report<<tag_N_EM<<endl;
-  report<<"#input_T_EM"<<endl;
-  report<<input_T_EM<<endl;
 
 
- if(EM_structure==0){
-  report<<"#OBS_tag_prop_pan_final"<<endl;
-  report<<OBS_tag_prop_pan_final<<endl;
- }
+///////////
+// panmictic to spatial will go here eventually
+/////////
 
- if(EM_structure>0){ 
-  report<<"#OBS_tag_prop_final"<<endl;
-  report<<OBS_tag_prop_final<<endl;
-  }
-
-//Additional inputs for EM
+//Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
   report<<"#init_abund_EM"<<endl;
@@ -5938,14 +5954,12 @@ REPORT_SECTION
   report<<sel_beta3_survey<<endl;
   report<<"#sel_beta4_survey"<<endl;
   report<<sel_beta4_survey<<endl;
-  
   report<<"#steep"<<endl;
   report<<steep<<endl;
   report<<"#R_ave"<<endl;
   report<<R_ave<<endl;
   report<<"#SSB_zero"<<endl;
   report<<SSB_zero<<endl;
-  
   report<<"#rec_devs"<<endl;
   report<<rec_devs<<endl;
   report<<"#Rec_Prop"<<endl;
@@ -5977,7 +5991,9 @@ REPORT_SECTION
   
   report<<"#debug"<<endl;
   report<<debug<<endl;
-  
+
+
+
  // Some stuff for looking at tag calculations 
   /*
   report<<"#OBS_tag_prop_final"<<endl;
