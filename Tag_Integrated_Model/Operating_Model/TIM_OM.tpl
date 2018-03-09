@@ -280,7 +280,7 @@ DATA_SECTION
   init_4darray sigma_catch_overlap(1,np,1,np,1,nreg,1,nf)
   init_3darray SIM_ncatch(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray SIM_ncatch_overlap(1,np,1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
-  init_3darray SIM_nsurvey(1,np,1,nreg,1,nf) //cannot exceed 2000, otherwise change dimension of temp vector below
+  init_3darray SIM_nsurvey(1,np,1,nreg,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray SIM_nsurvey_overlap(1,np,1,np,1,nreg,1,nfs) //cannot exceed 2000, otherwise change dimension of temp vector below
 
 //################################################################################################################
@@ -546,6 +546,7 @@ DATA_SECTION
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
 
+ 
 PARAMETER_SECTION
 
   !! ivector nr=nregions;
@@ -953,8 +954,7 @@ PARAMETER_SECTION
 
  !! cout << "parameters set" << endl;
  
-
-
+   
 PROCEDURE_SECTION
 
   get_random_numbers();
@@ -1258,6 +1258,9 @@ FUNCTION get_selectivity
               }
              }
             }
+
+
+ 
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
 
@@ -1457,7 +1460,8 @@ FUNCTION get_vitals
        }
      }
 
-//SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
+
+//SPR calcs are done with either  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
      for (int k=1;k<=npops;k++)
@@ -1488,7 +1492,6 @@ FUNCTION get_SPR
       beta(k)=(5*steep(k)-1)/(4*steep(k)*R_ave(k));
       }
     }
-
 
 
 FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and amplitude
@@ -2555,6 +2558,7 @@ FUNCTION get_abundance
                     }
                    }
                   }
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
          for (int a=1;a<=nages;a++)
            {
@@ -5074,7 +5078,6 @@ FUNCTION get_abundance
           }
 
 
-    
 
 
 FUNCTION get_rand_survey_CAA_prop
@@ -5273,7 +5276,6 @@ FUNCTION get_rand_CAA_prop
    }
 
 
-
 FUNCTION get_tag_recaptures
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
@@ -5426,6 +5428,7 @@ FUNCTION get_tag_recaptures
         }
        }
 
+  
  //in order to use the multinomial RNG, need to have a vector of probabilities
  //this essentially requires stacking the tag_prop array into vectors for each release cohort covering all recap states (recap year, population, region)
  //need to extract each recap prob vector and store, then combine into array where can extract the last index (essentially the columns of the array)
@@ -5491,7 +5494,10 @@ FUNCTION get_tag_recaptures
           }
          }
         }
- }
+       }
+
+
+      
 FUNCTION get_observed_tag_recaptures
  if(do_tag==1)
   {
@@ -5553,12 +5559,14 @@ FUNCTION get_observed_tag_recaptures
              OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
              OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
 
+             if(OM_structure>0 && EM_structure==0){
                    for (int k=1;k<=max_life_tags+1;k++)
                       {
                        OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
                        OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
-                      //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
                        OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
+                       //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
+                       }
                       }
                      }
                     }
@@ -5589,7 +5597,8 @@ FUNCTION evaluate_the_objective_function
 REPORT_SECTION
 
  //Aggregating OBS values for panmictic mismatch
- 
+
+ if(EM_structure==0 && OM_structure>0){ 
   for (int y=1;y<=nyrs;y++)
    {
    for (int p=1;p<=npops;p++)
@@ -5668,7 +5677,7 @@ REPORT_SECTION
 
       } //end pop loop          
      } //end year loop
-
+  }
 
 //Additional model structure parameters
   report<<"#nages"<<endl;
@@ -5859,14 +5868,13 @@ REPORT_SECTION
       report<<tag_N_EM<<endl;
       report<<"#input_T_EM"<<endl;
       report<<input_T_EM<<endl;
-
       report<<"#OBS_tag_prop_pan_final"<<endl;
       report<<OBS_tag_prop_pan_final<<endl;
       }
 
 
-//spatial to spatial EM inputs
-     if(EM_structure>0 && OM_structure>0){
+//spatial to spatial EM inputs or panmictic matching - no aggregation needed
+     if((EM_structure>0 && OM_structure>0) || (EM_structure==0 && OM_structure==0)){
       report<<"#input_Rec_prop"<<endl;
       report<<input_Rec_prop<<endl;
       report<<"#input_weight"<<endl;
