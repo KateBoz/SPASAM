@@ -55,7 +55,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 #select the file you want to run
 #if only running 1 folder
 # { 
-  i=9
+  i=3
 
 #if running the whole folder
 #  for(i in 1:length(files)){
@@ -438,7 +438,7 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
   ggtitle("Fishery Selectivity")
 
 #fishery selectivity resid
-f.select$resid<-((out$selectivity_age_TRUE-out$selectivity_age_TRUE)/out$selectivity_age_TRUE)*100
+f.select$resid<-((out$selectivity_age_TRUE-out$selectivity_age)/out$selectivity_age_TRUE)*100
 
 f.select.resid.plot<-melt(f.select[,c(1,2,5)],id=c("Reg","Age"))
 f.select.resid.plot$Reg<-as.factor(f.select.resid.plot$Reg)
@@ -492,7 +492,7 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
 
 
 # survey selectivity resids plot
-s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age_TRUE)/out$survey_selectivity_age_TRUE)*100
+s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age)/out$survey_selectivity_age_TRUE)*100
 s.select.resid.plot<-melt(s.select[,c(1,2,5)],id=c("Reg","Age"))
 s.select.resid.plot$Reg<-as.factor(s.select.resid.plot$Reg)
 
@@ -874,4 +874,6 @@ sink()
 make.plots()
 
 } #end loops
+  
+
 
