@@ -342,6 +342,10 @@ DATA_SECTION
 
   init_matrix tsurvey_EM(1,np_em,1,nreg_em)
 
+  init_number diagnostics_switch
+  //#==0 allow OBS data to be used for estimation
+  //#==1 allow TRUE data from without error to be used for estimation
+
   init_number larval_move_switch_EM
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
   //==0 no movement
@@ -5708,6 +5712,8 @@ REPORT_SECTION
 //EM parameters input from OM .dat
   report<<"#tsurvey_EM"<<endl;
   report<<tsurvey_EM<<endl;
+  report<<"#diagnostics_switch"<<endl;
+  report<<diagnostics_switch<<endl;
   report<<"#larval_move_switch"<<endl;
   report<<larval_move_switch_EM<<endl;
   report<<"#move_switch"<<endl;
@@ -5982,6 +5988,18 @@ REPORT_SECTION
   report<<biomass_AM<<endl;
   report<<"#biomass_population"<<endl;
   report<<biomass_population<<endl;
+
+//add to EM input
+  report<<"#catch_at_age_fleet_prop"<<endl;
+  report<<catch_at_age_fleet_prop<<endl;
+  report<<"#yield_fleet"<<endl;
+  report<<yield_fleet<<endl;
+  report<<"#survey_at_age_fleet_prop"<<endl;
+  report<<survey_at_age_fleet_prop<<endl;
+  report<<"#true_survey_fleet_bio"<<endl;
+  report<<true_survey_fleet_bio<<endl;
+//
+
   report<<"#harvest_rate_region_bio"<<endl;
   report<<harvest_rate_region_bio<<endl;
   report<<"#depletion_region"<<endl;
@@ -5996,7 +6014,13 @@ REPORT_SECTION
   report<<selectivity_age<<endl;
   report<<"#survey_selectivity_age"<<endl;
   report<<survey_selectivity_age<<endl;
-  
+
+ //true tag information
+  report<<"#TRUE_tag_prop"<<endl;
+  report<<tag_prop_final<<endl;
+
+
+
   report<<"#debug"<<endl;
   report<<debug<<endl;
 
