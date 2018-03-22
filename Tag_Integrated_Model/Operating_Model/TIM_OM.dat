@@ -30,7 +30,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-0
+1
 # parse_TAC
   #==0 do not alter the input TAC or harvest rate
   #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
@@ -335,8 +335,8 @@
 0.8
 0.8
 #input_F
-0.1
-0.15
+0.4
+0.5
 #dunce F parameters (1,nps,1,nr,1,3)  for Dunce Cap F option ==9
   # first column is start year of fishery (F before this ==0)
   # second column is  min  F
@@ -497,7 +497,7 @@
 #diagnostics_switch
   #==0 allow OBS data to be used for estimation
   #==1 allow TRUE data from without error to be used for estimation
-0
+1
 
 #larval_move_switch
   #==0 no movement
@@ -688,11 +688,11 @@
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
--2
+2
 #lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
--2 
+2 
 #ph_sel_log_surv
 -5
 #ph_sel_dubl
@@ -706,7 +706,7 @@
 #ph_T_YR
 -5
 #ph_T_CNST
-4
+-4
 #ph_dummy
 1
 
