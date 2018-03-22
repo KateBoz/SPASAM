@@ -224,19 +224,13 @@ rec2<-ggplot(rec.devs.plot,aes(Years,value))+
 ##########################
 #recruit residual plot
 
-#creating a df of same dims
-  rec_resid_temp<-out$recruits_BM#filling a temp
-  rec_resid_temp_TRUE<-out$recruits_BM_TRUE#filling a temp
 
 #calculate the resids as Relative % Diff
-  rec_resid_temp2<-((rec_resid_temp_TRUE-rec_resid_temp)/rec_resid_temp_TRUE)*100
+rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)
   
   
 #preparing for plotting
-  rec.resids<-data.frame(Year=rep(years,nreg),Reg=rep(1:nreg,each=(nyrs)))
-  Rec_Resid=as.vector(t(rec_resid_temp2))
-  rec.resids<-cbind(rec.resids,Rec_Resid)
-  rec.resids.plot<-melt(rec.resids,id=c("Reg","Year"))
+  rec.resids.plot<-melt(rec.total[,c(1,2,5)],id=c("Reg","Year"))
   rec.resids.plot$Reg<-as.factor(rec.resids.plot$Reg)
   
 #rec resids plot  
@@ -524,6 +518,8 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
 
 #might need to change the dims if working with multi pop
 
+
+#combining true and estimated together
 F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=out$F_year, F_year_T=out$F_year_TRUE)
 
 F.plot<-melt(F.year,id=c("Reg","Year"))
@@ -548,11 +544,13 @@ F.plot.p<-ggplot(F.plot,aes(Year,value))+
 
 
 #F resids
-F.year$resid<-((out$F_year_TRUE-out$F_year)/out$F_year_TRUE)*100
-F.year.resid<-melt(F.year[,c(1,2,5)],id=c("Reg","Year"))
-F.year.resid$Reg<-as.factor(F.year.resid$Reg)
 
-F.resid.plot<-ggplot(F.year.resid,aes(Year,value))+
+
+F.year$resid<-((F.year$F_year_T-F.year$F_year)/out$F_year_T)*100
+F.resid.p<-melt(F.year[,c(1,2,5)],id=c("Reg","Year"))
+F.resid.p$Reg<-as.factor(F.resid.p$Reg)
+
+F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
   geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
