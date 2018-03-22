@@ -3303,7 +3303,7 @@ FUNCTION evaluate_the_objective_function
              for (int z=1;z<=nfleets_survey(j);z++)
               {
               if(diagnostics_switch==1){
-              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
+              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
                }
                
