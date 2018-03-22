@@ -57,6 +57,11 @@ DATA_SECTION
 ////////////////////////////////////////////////////////////////////////////////////
 
   init_matrix tsurvey(1,np,1,nreg) //time of survey in proportion of year (0,1)
+
+  init_number diagnostics_switch
+  //#==0 allow OBS data to be used for estimation
+  //#==1 allow TRUE data from without error to be used for estimation
+  
   init_number larval_move_switch
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
   //==0 no movement
@@ -299,6 +304,14 @@ DATA_SECTION
   init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
+  
+//these are fixed to EM dimensions
+  init_5darray catch_at_age_fleet_prop_TRUE(1,np,1,nreg,1,ny,1,nf,1,na)
+  init_4darray yield_fleet_TRUE(1,np,1,nreg,1,ny,1,nf)
+  init_5darray survey_fleet_prop_TRUE(1,np,1,nreg,1,ny,1,nfs,1,na)
+  init_4darray survey_fleet_bio_TRUE(1,np,1,nreg,1,ny,1,nfs)
+
+//OM dimensions
   init_3darray harvest_rate_region_bio_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray depletion_region_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
@@ -306,6 +319,10 @@ DATA_SECTION
   init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
   init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
   init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
+
+//need to fix to EM dim 
+  init_5darray tag_prop_final_TRUE(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
+
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -690,6 +707,7 @@ PARAMETER_SECTION
   objective_function_value f;
   
   !! cout << "parameters set" << endl;
+
 
  //INITIALIZATION_SECTION  //set initial values
  //  steep .814;
@@ -3284,16 +3302,24 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-            survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
+              if(diagnostics_switch==1){
+              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
+              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
+               }
+               
+              if(diagnostics_switch==0){
+              survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
-             }
+              }
+
+              }
             }
            }
           }
         
      
      // catch likelihood and multinomial fishery ages
-           for (int j=1;j<=npops;j++)
+   for (int j=1;j<=npops;j++)
      {
        for (int r=1;r<=nregions(j);r++)
        {
@@ -3301,12 +3327,19 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-           catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
-           fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
+
+              if(diagnostics_switch==1){
+               catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
+               fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
+                }
+              if(diagnostics_switch==0){
+              catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
+              fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
+              }
              }
-             }
+            }
+           }
           }
-         }
 
  if(active(ln_rec_devs_RN))
   {
@@ -3352,7 +3385,7 @@ FUNCTION evaluate_the_objective_function
  // }
   
  if(do_tag_mult==1)
-  {
+  {  
    for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3368,6 +3401,9 @@ FUNCTION evaluate_the_objective_function
          }
          for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
            {
+           if(diagnostics_switch==1){
+            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
+            }
             if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
              {
               tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
@@ -3386,8 +3422,10 @@ FUNCTION evaluate_the_objective_function
              }
 
 
-            }}}}}
-  }
+            }}}}}}
+
+
+
   
   // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
 
@@ -3557,6 +3595,29 @@ REPORT_SECTION
   report<<Bratio_population_TRUE<<endl;
 
  //OBS and Pred Values
+
+ if(diagnostics_switch==1){
+  report<<"$OBS_survey_fleet_bio"<<endl;
+  report<<survey_fleet_bio_TRUE<<endl;
+  report<<"$survey_fleet_bio"<<endl;
+  report<<survey_fleet_bio<<endl;
+  report<<"$OBS_survey_fleet_bio_se"<<endl;
+  report<<OBS_survey_fleet_bio_se<<endl;
+  report<<"$OBS_survey_prop"<<endl;
+  report<<survey_fleet_prop_TRUE<<endl;
+  report<<"$OBS_yield_fleet"<<endl;
+  report<<yield_fleet_TRUE<<endl;
+  report<<"$yield_fleet"<<endl;
+  report<<yield_fleet<<endl;
+  report<<"$OBS_yield_fleet_se"<<endl;
+  report<<OBS_yield_fleet_se<<endl;
+  report<<"$OBS_catch_prop"<<endl;
+  report<<catch_at_age_fleet_prop_TRUE<<endl;
+  report<<"$OBS_tag_prop_final"<<endl;
+  report<<tag_prop_final_TRUE<<endl;
+  }
+
+ if(diagnostics_switch==0){
   report<<"$OBS_survey_fleet_bio"<<endl;
   report<<OBS_survey_fleet_bio<<endl;
   report<<"$survey_fleet_bio"<<endl;
@@ -3565,7 +3626,6 @@ REPORT_SECTION
   report<<OBS_survey_fleet_bio_se<<endl;
   report<<"$OBS_survey_prop"<<endl;
   report<<OBS_survey_prop<<endl;
-
   report<<"$OBS_yield_fleet"<<endl;
   report<<OBS_yield_fleet<<endl;
   report<<"$yield_fleet"<<endl;
@@ -3574,6 +3634,9 @@ REPORT_SECTION
   report<<OBS_yield_fleet_se<<endl;
   report<<"$OBS_catch_prop"<<endl;
   report<<OBS_catch_at_age_fleet_prop<<endl;
+  report<<"$OBS_tag_prop_final"<<endl;
+  report<<OBS_tag_prop_final<<endl;
+  }
 
 
 /// TAG INFORMATION
@@ -3589,8 +3652,7 @@ REPORT_SECTION
   report<<ntags_total<<endl;
   report<<"$ntags"<<endl;
   report<<ntags<<endl;
-  report<<"$OBS_tag_prop_final"<<endl;
-  report<<OBS_tag_prop_final<<endl;
+
  
   report<<"$likelihood components"<<endl;
   report<<"$tag_like"<<endl;
