@@ -13,12 +13,14 @@ load_libraries<-function() {
   library(PBSmodelling)
   library(data.table)
   library(ggplot2)
+  library(reshape2)
   library(gridExtra)
   library(gplots)
   library(colorspace)
   library(RColorBrewer)
   library(dplyr)
   library(data.table)
+  library(seriation)
 }
 load_libraries()
 
@@ -39,7 +41,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 ########### INPUTS FOR RUNNING MODELS ###########################################
 #################################################################################
   
-  # Manually make changes in the OM .dat and run both OM and EM together
+# Manually make changes in the OM .dat and run both OM and EM together
 
 
 ######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
@@ -54,8 +56,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
   
 #select the file you want to run
 #if only running 1 folder
-# { 
-  i=3
+{ 
+  i=2
 
 #if running the whole folder
 #  for(i in 1:length(files)){
@@ -91,7 +93,7 @@ file.copy(from = from,  to = to)
 setwd(EM_direct)
 invisible(shell(paste0(EM_name),wait=T))
 
-#}#end running the OM/EM together
+} #end running the OM/EM together
 
 
 #########################################################
@@ -267,8 +269,9 @@ if(npops==1){
   }
   
 
-  #other pop types
-  if(npops>1){
+#other pop types
+  #might need to fine tune this for mismatch
+  if(npops>1||nreg<1){
     i.ab_temp<-data.frame(out$init_abund)
     pops_temp<-rep(1:npops,each=npops)
     t<-split(i.ab_temp,pops_temp)
@@ -397,7 +400,6 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("SSB")
-
 
 
 
@@ -574,15 +576,19 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 
 
 #Panmictic and multi-area
+
 if(npops==1){
   T_est<-data.frame(out$T_year)
   T_true<-data.frame(out$T_year_TRUE)
+  T_resid<-((T_true-T_est)/T_true)*1
   
   for(i in 1:nreg){
     names(T_est)[i]<-paste0("Est_",i)
     names(T_true)[i]<-paste0("True_",i)
     names(T_resid)[i]<-paste0("Resid_",i)}
 }
+
+
 
 #other population types
 if(npops>1){
@@ -722,7 +728,71 @@ survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
   ggtitle("Survey Biomass")
 
 
-# age comps coming soon...
+###################################################
+# Age Compositions
+##################################################
+
+#survey age comps
+
+survey.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
+
+survey.prop.resid<-data.frame(((out$OBS_survey_prop-out$survey_at_age_fleet_prop)/(out$OBS_survey_prop))*100)
+#survey.prop.resid<-data.frame(out$OBS_survey_prop-out$survey_at_age_fleet_prop)
+survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
+
+survey.long<-melt(survey.comps.resid,id.vars=c("Years","Reg"))
+
+
+survey.comp.plot<-
+  ggplot(survey.long, aes(x = as.numeric(variable), y = Years)) + 
+  geom_raster(aes(fill=value)) + 
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  scale_y_continuous(trans = "reverse")+
+  labs(x="Age", y="Year", title="Survey Age Comp Residuals") +
+  facet_grid(Reg~.)+
+  theme_bw() + 
+  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+                     axis.text.y=element_text(size=9),
+                     plot.title=element_text(size=11))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
+
+
+
+#fishery age comps
+
+fishery.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
+
+fishery.prop.resid<-data.frame(((out$OBS_catch_prop-out$catch_at_age_fleet_prop)/(out$OBS_catch_prop))*100)
+#fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$catch_at_age_fleet_prop)
+
+fishery.comps.resid<-cbind(fishery.comps.resid,fishery.prop.resid)
+
+fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
+
+
+fishery.comp.plot<-
+  ggplot(fishery.long, aes(x = as.numeric(variable), y = Years)) + 
+  geom_raster(aes(fill=value)) + 
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  scale_y_continuous(trans = "reverse")+
+  labs(x="Age", y="Year", title="Fishery Age Comp Residuals") +
+  facet_grid(Reg~.)+
+  theme_bw() + 
+  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+        axis.text.y=element_text(size=9),
+        plot.title=element_text(size=11))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
+
+
+#(out$OBS_catch_prop[1,1]-out$catch_at_age_fleet_prop[1,1])/out$OBS_catch_prop[1,1]*100
+
+
+##########################################
+# SAVE THE OUTPUTS
+##########################################
+
 
 #print these plots to pdf in the EM folder
 setwd(direct)
@@ -746,6 +816,8 @@ print(T.year.p)
 print(T.resid.plot)
 print(yield.p)
 print(survey.p)
+print(survey.comp.plot)
+print(fishery.comp.plot)
 
 dev.off()
 
