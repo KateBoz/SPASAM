@@ -3535,6 +3535,17 @@ REPORT_SECTION
   report<<SSB_region<<endl;
   report<<"$Bratio_population"<<endl;
   report<<Bratio_population<<endl;
+
+//estimated values
+  report<<"$survey_fleet_bio"<<endl;
+  report<<survey_fleet_bio<<endl;
+  report<<"$yield_fleet"<<endl;
+  report<<yield_fleet<<endl;
+  report<<"$survey_at_age_fleet_prop"<<endl;
+  report<<survey_at_age_fleet_prop<<endl;
+  report<<"$catch_at_age_fleet_prop"<<endl;
+  report<<catch_at_age_fleet_prop<<endl;
+
   
  /// TRUE VALUES
   report<<"$input_T"<<endl;
@@ -3594,44 +3605,29 @@ REPORT_SECTION
   report<<"$Bratio_population_TRUE"<<endl;
   report<<Bratio_population_TRUE<<endl;
 
- //OBS and Pred Values
 
+
+//OBS Values
  if(diagnostics_switch==1){
   report<<"$OBS_survey_fleet_bio"<<endl;
   report<<survey_fleet_bio_TRUE<<endl;
-  report<<"$survey_fleet_bio"<<endl;
-  report<<survey_fleet_bio<<endl;
-  report<<"$OBS_survey_fleet_bio_se"<<endl;
-  report<<OBS_survey_fleet_bio_se<<endl;
   report<<"$OBS_survey_prop"<<endl;
   report<<survey_fleet_prop_TRUE<<endl;
   report<<"$OBS_yield_fleet"<<endl;
   report<<yield_fleet_TRUE<<endl;
-  report<<"$yield_fleet"<<endl;
-  report<<yield_fleet<<endl;
-  report<<"$OBS_yield_fleet_se"<<endl;
-  report<<OBS_yield_fleet_se<<endl;
   report<<"$OBS_catch_prop"<<endl;
   report<<catch_at_age_fleet_prop_TRUE<<endl;
   report<<"$OBS_tag_prop_final"<<endl;
   report<<tag_prop_final_TRUE<<endl;
-  }
+   }
 
  if(diagnostics_switch==0){
   report<<"$OBS_survey_fleet_bio"<<endl;
   report<<OBS_survey_fleet_bio<<endl;
-  report<<"$survey_fleet_bio"<<endl;
-  report<<survey_fleet_bio<<endl;
-  report<<"$OBS_survey_fleet_bio_se"<<endl;
-  report<<OBS_survey_fleet_bio_se<<endl;
   report<<"$OBS_survey_prop"<<endl;
   report<<OBS_survey_prop<<endl;
   report<<"$OBS_yield_fleet"<<endl;
   report<<OBS_yield_fleet<<endl;
-  report<<"$yield_fleet"<<endl;
-  report<<yield_fleet<<endl;
-  report<<"$OBS_yield_fleet_se"<<endl;
-  report<<OBS_yield_fleet_se<<endl;
   report<<"$OBS_catch_prop"<<endl;
   report<<OBS_catch_at_age_fleet_prop<<endl;
   report<<"$OBS_tag_prop_final"<<endl;
