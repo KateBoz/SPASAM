@@ -732,6 +732,9 @@ PROCEDURE_SECTION
    get_CAA_prop();
    get_tag_recaptures();
    evaluate_the_objective_function();
+
+
+
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
  nreg_temp=rowsum(nregions_temp);
@@ -758,15 +761,16 @@ FUNCTION get_movement
               {
                T(j,r,y,a,k,n)=0;
               }
+            }
+           } 
+          }
+         }
+        }
        }
-      } 
-     }
-    }
-   }
-  }
-  }
+      }
 
- if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0)) // if T fixed set it to input T
+ if(move_switch==1)// || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
+// if T fixed set it to input T
   {
   for (int j=1;j<=npops;j++)
    {
@@ -781,12 +785,12 @@ FUNCTION get_movement
             for (int n=1;n<=nregions(k);n++)
              {
               T(j,r,y,a,k,n)=T_year_TRUE(j,r,y,k,n);            
-       }
-      } 
+        }
+       } 
+      }
      }
     }
    }
-  }
   }
   
  if(npops==1 && sum(nregions)==1) //if panmictic then movement is 100%
@@ -805,26 +809,26 @@ FUNCTION get_movement
             for (int n=1;n<=nregions(k);n++)
              {
               T(j,r,y,a,k,n)=1;            
-       }
-      } 
+        }
+       } 
+      }
      }
     }
    }
   }
-  }
 
   if(move_switch>1)
-  {
- if(phase_T_YR>0) 
-  {
-   for(int y=1;y<=nyrs;y++)
+   {
+    if(phase_T_YR>0) 
     {
-    G=0;
-    G_temp=0;
-     for (int j=1;j<=sum(nregions);j++)
-      {
-      for (int i=1;i<=sum(nregions);i++) 
+      for(int y=1;y<=nyrs;y++)
        {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
             if(j==i)
             {
             G(j,i)=1;
@@ -840,34 +844,34 @@ FUNCTION get_movement
         }
        }    
         G_temp=rowsum(G);     
-  for (int j=1;j<=npops;j++)
-   {
-    for (int r=1;r<=nregions(j);r++)
-     {
-        for (int a=1;a<=nages;a++)
-         {
-          for (int k=1;k<=npops;k++)
-           {
-            for (int n=1;n<=nregions(k);n++)
-             {
-              T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
-            
-       }
-      } 
-     }
-    }
-   }
-  }
-  }
-
- if(phase_T_CNST>0) 
-  {
-    G=0;
-    G_temp=0;
-     for (int j=1;j<=sum(nregions);j++)
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
       {
-      for (int i=1;i<=sum(nregions);i++) 
+       for (int a=1;a<=nages;a++)
+        {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+            
+            }
+           } 
+          }
+         }
+        }
+       }
+      }
+
+   if(phase_T_CNST>0) 
+    {
+    G=0;
+     G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
        {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
             if(j==i)
             {
             G(j,i)=1;
@@ -880,9 +884,9 @@ FUNCTION get_movement
             {
             G(j,i)=mfexp(ln_T_CNST(j,i));
             }
-        }
-       }    
-        G_temp=rowsum(G);
+           }
+          }    
+      G_temp=rowsum(G);
 
  for(int y=1;y<=nyrs;y++)
   {
@@ -897,15 +901,14 @@ FUNCTION get_movement
             for (int n=1;n<=nregions(k);n++)
              {
               T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
-            
+             }
+            } 
+           }
+          }
+         }
+        }
        }
-      } 
-     }
-    }
-   }
-  }
-  }
-  }
+      }
 
   for (int j=1;j<=npops;j++)
    {
@@ -917,12 +920,13 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T_terminal(j,r,a,k,n)=T(j,r,nyrs,a,k,n);            
-      } 
-     }
-    }
-   }
-  }
+              T_terminal(j,r,a,k,n)= T(j,r,nyrs,a,k,n);            
+             } 
+            }
+           }
+          }
+         }
+         
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -934,11 +938,12 @@ FUNCTION get_movement
             for (int n=1;n<=nregions(k);n++)
              {
               T_year(j,r,y,k,n)=T(j,r,y,4,k,n);            
-      } 
-     }
-    }
-   }
-  } 
+            } 
+           }
+          }
+         }
+        }
+
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 
@@ -3242,6 +3247,8 @@ FUNCTION get_tag_recaptures
 FUNCTION evaluate_the_objective_function
   // f=dummy; //in case all the estimated parameters are turned off
    f=0.0;
+
+
   Tpen_like.initialize();
  if(move_pen_switch==1)
  {
@@ -3283,8 +3290,12 @@ FUNCTION evaluate_the_objective_function
          }
         }
       }
+      
    f+=Tpen_like;   
  }
+
+
+
  catch_like.initialize();
  fish_age_like.initialize();
  survey_age_like.initialize();
@@ -3292,6 +3303,8 @@ FUNCTION evaluate_the_objective_function
  tag_like.initialize();
  tag_like_temp.initialize();
  rec_like.initialize();
+
+
  // Calculate multinomial likelihoods for compositions (Fournier style)
  // and survey biomass lognormal likelihood
       for (int j=1;j<=npops;j++)
@@ -3541,12 +3554,8 @@ REPORT_SECTION
   report<<survey_fleet_bio<<endl;
   report<<"$yield_fleet"<<endl;
   report<<yield_fleet<<endl;
-  report<<"$survey_at_age_fleet_prop"<<endl;
-  report<<survey_at_age_fleet_prop<<endl;
-  report<<"$catch_at_age_fleet_prop"<<endl;
-  report<<catch_at_age_fleet_prop<<endl;
 
-  
+
  /// TRUE VALUES
   report<<"$input_T"<<endl;
   report<<input_T<<endl;
@@ -3605,34 +3614,21 @@ REPORT_SECTION
   report<<"$Bratio_population_TRUE"<<endl;
   report<<Bratio_population_TRUE<<endl;
 
-
-
-//OBS Values
- if(diagnostics_switch==1){
-  report<<"$OBS_survey_fleet_bio"<<endl;
-  report<<survey_fleet_bio_TRUE<<endl;
-  report<<"$OBS_survey_prop"<<endl;
-  report<<survey_fleet_prop_TRUE<<endl;
-  report<<"$OBS_yield_fleet"<<endl;
-  report<<yield_fleet_TRUE<<endl;
-  report<<"$OBS_catch_prop"<<endl;
-  report<<catch_at_age_fleet_prop_TRUE<<endl;
-  report<<"$OBS_tag_prop_final"<<endl;
-  report<<tag_prop_final_TRUE<<endl;
-   }
+//OBS simulated data for lower dimensional arrays
+  if(diagnostics_switch==1){
+    report<<"$OBS_survey_fleet_bio"<<endl;
+    report<<survey_fleet_bio_TRUE<<endl;
+    report<<"$OBS_yield_fleet"<<endl;
+    report<<yield_fleet_TRUE<<endl;
+    }
 
  if(diagnostics_switch==0){
-  report<<"$OBS_survey_fleet_bio"<<endl;
-  report<<OBS_survey_fleet_bio<<endl;
-  report<<"$OBS_survey_prop"<<endl;
-  report<<OBS_survey_prop<<endl;
-  report<<"$OBS_yield_fleet"<<endl;
-  report<<OBS_yield_fleet<<endl;
-  report<<"$OBS_catch_prop"<<endl;
-  report<<OBS_catch_at_age_fleet_prop<<endl;
-  report<<"$OBS_tag_prop_final"<<endl;
-  report<<OBS_tag_prop_final<<endl;
-  }
+    report<<"$OBS_survey_fleet_bio"<<endl;
+    report<<OBS_survey_fleet_bio<<endl;
+    report<<"$OBS_yield_fleet"<<endl;
+    report<<OBS_yield_fleet<<endl;
+    }
+
 
 
 /// TAG INFORMATION
@@ -3649,7 +3645,7 @@ REPORT_SECTION
   report<<"$ntags"<<endl;
   report<<ntags<<endl;
 
- 
+
   report<<"$likelihood components"<<endl;
   report<<"$tag_like"<<endl;
   report<<tag_like<<endl;
@@ -3688,12 +3684,8 @@ REPORT_SECTION
   region_counter=1;
     for (int p=1;p<=npops;p++)
      {
-     // for (int r=1;r<=nregions(p);r++)
-       // {
-          //reordered 6 d arrays go here. Will fix that later if neede
-       //}
-
       // 5D arrays by population go here
+
         report<<"$alt_T_year"<<p<<endl;
         report<<T_year[p]<<endl;
         report<<"$survey_prop"<<p<<endl;
@@ -3702,13 +3694,65 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop[p]<<endl;
         report<<"$tag_prop_final"<<p<<endl;
         report<<tag_prop_final[p]<<endl;
+        report<<"$survey_at_age_fleet_prop"<<p<<endl;
+        report<<survey_at_age_fleet_prop[p]<<endl;
+        report<<"$catch_at_age_fleet_prop"<<p<<endl;
+        report<<catch_at_age_fleet_prop[p]<<endl;
+
+     //OBS Values
+     if(diagnostics_switch==1){
+       report<<"$OBS_survey_prop"<<p<<endl;
+       report<<survey_fleet_prop_TRUE[p]<<endl;
+       report<<"$OBS_catch_prop"<<p<<endl;
+       report<<catch_at_age_fleet_prop_TRUE[p]<<endl;
+       report<<"$OBS_tag_prop_final"<<p<<endl;
+       report<<tag_prop_final_TRUE[p]<<endl;
+      }
+
+     if(diagnostics_switch==0){
+      report<<"$OBS_survey_prop"<<p<<endl;
+      report<<OBS_survey_prop[p]<<endl;
+      report<<"$OBS_catch_prop"<<p<<endl;
+      report<<OBS_catch_at_age_fleet_prop[p]<<endl;
+      report<<"$OBS_tag_prop_final"<<p<<endl;
+      report<<OBS_tag_prop_final[p]<<endl;
+      }
 
      }
    }
 
+ if(npops==1)// for panmictic and metamictic population outputs
+     {
+        report<<"$T_year"<<endl;
+        report<<T_year<<endl;
+        report<<"$survey_prop"<<endl;
+        report<<survey_at_age_fleet_prop<<endl;
+        report<<"$catch_at_age_fleet_prop"<<endl;
+        report<<catch_at_age_fleet_prop<<endl;
+        report<<"$tag_prop_final"<<endl;
+        report<<tag_prop_final<<endl;
+
+     if(diagnostics_switch==1){
+       report<<"$OBS_survey_prop"<<endl;
+       report<<survey_fleet_prop_TRUE<<endl;
+       report<<"$OBS_catch_prop"<<endl;
+       report<<catch_at_age_fleet_prop_TRUE<<endl;
+       report<<"$OBS_tag_prop_final"<<endl;
+       report<<tag_prop_final_TRUE<<endl;
+      }
+
+     if(diagnostics_switch==0){
+      report<<"$OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop<<endl;
+      report<<"$OBS_catch_prop"<<endl;
+      report<<OBS_catch_at_age_fleet_prop<<endl;
+      report<<"$OBS_tag_prop_final"<<endl;
+      report<<OBS_tag_prop_final<<endl;
+      }
+     }
 
 
-  save_gradients(gradients);
+ save_gradients(gradients);
 RUNTIME_SECTION
   convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
   maximum_function_evaluations 10000
