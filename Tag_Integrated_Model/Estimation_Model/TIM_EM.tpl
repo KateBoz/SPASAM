@@ -769,7 +769,7 @@ FUNCTION get_movement
        }
       }
 
- if(move_switch==1)// || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
+ if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
 // if T fixed set it to input T
   {
   for (int j=1;j<=npops;j++)
@@ -1067,7 +1067,14 @@ FUNCTION get_selectivity
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
 
-  for (int j=1;j<=npops;j++)
+  if(ph_F<0)
+     {
+     F_year=F_year_TRUE;
+      }
+      
+ if(ph_F>0)
+ {
+   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
      {
@@ -1077,31 +1084,27 @@ FUNCTION get_F_age
          {
           for (int z=1;z<=nfleets(j);z++)
            {
-             if(ph_F<0) //inefficient place for this because it'll reassign in all these loops but F_fleet needs to be in loops below...
-             {
-              F_year=F_year_TRUE;
-             }
-             else {
              if(F_switch==1) //estimate annual deviations
               {
                F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); 
               }
              if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
-               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));  
+               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));
+               
                if(y>1)
                {
                F_year(j,r,y,z)=F_rho(j,z)*mfexp(((y-1)+nreg_temp(j)*nyrs+(r-1)*nyrs,z));            
                }
               }
-             } //end else for negative F phase
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
            }
-               F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
-           }
+             F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
+          }
          }
         }
        }
+      }
 
 FUNCTION get_vitals
  //set q to true if neg phase
@@ -3245,7 +3248,7 @@ FUNCTION get_tag_recaptures
  }
 
 FUNCTION evaluate_the_objective_function
-  // f=dummy; //in case all the estimated parameters are turned off
+   //f=dummy; //in case all the estimated parameters are turned off
    f=0.0;
 
 
@@ -3489,7 +3492,6 @@ REPORT_SECTION
   report<<M<<endl;
 
  //EST values
-
   //report<<"$T_terminal"<<endl; ///need to fix this for reporting out the 6D array
   //report<<T_terminal<<endl;
 
@@ -3645,7 +3647,7 @@ REPORT_SECTION
   report<<"$ntags"<<endl;
   report<<ntags<<endl;
 
-
+//likelihoods
   report<<"$likelihood components"<<endl;
   report<<"$tag_like"<<endl;
   report<<tag_like<<endl;
@@ -3674,10 +3676,41 @@ REPORT_SECTION
   report<<"$SR"<<endl;
   report<<SR<<endl;
 
+////////////////////////////////////////////////////////////////////
+//reporting hi dimensional arrays
+ if(npops==1)// for panmictic and metamictic population outputs
+     {
+        report<<"$T_year"<<endl;
+        report<<T_year<<endl;
+        report<<"$EST_survey_prop"<<endl;
+        report<<survey_at_age_fleet_prop<<endl;
+        report<<"$EST_catch_age_fleet_prop"<<endl;
+        report<<catch_at_age_fleet_prop<<endl;
+        report<<"$EST_tag_prop_final"<<endl;
+        report<<tag_prop_final<<endl;
 
- //////////////////////////////////////////////////////////////////////
- //Printing 5D and 6D arrays by population for metapop example 
- /////////////////////////////////////////////////////////////////////
+     if(diagnostics_switch==1){
+       report<<"$OBS_survey_prop"<<endl;
+       report<<survey_fleet_prop_TRUE<<endl;
+       report<<"$OBS_catch_prop"<<endl;
+       report<<catch_at_age_fleet_prop_TRUE<<endl;
+       report<<"$OBS_tag_prop_final"<<endl;
+       report<<tag_prop_final_TRUE<<endl;
+      }
+
+     if(diagnostics_switch==0){
+      report<<"$OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop<<endl;
+      report<<"$OBS_catch_prop"<<endl;
+      report<<OBS_catch_at_age_fleet_prop<<endl;
+      report<<"$OBS_tag_prop_final"<<endl;
+      report<<OBS_tag_prop_final<<endl;
+      }
+     }
+
+
+ ////////////////////////////////////////////////////////////
+ //Printing 5D and 6D arrays by population for metapop 
 
  if(npops>1) //more than one population or if one population, more than 1 region within that population
   {
@@ -3688,16 +3721,12 @@ REPORT_SECTION
 
         report<<"$alt_T_year"<<p<<endl;
         report<<T_year[p]<<endl;
-        report<<"$survey_prop"<<p<<endl;
+        report<<"$EST_survey_age_prop"<<p<<endl;
         report<<survey_at_age_fleet_prop[p]<<endl;
-        report<<"$catch_at_age_fleet_prop"<<p<<endl;
+        report<<"$EST_catch_age_fleet_prop"<<p<<endl;
         report<<catch_at_age_fleet_prop[p]<<endl;
-        report<<"$tag_prop_final"<<p<<endl;
+        report<<"$EST_tag_prop_final"<<p<<endl;
         report<<tag_prop_final[p]<<endl;
-        report<<"$survey_at_age_fleet_prop"<<p<<endl;
-        report<<survey_at_age_fleet_prop[p]<<endl;
-        report<<"$catch_at_age_fleet_prop"<<p<<endl;
-        report<<catch_at_age_fleet_prop[p]<<endl;
 
      //OBS Values
      if(diagnostics_switch==1){
@@ -3721,35 +3750,6 @@ REPORT_SECTION
      }
    }
 
- if(npops==1)// for panmictic and metamictic population outputs
-     {
-        report<<"$T_year"<<endl;
-        report<<T_year<<endl;
-        report<<"$survey_prop"<<endl;
-        report<<survey_at_age_fleet_prop<<endl;
-        report<<"$catch_at_age_fleet_prop"<<endl;
-        report<<catch_at_age_fleet_prop<<endl;
-        report<<"$tag_prop_final"<<endl;
-        report<<tag_prop_final<<endl;
-
-     if(diagnostics_switch==1){
-       report<<"$OBS_survey_prop"<<endl;
-       report<<survey_fleet_prop_TRUE<<endl;
-       report<<"$OBS_catch_prop"<<endl;
-       report<<catch_at_age_fleet_prop_TRUE<<endl;
-       report<<"$OBS_tag_prop_final"<<endl;
-       report<<tag_prop_final_TRUE<<endl;
-      }
-
-     if(diagnostics_switch==0){
-      report<<"$OBS_survey_prop"<<endl;
-      report<<OBS_survey_prop<<endl;
-      report<<"$OBS_catch_prop"<<endl;
-      report<<OBS_catch_at_age_fleet_prop<<endl;
-      report<<"$OBS_tag_prop_final"<<endl;
-      report<<OBS_tag_prop_final<<endl;
-      }
-     }
 
 
  save_gradients(gradients);
