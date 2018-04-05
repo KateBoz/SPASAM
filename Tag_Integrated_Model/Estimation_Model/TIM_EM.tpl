@@ -302,6 +302,7 @@ DATA_SECTION
   init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
   init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
+
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
   
@@ -1067,14 +1068,7 @@ FUNCTION get_selectivity
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
 
-  if(ph_F<0)
-     {
-     F_year=F_year_TRUE;
-      }
-      
- if(ph_F>0)
- {
-   for (int j=1;j<=npops;j++)
+  for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
      {
@@ -1084,27 +1078,32 @@ FUNCTION get_F_age
          {
           for (int z=1;z<=nfleets(j);z++)
            {
+             if(ph_F<0)
+             {
+              F_year(j,r,y,z)=F_year_TRUE(j,r,y,z);
+             }
+             else {
              if(F_switch==1) //estimate annual deviations
               {
                F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); 
               }
              if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
               {
-               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));
-               
+               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));  
                if(y>1)
                {
                F_year(j,r,y,z)=F_rho(j,z)*mfexp(((y-1)+nreg_temp(j)*nyrs+(r-1)*nyrs,z));            
                }
               }
+             } //end else for negative F phase
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
+            }
+            F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
            }
-             F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
-          }
          }
         }
        }
-      }
+
 
 FUNCTION get_vitals
  //set q to true if neg phase
@@ -1120,9 +1119,9 @@ FUNCTION get_vitals
           for(int j=1;j<=nfleets_survey(i);j++) 
           {
            q_survey(i,k,j) = mfexp(ln_q(i,j));}
-    }
-    }
-    }
+        }
+       }
+      }
     
 //set R_ave to true if neg phase
   if(ph_lmr<0){
