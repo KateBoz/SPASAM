@@ -352,13 +352,13 @@
 #input_M
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
 0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226	0.226
-#sigma_recruit
+#_sigma_recruit
 0.4
 0.4
-#sigma_rec_prop #error around recruit apportionment
+#_sigma_rec_prop #error around recruit apportionment
 0.2
 0.2
-#sigma_F
+#_sigma_F
 0.35
 0.2
 ##########################################################################################################################################
@@ -399,10 +399,10 @@
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 1562.5	1246.434534	994.3033902	793.1738129	632.7291083	504.7394632	402.6398064	321.193062	256.2215197	204.3925443	163.0476324	130.0660478	103.7560408	82.76807187	66.02558917
-#rec_index_sigma
+#_rec_index_sigma
 0.1
 0.1
-#sigma_survey
+#_sigma_survey
 0.1
 0.1
 #sigma_survey_overlap
@@ -410,7 +410,7 @@
 0.1
 0.1
 0.1
-#sigma_catch
+#_sigma_catch
 0.05
 0.05
 #sigma_catch_overlap
@@ -418,8 +418,7 @@
 0.05
 0.05
 0.05
-#SIM_ncatch
-#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+#_SIM_ncatch #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
 100
 #SIM_ncatch_overlap
@@ -428,12 +427,10 @@
 100
 100
 100
-#SIM_nsurvey
-#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+#_SIM_nsurvey #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
 100
-#SIM_nsurvey_overlap
-#//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+#SIM_nsurvey_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
 100
 100
 100
