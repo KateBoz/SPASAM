@@ -20,7 +20,9 @@ load_libraries<-function() {
   library(RColorBrewer)
   library(dplyr)
   library(data.table)
-  library(seriation)
+  library(matrixStats) 
+  library(gridExtra)
+  library(grid)
 }
 load_libraries()
 
@@ -49,7 +51,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
  ##beginnings of code for running lots of sims
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat etc 
-  direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
+ direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
 
 #list files in the directory
   files<-list.files(direct_master)
@@ -57,7 +59,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 #select the file you want to run
 #if only running 1 folder
 { 
-  i=2
+  i=3
 
 #if running the whole folder
 #  for(i in 1:length(files)){
@@ -202,7 +204,7 @@ if(npops==1){
   
 rec.devs.plot<-melt(rec.devs,id=c("Year"))
   
-rec2<-ggplot(rec.devs.plot,aes(Years,value))+
+rec2<-ggplot(rec.devs.plot,aes(Year,value))+
     geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
     theme_bw()+
     #facet_wrap(~Reg)+
@@ -251,7 +253,7 @@ rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)
     theme(legend.title = element_blank())+
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
     theme(legend.position = "none", legend.justification = c(1,1))+
-    ggtitle("Recruitment")
+    ggtitle("Recruitment Residuals")
 
 
 
@@ -346,7 +348,7 @@ if(npops==1){
     theme(legend.title = element_blank())+
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
     theme(legend.position = "none", legend.justification = c(1,1))+
-    ggtitle("Initial Abundance")
+    ggtitle("Initial Abundance Residuals")
   
   
 ###############################
@@ -399,7 +401,7 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
-  ggtitle("SSB")
+  ggtitle("SSB Residuals")
 
 
 
@@ -457,7 +459,7 @@ f.select.resid<-ggplot(f.select.resid.plot,aes(Age,value))+
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
-  ggtitle("Fishery Selectivity")
+  ggtitle("Fishery Selectivity Residuals")
 
 
 ########################
@@ -498,7 +500,6 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Relative % Difference (True-Estimated)")+
-  
   facet_wrap(~Reg)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -508,7 +509,7 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
-  ggtitle("Survey Selectivity")
+  ggtitle("Survey Selectivity Residuals")
 
 
 
@@ -517,12 +518,11 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
 ########## F by year #######################################
 ############################################################
 
-
-#might need to change the dims if working with multi pop
-
-
 #combining true and estimated together
-F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=out$F_year, F_year_T=out$F_year_TRUE)
+f.max<-rowMaxs(out$F)
+f.max.t<-rowMaxs(out$F_TRUE)
+F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=f.max.t)
+
 
 F.plot<-melt(F.year,id=c("Reg","Year"))
 F.plot$Reg<-as.factor(F.plot$Reg)
@@ -546,8 +546,6 @@ F.plot.p<-ggplot(F.plot,aes(Year,value))+
 
 
 #F resids
-
-
 F.year$resid<-((F.year$F_year_T-F.year$F_year)/out$F_year_T)*100
 F.resid.p<-melt(F.year[,c(1,2,5)],id=c("Reg","Year"))
 F.resid.p$Reg<-as.factor(F.resid.p$Reg)
@@ -567,7 +565,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
-  ggtitle("Fully Selected F")
+  ggtitle("Fully Selected F Residuals")
 
 
 ############################################################
@@ -668,7 +666,7 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
-  ggtitle("Yearly Movement Rate")
+  ggtitle("Yearly Movement Rate Residuals")
 
 
 
@@ -732,21 +730,43 @@ survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
 # Age Compositions
 ##################################################
 
+####################
 #survey age comps
 
 survey.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
 
-survey.prop.resid<-data.frame(((out$OBS_survey_prop-out$survey_at_age_fleet_prop)/(out$OBS_survey_prop))*100)
-#survey.prop.resid<-data.frame(out$OBS_survey_prop-out$survey_at_age_fleet_prop)
-survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
 
+if(npops==1){
+#survey.prop.resid<-data.frame(((out$OBS_survey_prop-out$EST_survey_age_prop)/(out$OBS_survey_prop)))*100
+survey.prop.resid<-data.frame(out$OBS_survey_prop-out$EST_survey_prop)*100
+survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
 survey.long<-melt(survey.comps.resid,id.vars=c("Years","Reg"))
+}
+
+
+if(npops>1){
+  
+#combine movements age_comps
+  pull.surv.obs<-out[grep("OBS_survey_prop", names(out), value = TRUE)]
+  pull.surv.est<-out[grep("EST_survey_age_prop", names(out), value = TRUE)]
+  
+  surv_obs<-data.frame(matrix(unlist(pull.surv.obs),nyrs*npops,na,byrow=TRUE))
+  surv_est<-data.frame(matrix(unlist(pull.surv.est),nyrs*npops,na,byrow=TRUE))
+  
+  surv_resid<-(surv_obs-surv_est)*100
+    
+survey.comps.resid<-cbind(survey.comps.resid,surv_resid)
+survey.long<-melt(survey.comps.resid,id.vars=c("Years","Reg"))
+
+}
 
 
 survey.comp.plot<-
   ggplot(survey.long, aes(x = as.numeric(variable), y = Years)) + 
   geom_raster(aes(fill=value)) + 
-  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
+  labs(fill = "% Dif")+
   scale_y_continuous(trans = "reverse")+
   labs(x="Age", y="Year", title="Survey Age Comp Residuals") +
   facet_grid(Reg~.)+
@@ -754,27 +774,48 @@ survey.comp.plot<-
   theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
                      axis.text.y=element_text(size=9),
                      plot.title=element_text(size=11))+
-  theme(legend.title = element_blank())+
+  #theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
 
 
+
+######################
 #fishery age comps
 
 fishery.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
 
-fishery.prop.resid<-data.frame(((out$OBS_catch_prop-out$catch_at_age_fleet_prop)/(out$OBS_catch_prop))*100)
-#fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$catch_at_age_fleet_prop)
 
+if(npops==1){
+#fishery.prop.resid<-data.frame(((out$OBS_catch_prop-out$EST_catch_age_fleet_prop)/(out$OBS_catch_prop))*100)
+fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)*100
 fishery.comps.resid<-cbind(fishery.comps.resid,fishery.prop.resid)
-
 fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
+}
+
+
+
+if(npops>1){
+  #combine movements age_comps
+  pull.catch.obs<-out[grep("OBS_catch_prop", names(out), value = TRUE)]
+  pull.catch.est<-out[grep("EST_catch_age_fleet_prop", names(out), value = TRUE)]
+  
+  catch_obs<-data.frame(matrix(unlist(pull.catch.obs),nyrs*npops,na,byrow=TRUE))
+  catch_est<-data.frame(matrix(unlist(pull.catch.est),nyrs*npops,na,byrow=TRUE))
+  
+  fishery_resid<-(catch_obs-catch_est)*100
+  
+  fishery.comps.resid<-cbind(fishery.comps.resid,fishery_resid)
+  fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
+}
 
 
 fishery.comp.plot<-
   ggplot(fishery.long, aes(x = as.numeric(variable), y = Years)) + 
   geom_raster(aes(fill=value)) + 
-  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
+  labs(fill = "% Dif")+
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
   scale_y_continuous(trans = "reverse")+
   labs(x="Age", y="Year", title="Fishery Age Comp Residuals") +
   facet_grid(Reg~.)+
@@ -782,11 +823,149 @@ fishery.comp.plot<-
   theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
         axis.text.y=element_text(size=9),
         plot.title=element_text(size=11))+
-  theme(legend.title = element_blank())+
+  #theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
 
-#(out$OBS_catch_prop[1,1]-out$catch_at_age_fleet_prop[1,1])/out$OBS_catch_prop[1,1]*100
+
+############################
+# Fits to Tag data
+
+#building the matrix
+tag.prop.resid<-data.frame(Rel_Reg=rep(1:nreg,each=out$nyrs_release*na),Rel_year=rep(1:out$nyrs_release,each = na),Rel_age=rep(1:na,(out$nyrs_release*nreg)))
+
+#create column names 
+colnamesindex1<-rep(1:out$max_life_tags,nreg)/10
+colnamesindex2<-rep(1:nreg,each=out$max_life_tags)
+colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"nocap"))
+
+
+#not there yet
+if(npops==1){
+  tags_obs<-out$OBS_tag_prop_final
+  tags_est<-out$EST_tag_prop_final
+  tag_resid<-(tags_obs-tags_est)*100
+  
+  tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
+  tags.long<-melt(tag.prop.resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
+  
+}
+
+
+if(npops>1){
+  #combine movements age_comps
+  pull.tags.obs<-out[grep("OBS_tag_prop", names(out), value = TRUE)]
+  pull.tags.est<-out[grep("EST_tag_prop", names(out), value = TRUE)]
+  
+  tags_obs<-data.frame(matrix(unlist(pull.tags.obs),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
+  tags_est<-data.frame(matrix(unlist(pull.tags.est),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
+  
+  tag_resid<-(tags_obs-tags_est)*100
+  names(tag_resid)<-colnamesindex
+
+  tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
+  tags.long<-melt(tag.prop.resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
+}
+
+
+#not sure what I am doing here but whatever
+
+tags.resid.plot<-
+  ggplot(tags.long, aes(x = Rel_age, y=as.character(variable))) + 
+  geom_raster(aes(fill=value)) + 
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-10, 10))+
+  labs(fill = "% Dif")+
+  #scale_y_continuous(trans = "reverse")+
+  labs(x="Age of Release", y="Recapture Region", title="Release Year") +
+  #facet_grid(Rel_Reg ~ Rel_year)+
+  facet_grid(Rel_Reg~Rel_year)+
+  theme_bw() + 
+  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+        axis.text.y=element_text(size=9),
+        plot.title=element_text(size=11))+
+  #theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
+
+
+# heaven help me!
+
+
+##############################################
+# Generate Table of Error Values from OM .dat
+##############################################
+
+#for OM
+OM_dat<-readLines(paste0(OM_direct,"\\TIM_OM.dat"))
+
+#create a table of values
+
+OM_error_table<-data.frame(Parameter=c("Sigma_Rec","Sigma_Rec_Apport","Sigma_F","Rec_Index_sigma","Survey_Sigma","Catch_Sigma","SIM_N_Catch","SIM_N_Survey"))
+
+#set up matrix to fill in the values
+temp<-matrix(NA,dim(OM_error_table)[1],nreg)
+names(temp)<-1:nreg
+OM_error_table<-cbind(OM_error_table,temp)
+
+###building table
+
+if(npops==1){
+rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
+OM_error_table[1,2]<-OM_dat[rec_om]
+  
+rec_app_om<-grep("_sigma_rec_prop",OM_dat, fixed = T)+1
+OM_error_table[2,2]<-OM_dat[rec_app_om]
+
+}
+
+
+if(npops>1){
+rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
+OM_error_table[1,2:(1+npops)]<-OM_dat[rec_om:(rec_om+1)]
+
+rec_app_om<-grep("_sigma_rec_prop",OM_dat, fixed = T)+1
+OM_error_table[2,2:(1+nreg)]<-OM_dat[rec_app_om:(rec_app_om+1)]
+
+}
+
+
+F_om<-grep("_sigma_F",OM_dat, fixed = T)+1
+OM_error_table[3,2:(1+nreg)]<-OM_dat[F_om:(F_om+1)]
+
+rec_ind_om<-grep("_rec_index_sigma",OM_dat, fixed = T)+1
+OM_error_table[4,2:(1+nreg)]<-OM_dat[rec_ind_om:(rec_ind_om+1)]
+
+surv_ind_om<-grep("_sigma_survey",OM_dat, fixed = T)+1
+OM_error_table[5,2:(1+nreg)]<-OM_dat[surv_ind_om:(surv_ind_om+1)]
+
+catch_om<-grep("_sigma_catch",OM_dat, fixed = T)+1
+OM_error_table[6,2:(1+nreg)]<-OM_dat[catch_om:(catch_om+1)]
+
+ncatch_om<-grep("_SIM_ncatch",OM_dat, fixed = T)+1
+OM_error_table[7,2:(1+nreg)]<-OM_dat[ncatch_om:(ncatch_om+1)]
+
+nsurvey_om<-grep("_SIM_nsurvey",OM_dat, fixed = T)+1
+OM_error_table[8,2:(1+nreg)]<-OM_dat[nsurvey_om:(nsurvey_om+1)]
+
+
+OM_table<-tableGrob(OM_error_table)
+h <- grobHeight(OM_table)
+w <- grobWidth(OM_table)
+title <- textGrob("OM Error Params", y=unit(0.5,"npc") + 1.0*h, 
+                  vjust=0, gp=gpar(fontsize=12))
+
+gt <- gTree(children=gList(OM_table, title))
+
+
+
+###################################
+##EM Error Parameters
+##################################
+
+
+# coming soon
+
+
+
 
 
 ##########################################
@@ -794,32 +973,101 @@ fishery.comp.plot<-
 ##########################################
 
 
+#provide some information on the run
+
+if(out$npops_OM>1 & out$npops>1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Metapopulation",sep = "\n")
+}
+
+if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions>1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Spatial Heterogeneity",sep ="\n")
+}
+if(out$npops_OM==1 && out$nregions_OM==1 && out$npops==1 && out$nregions==1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Panmictic", sep = "\n")
+}
+
+
+#is this a diagnostics run?
+diagnostic<-OM_dat[(grep("diagnostics_switch",OM_dat, fixed = T)+3)]
+
+if(diagnostic==0)
+{text2<-"Diagnostic Run: NO. Uses OBS value as data inputs"}
+
+if(diagnostic==1)
+{text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
+
+
+text.all<-paste(text1,text2,sep = "\n")
+
+
+# Create a text grob
+tgrob <- textGrob(text.all,just = "centre")
+
+
+################################################
+###############################################
 #print these plots to pdf in the EM folder
 setwd(direct)
 
 #generate pdf with plots
-pdf("Model_Diagnostics.pdf",width=6,height=4,paper='special') 
-print(rec1)
-#print(rec2)
-print(R.resid)
-print(init.ab)
-print(init.ab.resid)
-print(ssb.p)
-print(ssb.resid)
-print(s.select.p)
-print(s.select.resid)
-print(f.select.p)
-print(f.select.resid)
-print(F.plot.p)
-print(F.resid.plot)
-print(T.year.p)
-print(T.resid.plot)
-print(yield.p)
-print(survey.p)
-print(survey.comp.plot)
-print(fishery.comp.plot)
+pdf("Model_Diagnostics.pdf",paper='letter') 
+
+grid.arrange(ncol=1,
+             top=textGrob("TIM Diagnostics", gp=gpar(fontsize=18,font=3)),
+            tgrob,
+            gt)
+
+grid.arrange(ncol = 1,
+  #top="Recrutiment",
+  rec1, R.resid
+  )
+
+grid.arrange(ncol = 1,
+  #top="Initial Abundance",
+  init.ab,init.ab.resid
+)
+
+grid.arrange(ncol = 1,
+    #top="Abundance"
+    ssb.p,ssb.resid
+)
+
+#selectivity plots
+grid.arrange(ncol = 1,
+      #top="Selectivity",
+      s.select.p, s.select.resid)
+
+grid.arrange(ncol = 1,
+      #top="Selectivity",
+      f.select.p, f.select.resid)
+
+#other stuff
+grid.arrange(ncol = 1,
+    top = "Fishing Mortality",
+    F.plot.p, F.resid.plot)
+
+#other stuff
+grid.arrange(ncol = 1,
+    #top = "Movement",
+    T.year.p,T.resid.plot)
+
+#other stuff
+grid.arrange(ncol = 1,
+  top ="Fits to Data",
+   yield.p, survey.p)
+
+grid.arrange(ncol = 1,
+    top ="Fits to Data continued",
+    survey.comp.plot, fishery.comp.plot)
+
+grid.arrange(ncol = 1,
+    top ="Tag Proportion Residuals",
+    tags.resid.plot)
 
 dev.off()
+  
+
+#print(rec2)
 
 
 #save the outputs to a text file
@@ -909,6 +1157,8 @@ print(out$survey_selectivity_age)
 print("$survey_selectivity_age")
 print(out$survey_selectivity_age_TRUE)
 
+print("$report_rate")
+print(out$report_rate)
 
 if(npops==1){
 print("$T_year")
@@ -938,6 +1188,7 @@ print("$OBS_survey_fleet_bio")
 print(out$OBS_survey_fleet_bio)
 
 sink()
+
 }
 
 
