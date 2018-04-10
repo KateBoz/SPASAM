@@ -51,7 +51,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
  ##beginnings of code for running lots of sims
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat etc 
- direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
+ #direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2\\Diagnostic_RUNS"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
 
 #list files in the directory
   files<-list.files(direct_master)
@@ -59,8 +60,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 #select the file you want to run
 #if only running 1 folder
 { 
-  i=3
-
+  i=2
+  
 #if running the whole folder
 #  for(i in 1:length(files)){
 
@@ -349,6 +350,60 @@ if(npops==1){
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Initial Abundance Residuals")
+  
+  
+  
+#################################
+# Total Biomass
+  
+bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est = as.vector(t(out$biomass_AM)), Bio_True=as.vector(t(out$biomass_AM_TRUE)))
+  
+  bio.plot<-melt(bio.dat,id=c("Reg","Year"))
+  bio.plot$Reg<-as.factor(bio.plot$Reg)
+  
+  bio.p<-ggplot(bio.plot,aes(Year,value))+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+    facet_wrap(~Reg)+
+    scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
+    scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
+    ylab("SSB")+
+    theme_bw()+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          legend.background = element_rect(fill="transparent"),
+          panel.border = element_rect(colour = "black"))+
+    theme(legend.title = element_blank())+
+    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    theme(legend.position = c(1, 1), legend.justification = c(1,1))+
+    ggtitle("Total Biomass")
+  
+  
+  
+  
+  #Biomass residual plot
+  bio.dat$resid<-((bio.dat$Bio_True-bio.dat$Bio_est)/bio.dat$Bio_True)*100
+  
+  bio.resid.plot<-melt(bio.dat[,c(1,2,5)],id=c("Reg","Year"))
+  bio.resid.plot$Reg<-as.factor(bio.resid.plot$Reg)
+  
+  bio.resid<-ggplot(bio.resid.plot,aes(Year,value))+
+    geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+    geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+    theme_bw()+
+    scale_color_gradient2(low="red",mid="grey",high ="blue")+
+    ylab("Relative % Difference (True-Estimated)")+
+    facet_wrap(~Reg)+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          strip.background = element_blank(),
+          legend.background = element_rect(fill="transparent"),
+          panel.border = element_rect(colour = "black"))+
+    theme(legend.title = element_blank())+
+    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    theme(legend.position = "none", legend.justification = c(1,1))+
+    ggtitle("Biomass Residuals") 
+  
   
   
 ###############################
@@ -873,7 +928,8 @@ if(npops>1){
 tags.resid.plot<-
   ggplot(tags.long, aes(x = Rel_age, y=as.character(variable))) + 
   geom_raster(aes(fill=value)) + 
-  scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-10, 10))+
+  #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-10, 10))+
+  scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
   labs(fill = "% Dif")+
   #scale_y_continuous(trans = "reverse")+
   labs(x="Age of Release", y="Recapture Region", title="Release Year") +
@@ -991,7 +1047,7 @@ if(out$npops_OM==1 && out$nregions_OM==1 && out$npops==1 && out$nregions==1){
 diagnostic<-OM_dat[(grep("diagnostics_switch",OM_dat, fixed = T)+3)]
 
 if(diagnostic==0)
-{text2<-"Diagnostic Run: NO. Uses OBS value as data inputs"}
+{text2<-"Diagnostic Run: NO. Uses OBS values as data inputs"}
 
 if(diagnostic==1)
 {text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
@@ -1025,6 +1081,11 @@ grid.arrange(ncol = 1,
 grid.arrange(ncol = 1,
   #top="Initial Abundance",
   init.ab,init.ab.resid
+)
+
+grid.arrange(ncol = 1,
+             #top="Abundance"
+             bio.p,bio.resid
 )
 
 grid.arrange(ncol = 1,
