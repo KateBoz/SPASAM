@@ -387,7 +387,43 @@ DATA_SECTION
 
 
  // !!exit(54);
-
+    vector offset(1,2);                                    // Multinomial "offset"
+ // !!exit(54);
+LOCAL_CALCS
+// Calculate "offset" for multinomials - survey age, fishery size, survey size
+//   "Offset" value lets the multinomial likelihood equal zero when the observed and
+//     predicted are equal as in Fournier (1990) "robustifies"
+//   First step is to ensure that the data are expressed as proportions
+      for (int j=1;j<=npops;j++)
+     {
+       for (int r=1;r<=nregions(j);r++)
+       {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+             for (int z=1;z<=nfleets_survey(j);z++)
+              {
+              offset(1) -= OBS_survey_prop_N(j,r,y,z) * ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001));
+              }
+            }
+           }
+          }
+        
+     
+     // catch likelihood and multinomial fishery ages
+   for (int j=1;j<=npops;j++)
+     {
+       for (int r=1;r<=nregions(j);r++)
+       {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+             for (int z=1;z<=nfleets(j);z++)
+              {
+                offset(2) -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
+               }
+            }
+           }
+          }
+  
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
 
@@ -3332,7 +3368,7 @@ FUNCTION evaluate_the_objective_function
            }
           }
         
-     
+            survey_age_like -=offset(1);
      // catch likelihood and multinomial fishery ages
    for (int j=1;j<=npops;j++)
      {
@@ -3355,7 +3391,7 @@ FUNCTION evaluate_the_objective_function
             }
            }
           }
-
+       fish_age_like -=offset(2);
  if(active(ln_rec_devs_RN))
   {
    for(int j=1;j<=npops;j++)
