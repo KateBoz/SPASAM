@@ -51,8 +51,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
  ##beginnings of code for running lots of sims
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat etc 
- #direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2\\Diagnostic_RUNS"
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
+ direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2\\Diagnostic_RUNS2"
+#direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
 
 #list files in the directory
   files<-list.files(direct_master)
@@ -60,7 +60,7 @@ direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
 #select the file you want to run
 #if only running 1 folder
 { 
-  i=2
+  i=3
   
 #if running the whole folder
 #  for(i in 1:length(files)){
@@ -890,9 +890,9 @@ fishery.comp.plot<-
 tag.prop.resid<-data.frame(Rel_Reg=rep(1:nreg,each=out$nyrs_release*na),Rel_year=rep(1:out$nyrs_release,each = na),Rel_age=rep(1:na,(out$nyrs_release*nreg)))
 
 #create column names 
-colnamesindex1<-rep(1:out$max_life_tags,nreg)/10
-colnamesindex2<-rep(1:nreg,each=out$max_life_tags)
-colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"nocap"))
+colnamesindex1<-rep(1:nreg,out$max_life_tags)/10
+colnamesindex2<-rep(1:out$max_life_tags,each=nreg)
+colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"NoCapture"))
 
 
 #not there yet
@@ -932,7 +932,7 @@ tags.resid.plot<-
   scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
   labs(fill = "% Dif")+
   #scale_y_continuous(trans = "reverse")+
-  labs(x="Age of Release", y="Recapture Region", title="Release Year") +
+  labs(x="Age of Release", y="Time-at-Liberty . Recap Region", title="Release Year") +
   #facet_grid(Rel_Reg ~ Rel_year)+
   facet_grid(Rel_Reg~Rel_year)+
   theme_bw() + 
