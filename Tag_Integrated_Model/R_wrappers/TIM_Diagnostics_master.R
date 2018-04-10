@@ -899,11 +899,11 @@ colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"nocap"))
 if(npops==1){
   tags_obs<-out$OBS_tag_prop_final
   tags_est<-out$EST_tag_prop_final
-  tag_resid<-(tags_obs-tags_est)*100
+  tag_resid<-data.frame((tags_obs-tags_est)*100)
+  names(tag_resid)<-colnamesindex
   
   tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
   tags.long<-melt(tag.prop.resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
-  
 }
 
 
