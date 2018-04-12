@@ -643,7 +643,15 @@
 -1
 #ph_rec
 -2
+#ph_rec_app_CNST
+-2
+#ph_rec_app_YR
+-2
 #ph_init_abund
+1
+#ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
+1
+#ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #ph_F
 -3
@@ -676,7 +684,7 @@
 #ph_T_CNST
 -4
 #ph_dummy
-1
+-1
 
 ##################################
 ### likelihood weights
