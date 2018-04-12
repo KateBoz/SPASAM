@@ -441,7 +441,11 @@ DATA_SECTION
 
   init_int ph_lmr
   init_int ph_rec
+  init_int ph_rec_app_CNST
+  init_int ph_rec_app_YR
   init_int ph_abund_devs
+  init_int ph_reg_init // use when multiple regions, non natal homing to est distribution across regions
+  init_int ph_non_natal_init // use when natal homing to estimate distribution across pops, regs
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -990,6 +994,11 @@ PROCEDURE_SECTION
   evaluate_the_objective_function();
 
 FUNCTION get_random_numbers
+
+ // NOTE THAT IT APPEARS THE RNG JUST CONTINUES A SINGLE SET OF RANDOM NUMBERS WITHIN A DATA OBJECT
+ // THUS FOR EACH DATA SET OR SIMULATED PARAMETER THE VALUES WILL NOT REPEAT SO DON'T NEED MULTIPLE RANDOM
+ // NUMBERS FOR EACH DATA SET, ETC...
+
    random_number_generator myrand_yield(myseed_yield);
    random_number_generator myrand_survey(myseed_survey);
    random_number_generator myrand_F(myseed_F);
@@ -1030,7 +1039,6 @@ FUNCTION get_random_numbers
        }
      }
     }
-
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
 
@@ -5762,8 +5770,16 @@ REPORT_SECTION
   report<<ph_lmr<<endl;
   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
+  report<<"#ph_rec_app_CNST"<<endl;
+  report<<ph_rec_app_CNST<<endl;
+  report<<"#ph_rec_app_YR"<<endl;
+  report<<ph_rec_app_YR<<endl;
   report<<"#ph_abund_devs"<<endl;
   report<<ph_abund_devs<<endl;
+  report<<"#ph_reg_init"<<endl;
+  report<<ph_reg_init<<endl;
+  report<<"#ph_non_natal_init"<<endl;
+  report<<ph_non_natal_init<<endl;
   report<<"#ph_F"<<endl;
   report<<ph_F<<endl;
   report<<"#ph_steep"<<endl;
@@ -5826,9 +5842,7 @@ REPORT_SECTION
 
 //Spatial to panmictic EM inputs
    if(EM_structure==0 && OM_structure>0){ 
-      report<<"#input_Rec_prop"<<endl;
-      report<<1<<endl;
-      report<<"#input_weight"<<endl;
+            report<<"#input_weight"<<endl;
       report<<input_weight_population<<endl;
       report<<"#input_catch_weight"<<endl;
       report<<input_catch_weight_population<<endl;
@@ -5881,8 +5895,6 @@ REPORT_SECTION
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
      if((EM_structure>0 && OM_structure>0) || (EM_structure==0 && OM_structure==0)){
-      report<<"#input_Rec_prop"<<endl;
-      report<<input_Rec_prop<<endl;
       report<<"#input_weight"<<endl;
       report<<input_weight<<endl;
       report<<"#input_catch_weight"<<endl;
@@ -5941,8 +5953,8 @@ REPORT_SECTION
 //Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
-  report<<"#init_abund_EM"<<endl;
-  report<<init_abund_EM<<endl;
+ // report<<"#init_abund_EM"<<endl;
+ // report<<init_abund_EM<<endl;
 
 
 /// TRUE VALUES FROM OM
@@ -6019,7 +6031,8 @@ REPORT_SECTION
   report<<"#TRUE_tag_prop"<<endl;
   report<<tag_prop_final<<endl;
 
-
+  report<<"#T"<<endl;
+  report<<T<<endl;
 
   report<<"#debug"<<endl;
   report<<debug<<endl;

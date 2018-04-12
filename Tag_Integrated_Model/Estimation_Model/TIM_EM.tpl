@@ -115,13 +115,13 @@ DATA_SECTION
   //==1 stock-recruit relationship assumes an average value based on R_ave
   //==2 Beverton-Holt population-recruit functions based on population-specific input steepness, R0 (R_ave), M, and weight
 
-  init_number apportionment_type
+  init_number apportionment_type //only use if multiple regions in a population
   //==-1 no recruitment apportionment to regions within a population (each region within a population gets full amount of recruits from SR curve)
   //==0 apportionment to each region is based on relative SSB in region compared to population SSB
   //==1 input apportionment
   //==2 recruits are apportioned equally to each region within a population
-  //==3 estimate pop/reg apportionment
-  //==4 estimate pop/reg/year apportionment
+  //==3 estimate pop/reg apportionment constant over years
+  //==4 estimate pop/reg/year apportionment varying by year
 
   init_number use_stock_comp_info_survey //for likelihood calcs
   //Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
@@ -161,7 +161,11 @@ DATA_SECTION
 
   init_int ph_lmr
   init_int ph_rec
+  init_int ph_rec_app_CNST
+  init_int ph_rec_app_YR
   init_int ph_abund_devs
+  init_int ph_reg_init
+  init_int ph_non_natal_init
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -208,7 +212,6 @@ DATA_SECTION
 //#########################################################################################################################################
   ////////////////BIOLOGICAL PARAMETERS////////////////
   /////////////////////////////////////////////////////
-  init_matrix input_Rec_prop(1,np,1,nreg)
   init_3darray input_weight(1,np,1,nreg,1,na)  
   init_3darray input_catch_weight(1,np,1,nreg,1,na)
   init_3darray fecundity(1,np,1,nreg,1,na)
@@ -273,7 +276,7 @@ DATA_SECTION
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
   
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
-   init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+  // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
 
 
   //##########################################################################################################################################
@@ -324,6 +327,9 @@ DATA_SECTION
 //need to fix to EM dim 
   init_5darray tag_prop_final_TRUE(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
 
+
+  !! int xn=na*ny;
+  init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -342,19 +348,20 @@ DATA_SECTION
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
   
-    imatrix nregions_temp(1,np,1,np) //used to fill tag_recap matrices
+    imatrix nregions_temp(1,np,1,np) //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+    //used to fill tag_recap matrices along with dealing with collapsed indices (i.e., dimensions) for larger arrays
 
-  !! for(int j=1;j<=np;j++) //recap stock
+  !! for(int j=1;j<=np;j++) 
   !! {
-  !!  for (int r=1;r<=np;r++) //recap region
+  !!  for (int r=1;r<=np;r++) 
   !!  {
   !!    if(j<=r)
   !!     {
-  !!     nregions_temp(j,r)=0;
+  !!     nregions_temp(j,r)=0; ///first row is 0s
   !!     }
   !!    if(j>r)
   !!     {
-  !!     nregions_temp(j,r)=nreg(r); //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
+  !!     nregions_temp(j,r)=nreg(r);  //subsequent rows are filled with number of regions in previous population
   !!     }
   !!   }
   !!  }
@@ -521,20 +528,31 @@ PARAMETER_SECTION
   5darray T_terminal(1,nps,1,nr,1,nag,1,nps,1,nr) 
   5darray T_year(1,nps,1,nr,1,nyr,1,nps,1,nr) 
   7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
- 
-//recruitment parameters
-  init_bounded_matrix ln_rec_prop(1,parpops,1,nr,-4,0,-1)  // do we need this?
-  //is phase suppose to be negative below?? --DG
-  // for now... not sure what these are used for in estimation model? Are they necessary?
-  //YES..if we want to estimate recruit apportionment (typical in SS)..need to implement logit transform in later code
-  init_3darray ln_rec_prop_year(1,parpops,1,nr,1,nyr,-1) 
- 
+  
+ // ###################################################################################################################
+ //recruitment parameters
+
+   !! int app_lgth_YR=nps*nyr;
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-10,3,ph_rec_app_CNST)
+  init_3darray ln_rec_prop_YR(1,nps,1,nyr-1,1,nr-1,ph_rec_app_YR)  //no apportionment in first year because no SR used
+  //init_bounded_matrix ln_rec_prop_YR(1,nps,1,nr-1,-10,3,ph_rec_app_YR)
+
+  matrix G_app(1,nps,1,nr);
+  vector G_app_temp(1,nps);
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
    init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-40,40,ph_rec)
   
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs)
+  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs) //for initial abundance
+
+  init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-10,10,ph_non_natal_init)
+  init_bounded_matrix ln_reg(1,nps,1,nr-1,-10,10,ph_reg_init)
+  matrix G_nat(1,nps,1,T_lgth);
+  vector G_nat_temp(1,nps);
+  matrix G_reg(1,nps,1,nr);
+  vector G_reg_temp(1,nps);
+  3darray frac_natal(1,nps,1,nps,1,nr)
  //###############################################################################################################################
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
@@ -805,7 +823,6 @@ FUNCTION get_movement
         }
        }
       }
-
  if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
 // if T fixed set it to input T
   {
@@ -821,7 +838,7 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=T_year_TRUE(j,r,y,k,n);            
+              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);            
         }
        } 
       }
@@ -829,7 +846,7 @@ FUNCTION get_movement
     }
    }
   }
-  
+
  if(npops==1 && sum(nregions)==1) //if panmictic then movement is 100%
   {
 
@@ -1123,14 +1140,14 @@ FUNCTION get_F_age
               {
                F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); 
               }
-             if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
-              {
-               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));  
-               if(y>1)
-               {
-               F_year(j,r,y,z)=F_rho(j,z)*mfexp(((y-1)+nreg_temp(j)*nyrs+(r-1)*nyrs,z));            
-               }
-              }
+        //     if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
+        //      {
+        //       F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z));  
+        //       if(y>1)
+        //       {
+        //       F_year(j,r,y,z)=F_rho(j,z)*mfexp(((y-1)+nreg_temp(j)*nyrs+(r-1)*nyrs,z));            
+        //       }
+        //      }
              } //end else for negative F phase
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
             }
@@ -1206,9 +1223,23 @@ FUNCTION get_vitals
                 {
                  wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);
                 }
+               }   
+             }
+           }         
+         }
+       }
+     }
+
+
+ for(int y=1;y<=nyrs;y++)
+  {
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
                if(apportionment_type==1) //input recruitment apportionment directly by population and region
                 {
-                 Rec_Prop(j,r,y)=input_Rec_prop(j,r);
+                 Rec_Prop(j,r,y)=Rec_Prop_TRUE(j,r,y);
                 }
                if(apportionment_type==2) //equal apportionment by nregions
                 {
@@ -1218,32 +1249,204 @@ FUNCTION get_vitals
                 {
                  Rec_Prop(j,r,y)=1;
                 }
-               if(apportionment_type==(3)) //no yearly  NEED LOGIT TRANSFORM
+               if((ph_rec_app_YR<0 & ph_rec_app_CNST<0) & (apportionment_type!=2 || apportionment_type!=(-1))) //input recruitment apportionment directly by population and region
                 {
-                 Rec_Prop(j,r,y)=ln_rec_prop(j,r);
+                 Rec_Prop(j,r,y)=Rec_Prop_TRUE(j,r,y);
                 }
-               if(apportionment_type==(4)) //Yearly  NEED LOGIT TRANSFORM
-                {
-                 Rec_Prop(j,r,y)=ln_rec_prop_year(j,r,y);
-                }  
-               }   
-             }
-           }         
-         }
-       }
-     }
+ }
+ }
+ }
+  if(apportionment_type==3)
+   {
+   if(ph_rec_app_CNST>0) 
+    {
+    G_app=0;
+     G_app_temp=0;
+      for (int j=1;j<=npops;j++)
+       {
+        for (int i=1;i<=nregions(j);i++) 
+         {
+            if(j==i)
+            {
+            G_app(j,i)=1;
+            }
+            if(i>j)
+            {
+            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i));
+            }
+           }
+          }    
+      G_app_temp=rowsum(G_app);
 
-    for (int j=1;j<=npops;j++)
-     { 
+ for(int y=1;y<=nyrs;y++)
+  {
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+        Rec_Prop(j,r,y)=G_app(j,r)/G_app_temp(j);
+      }
+     }
+    }
+   }
+  }
+
+
+  if(apportionment_type==4)
+   {
+    if(ph_rec_app_YR>0) 
+    {
+      for(int y=1;y<=nyrs-1;y++)
+       {
+    G_app=0;
+     G_app_temp=0;
+      for (int j=1;j<=npops;j++)
+       {
+        for (int i=1;i<=nregions(j);i++) 
+         {
+            if(j==i)
+            {
+            G_app(j,i)=1;
+            }
+            if(i>j)
+            {
+            G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i));
+            }
+           }
+          }    
+      G_app_temp=rowsum(G_app);   
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+        Rec_Prop(j,r,y+1)=G_app(j,r)/G_app_temp(j); //apportionment not used in first year bec no SR function used
+      }
+     }
+    }
+   }
+  }
+  
+      for (int j=1;j<=npops;j++)
+       {
         for (int a=1;a<=nages;a++)
          {
-          abund_devs(j,a)=mfexp(ln_abund_devs(j,a));
-          if(ph_abund_devs<0)
-          {
-           abund_devs(j,a)=1;
-          }
+          abund_devs(j,a)=mfexp(ln_abund_devs(j,a)); //age based abund devs by population
          }
-      }
+       }
+     
+   if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
+    {
+   if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
+    {
+    G_nat=0;
+     G_nat_temp=0;
+      for (int j=1;j<=npops;j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G_nat(j,i)=1;
+            }
+            if(i>j)
+            {
+            G_nat(j,i)=mfexp(ln_nat(j,i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G_nat(j,i)=mfexp(ln_nat(j,i));
+            }
+           }
+          }    
+      G_nat_temp=rowsum(G_nat);
+
+  for (int j=1;j<=npops;j++)
+   {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              frac_natal(j,k,n)=G_nat(j,n+nreg_temp(k))/G_nat_temp(j);
+             }
+            } 
+           }
+          }
+    }
+
+   if(natal_homing_switch==0) //estimate parameters to distribute a population across multiplemultiple regions
+    {
+   if(ph_reg_init>0)
+   {
+    G_reg=0;
+     G_reg_temp=0;
+      for (int j=1;j<=npops;j++)
+       {
+        for (int i=1;i<=nregions(j);i++) 
+         {
+            if(j==i)
+            {
+            G_reg(j,i)=1;
+            }
+            if(i>j)
+            {
+            G_reg(j,i)=mfexp(ln_reg(j,i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G_reg(j,i)=mfexp(ln_reg(j,i));
+            }
+           }
+          }    
+      G_reg_temp=rowsum(G_reg);
+
+      for (int j=1;j<=npops;j++)
+        {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              if(j==k)
+               {
+                 frac_natal(j,k,n)=G_reg(k,n)/G_reg_temp(k);
+               }
+              if(j!=k)
+               {
+                 frac_natal(j,k,n)=0;
+               }
+             }
+            } 
+           }
+    }
+       if(ph_reg_init<0 && sum(nregions)==npops)
+        {
+         for (int j=1;j<=npops;j++)
+          {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              if(j==k)
+               {
+                 frac_natal(j,k,n)=1;
+               }
+              if(j!=k)
+               {
+                 frac_natal(j,k,n)=0;
+               }
+             }
+            } 
+           }
+         }
+    }
+
     for (int j=1;j<=npops;j++)
      { 
         for (int y=1;y<=nyrs-1;y++)
@@ -1257,18 +1460,18 @@ FUNCTION get_vitals
                 rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
           //     rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
 
-                  if(ph_rec<0){
-                   
-                         rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
-                           }     
-             if(recruit_randwalk_switch==1)
-                 {
-                  rec_devs_randwalk(j,y)=rec_devs(j,y);
-                  if(y>(nages+1)) //start random walk in year3 based on year 2 devs as starting point (don't use equilibrium devs from year 1)
-                   {
-                    rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y);  //is this correct?
-                   }
-                 }
+                  if(ph_rec<0)
+                  {            
+                    rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
+                  }     
+             //    if(recruit_randwalk_switch==1)
+             //    {
+             //     rec_devs_randwalk(j,y)=rec_devs(j,y);
+             //     if(y>(nages+1)) //start random walk in year3 based on year 2 devs as starting point (don't use equilibrium devs from year 1)
+             //      {
+              //      rec_devs(j,y)=rec_devs(j,y-1)*rec_devs_randwalk(j,y);  //is this correct?
+              //     }
+              //   }
                 }
                }
               }
@@ -1334,27 +1537,18 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-                    if(p==j)
-                     {
-                      init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
-                     }
-                    if(p!=j)
-                     {
-                      init_abund(p,j,r,a)=0;
-                     }
-                    if(ph_abund_devs<0)
-                     {
-                      init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
-                     }
+                   init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                  if(ph_abund_devs<0)
+                   {
+                     init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
+                   }
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
                     biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
                     biomass_BM_overlap_region(p,j,r,y)=sum(biomass_BM_age_overlap(p,j,r,y));
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-///////////////NON-NATAL Homing calcs /////////////////////////////////////////////////////////////// //////////////////////////////////////////////////////////////////////////////    
-                   init_abund_temp(j,r,a,p)=init_abund(p,j,r,a);
+
+                   init_abund_temp(j,r,a,p)=init_abund(p,j,r,a); //for non natal homing scenarios abund=0 when j!=p
                    abundance_at_age_BM(j,r,y,a)=sum(init_abund_temp(j,r,a));
                    recruits_BM(j,r,y)=abundance_at_age_BM(j,r,y,1);
 
