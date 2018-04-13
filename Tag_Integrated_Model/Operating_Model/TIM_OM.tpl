@@ -1472,7 +1472,6 @@ FUNCTION get_vitals
        }
      }
 
-
 //SPR calcs are done with either  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
@@ -5508,8 +5507,6 @@ FUNCTION get_tag_recaptures
         }
        }
 
-
-      
 FUNCTION get_observed_tag_recaptures
  if(do_tag==1)
   {
@@ -5568,19 +5565,19 @@ FUNCTION get_observed_tag_recaptures
              OBS_tag_prop_population_temp(i,x,a,s,n)=SIM_tag_prop(i,n,x,a,s);
              OBS_tag_prop_population_temp2(i,x,a,s)=sum(OBS_tag_prop_population_temp(i,x,a,s));
              OBS_tag_prop_population_final(i,x,a,s)=OBS_tag_prop_population_temp2(i,x,a,s)/(nregions(i)*SIM_ntag);
-             OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
-             OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
+           //  OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
+         //    OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
 
-             if(OM_structure>0 && EM_structure==0){
-                   for (int k=1;k<=max_life_tags+1;k++)
-                      {
-                       OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
-                       OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
-                       OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
+     //        if(OM_structure>0 && EM_structure==0){
+      //            for (int k=1;k<=max_life_tags+1;k++)
+       //               {
+       //                OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
+       //                OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
+        //               OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
                        //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
-                       }
-                      }
-                     }
+       //                }
+        //              }
+                    }
                     }
                    }
                   }
