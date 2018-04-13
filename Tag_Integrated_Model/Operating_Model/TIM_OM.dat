@@ -27,7 +27,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-1
+0
 
 # parse_TAC
   #==0 do not alter the input TAC or harvest rate
@@ -169,7 +169,7 @@
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
   #==3 cyclical (sine wave type)
-2
+1
 
 #use_stock_comp_info_survey
  #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
@@ -540,7 +540,7 @@
   #==1 stock-recruit relationship assumes an average value based on R_ave
   #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
   #==3 cyclical (sine wave type)
-2
+1
 
 #apportionment_type
   #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
@@ -590,7 +590,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-1
+0
 
 #do_tag_mult
   #==0 assume neg binomial distribution for tagging data
@@ -658,9 +658,9 @@
 #ph_lmr
 1
 #ph_rec
-3
-#ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
 2
+#ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
+4
 #ph_rec_app_YR
 -2
 #ph_init_abund
@@ -670,7 +670,7 @@
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #ph_F
-2
+3
 #ph_steep
 -1
 #ph_M
@@ -716,7 +716,7 @@
 #wt_rec
 1
 #wt_tag
-1
+0
 
 #abund_pen_switch
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
