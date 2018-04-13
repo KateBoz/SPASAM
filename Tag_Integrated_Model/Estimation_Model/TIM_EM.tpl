@@ -350,7 +350,7 @@ DATA_SECTION
   
     imatrix nregions_temp(1,np,1,np) //create temp matrix that holds the number of regions that exist in all previous populations (so can sum for use in calcs below)
     //used to fill tag_recap matrices along with dealing with collapsed indices (i.e., dimensions) for larger arrays
-
+  vector nr_temp(1,np)
   !! for(int j=1;j<=np;j++) 
   !! {
   !!  for (int r=1;r<=np;r++) 
@@ -358,14 +358,19 @@ DATA_SECTION
   !!    if(j<=r)
   !!     {
   !!     nregions_temp(j,r)=0; ///first row is 0s
+  !!     nr_temp(j)=nreg(j)-1;
   !!     }
   !!    if(j>r)
   !!     {
   !!     nregions_temp(j,r)=nreg(r);  //subsequent rows are filled with number of regions in previous population
+  !!     nr_temp(j)=nreg(j)-1;
   !!     }
   !!   }
   !!  }
   ivector nreg_temp(1,np)
+  int sum_nr_temp
+  !! sum_nr_temp=sum(nr_temp);
+  !! nreg_temp=rowsum(nregions_temp);
 
   int a
   int y
@@ -530,12 +535,17 @@ PARAMETER_SECTION
   7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
   
  // ###################################################################################################################
- //recruitment parameters
+ // ###################################################################################################################
+ //OLD YEARLY APPORTIONMENT APPROACH, NEITHER VERSION WORKS CORRECTLY
 
-   !! int app_lgth_YR=nps*nyr;
-  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-10,3,ph_rec_app_CNST)
-  init_3darray ln_rec_prop_YR(1,nps,1,nyr-1,1,nr-1,ph_rec_app_YR)  //no apportionment in first year because no SR used
-  //init_bounded_matrix ln_rec_prop_YR(1,nps,1,nr-1,-10,3,ph_rec_app_YR)
+//  init_3darray ln_rec_prop_YR(1,nps,1,nyr-1,1,nr-1,ph_rec_app_YR)  //no apportionment in first year because no SR used
+
+//  matrix G_app(1,nps,1,nr);
+//  vector G_app_temp(1,nps);
+
+ //#########################################################################################################################
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-5,5,ph_rec_app_CNST)
+  init_bounded_matrix ln_rec_prop_YR(1,nps,1,nyr-1,-5,5,ph_rec_app_YR) //needs work
 
   matrix G_app(1,nps,1,nr);
   vector G_app_temp(1,nps);
@@ -792,7 +802,6 @@ PROCEDURE_SECTION
 
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
- nreg_temp=rowsum(nregions_temp);
 
  if(move_switch==0)
   {
@@ -1295,13 +1304,13 @@ FUNCTION get_vitals
    }
   }
 
-
+ //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
   if(apportionment_type==4)
    {
     if(ph_rec_app_YR>0) 
     {
-      for(int y=1;y<=nyrs-1;y++)
-       {
+  for(int y=1;y<=nyrs-1;y++)
+  {
     G_app=0;
      G_app_temp=0;
       for (int j=1;j<=npops;j++)
@@ -1314,15 +1323,16 @@ FUNCTION get_vitals
             }
             if(i>j)
             {
-            G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i-1));
+            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1))*mfexp(ln_rec_prop_YR(j,y));
             }
             if(j!=i && i<j)
             {
-            G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i));
+            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i))*mfexp(ln_rec_prop_YR(j,y));
             }
            }
-          }    
-      G_app_temp=rowsum(G_app);   
+          }
+         
+      G_app_temp=rowsum(G_app);
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -1333,7 +1343,48 @@ FUNCTION get_vitals
     }
    }
   }
-  
+ 
+
+//###################### ALT YEARLY APPORTIONEMENT APPROACH, NEITHER VERSION APPEARS TO WORK
+  //if(apportionment_type==4)
+  // {
+   // if(ph_rec_app_YR>0) 
+   // {
+    //  for(int y=1;y<=nyrs-1;y++)
+   //    {
+  //  G_app=0;
+  //   G_app_temp=0;
+ //     for (int j=1;j<=npops;j++)
+    //   {
+  //      for (int i=1;i<=nregions(j);i++) 
+//         {
+           // if(j==i)
+         //   {
+       //     G_app(j,i)=1;
+     //       }
+   //         if(i>j)
+           // {
+         //   G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i-1));
+       //     }
+     //       if(j!=i && i<j)
+   //         {
+           // G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i));
+         //   }
+       //    }
+     //     }    
+   //   G_app_temp=rowsum(G_app);   
+ // for (int j=1;j<=npops;j++)
+  // {
+//    for (int r=1;r<=nregions(j);r++)
+   //  {
+     //   Rec_Prop(j,r,y+1)=G_app(j,r)/G_app_temp(j); //apportionment not used in first year bec no SR function used
+   //   }
+   //  }
+  //  }
+ //  }
+ // }
+//###################################################################################################
+
       for (int j=1;j<=npops;j++)
        {
         for (int a=1;a<=nages;a++)
