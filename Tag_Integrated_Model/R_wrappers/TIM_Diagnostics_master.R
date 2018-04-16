@@ -51,7 +51,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
  ##beginnings of code for running lots of sims
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat etc 
- direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2\\Diagnostic_RUNS2"
+ direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\TIM_editing"
 #direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
 
 #list files in the directory
@@ -60,7 +60,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 #select the file you want to run
 #if only running 1 folder
 { 
-  i=3
+  i=2
   
 #if running the whole folder
 #  for(i in 1:length(files)){
@@ -366,7 +366,7 @@ bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est =
     facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
-    ylab("SSB")+
+    ylab("Total Biomass")+
     theme_bw()+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -943,8 +943,6 @@ tags.resid.plot<-
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
 
-# heaven help me!
-
 
 ##############################################
 # Generate Table of Error Values from OM .dat
@@ -985,22 +983,22 @@ OM_error_table[2,2:(1+nreg)]<-OM_dat[rec_app_om:(rec_app_om+1)]
 
 
 F_om<-grep("_sigma_F",OM_dat, fixed = T)+1
-OM_error_table[3,2:(1+nreg)]<-OM_dat[F_om:(F_om+1)]
+OM_error_table[3,2:(1+nreg)]<-OM_dat[F_om:(F_om+(nreg-1))]
 
 rec_ind_om<-grep("_rec_index_sigma",OM_dat, fixed = T)+1
-OM_error_table[4,2:(1+nreg)]<-OM_dat[rec_ind_om:(rec_ind_om+1)]
+OM_error_table[4,2:(1+nreg)]<-OM_dat[rec_ind_om:(rec_ind_om+(nreg-1))]
 
 surv_ind_om<-grep("_sigma_survey",OM_dat, fixed = T)+1
-OM_error_table[5,2:(1+nreg)]<-OM_dat[surv_ind_om:(surv_ind_om+1)]
+OM_error_table[5,2:(1+nreg)]<-OM_dat[surv_ind_om:(surv_ind_om+(nreg-1))]
 
 catch_om<-grep("_sigma_catch",OM_dat, fixed = T)+1
-OM_error_table[6,2:(1+nreg)]<-OM_dat[catch_om:(catch_om+1)]
+OM_error_table[6,2:(1+nreg)]<-OM_dat[catch_om:(catch_om+(nreg-1))]
 
 ncatch_om<-grep("_SIM_ncatch",OM_dat, fixed = T)+1
-OM_error_table[7,2:(1+nreg)]<-OM_dat[ncatch_om:(ncatch_om+1)]
+OM_error_table[7,2:(1+nreg)]<-OM_dat[ncatch_om:(ncatch_om+(nreg-1))]
 
 nsurvey_om<-grep("_SIM_nsurvey",OM_dat, fixed = T)+1
-OM_error_table[8,2:(1+nreg)]<-OM_dat[nsurvey_om:(nsurvey_om+1)]
+OM_error_table[8,2:(1+nreg)]<-OM_dat[nsurvey_om:(nsurvey_om+(nreg-1))]
 
 
 OM_table<-tableGrob(OM_error_table)
@@ -1063,7 +1061,7 @@ tgrob <- textGrob(text.all,just = "centre")
 ################################################
 ###############################################
 #print these plots to pdf in the EM folder
-setwd(direct)
+setwd(EM_direct)
 
 #generate pdf with plots
 pdf("Model_Diagnostics.pdf",paper='letter') 
