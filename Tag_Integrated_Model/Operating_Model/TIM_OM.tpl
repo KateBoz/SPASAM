@@ -302,9 +302,6 @@ DATA_SECTION
   init_number NR_dev
 
 
-
-
-
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -435,9 +432,6 @@ DATA_SECTION
   init_matrix input_M_EM(1,np_em,1,na)
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
-  //!!cout<<input_T_EM<<endl;
-  //!!exit(43);
-
 
   init_int ph_lmr
   init_int ph_rec
@@ -494,7 +488,6 @@ DATA_SECTION
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
-
 
 
 //////////////////////////////////////////////////////////////
@@ -694,10 +687,13 @@ PARAMETER_SECTION
  5darray true_survey_fleet_age_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
  4darray true_survey_region_abundance(1,nps,1,nyr,1,nr,1,nag)
  4darray true_survey_region_abundance_temp(1,nps,1,nyr,1,nag,1,nr) 
+ 3darray true_survey_population_abundance_temp(1,nps,1,nyr,1,nag)
  3darray true_survey_population_abundance(1,nyr,1,nps,1,nag)
- 3darray true_survey_population_abundance_temp(1,nyr,1,nag,1,nps)
+ 3darray true_survey_total_abundance_temp(1,nyr,1,nag,1,nps)
  matrix true_survey_total_abundance(1,nyr,1,nag)
  // end new tag stuff
+
+
 
  5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -3870,11 +3866,13 @@ FUNCTION get_abundance
                   true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
                   true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
                   true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
-                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                  true_survey_total_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
                   true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
                  // end abundance for tagging *dh
 
-     
+
+
+
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -5010,7 +5008,15 @@ FUNCTION get_abundance
                   
                   // calculate true survey abundance for tagging simulation **dh**
                   true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
-                  true_survey_region_abundance(j,y,r)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                  true_survey_population_abundance_temp(j,y,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                  true_survey_population_abundance(y,j,a)=true_survey_population_abundance_temp(j,y,a);
+                  true_survey_total_abundance_temp(y,a,j)= true_survey_population_abundance(y,j,a);
+                  true_survey_total_abundance(y,a)=sum(true_survey_total_abundance_temp(y,a));
+
+
+                  
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -5028,8 +5034,6 @@ FUNCTION get_abundance
    } // end age loop
   } //end yr>1 loop
  }  //end y loop
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5311,8 +5315,11 @@ FUNCTION get_tag_recaptures
         {
           survey_selectivity_temp(i,n,xx,1,a)=survey_selectivity(i,n,xx,a,1);
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-         // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
-          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+ 
+          //ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+         ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a));//*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+         // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+
 
 
  // for the EM .dat
@@ -5326,8 +5333,12 @@ FUNCTION get_tag_recaptures
        }
       }
      }
-
      
+ //cout<<ntags<<endl;
+ //cout<<true_survey_total_abundance<<endl;
+ //(43);
+
+
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -6030,7 +6041,11 @@ REPORT_SECTION
 
   report<<"#T"<<endl;
   report<<T<<endl;
+ 
+  //report<<"abund_at_age"<<endl;
+  //report<<abundance_at_age_AM<<endl;
 
+ 
   report<<"#debug"<<endl;
   report<<debug<<endl;
 
