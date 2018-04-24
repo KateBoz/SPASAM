@@ -1057,7 +1057,7 @@ if(diagnostic==0)
 if(diagnostic==1)
 {text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
 
-text3<-paste0("Run Time of Estimation: ",round(as.vector(time.elapsed)[3],5))
+text3<-paste0("Run Time of Estimation: ",round((as.vector(time.elapsed)[3]/60),5)," minutes")
 
 
 text.all<-paste(text1,text2,text3,sep = "\n")
