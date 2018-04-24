@@ -1,8 +1,9 @@
 ####################################################
-# Beginnings of a code for running TIM OM/EM
+# Model diagnostics for TIM OM/EM
 # Created by: Katelyn Bosley
-#
 ####################################################
+
+# Manually make changes in the OM .dat and run both OM and EM together
 
 #remove junk from workspace
 rm(list=(ls()))
@@ -23,7 +24,8 @@ load_libraries<-function() {
   library(matrixStats) 
   library(gridExtra)
   library(grid)
-}
+  library(tictoc)
+  }
 load_libraries()
 
 
@@ -43,27 +45,20 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 ########### INPUTS FOR RUNNING MODELS ###########################################
 #################################################################################
   
-# Manually make changes in the OM .dat and run both OM and EM together
+#set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
-
-######### USER INPUTS...NEED TO CHANGE EACH RUN ##################################  
-  
- ##beginnings of code for running lots of sims
-
-#set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat etc 
- direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\TIM_editing"
-#direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_MS2"
+# master file with holding the runs 
+direct_master<-"G:\\TIM_editing\\"
 
 #list files in the directory
-  files<-list.files(direct_master)
+files<-list.files(direct_master)
   
 #select the file you want to run
-#if only running 1 folder
-{ 
-  i=2
+#if only running 1 folder set i to the number corresponding to the folder you want to run
+i=1
   
 #if running the whole folder
-#  for(i in 1:length(files)){
+ #for(i in 1:length(files)){
 
   #OM Location
   OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
@@ -72,13 +67,14 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
   #EM Location
   EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
   EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
-  ########################################################################################################
+###########################################################################
   
 
 
-########################################################################################################
-########### AUTOMATED...DO NOT CHANGE ##################################################################
-########################################################################################################
+############################################################################
+########### AUTOMATED...DO NOT CHANGE ######################################
+############################################################################
+
 { #run this section of code
 
 #run the OM
@@ -94,9 +90,13 @@ file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
-invisible(shell(paste0(EM_name),wait=T))
+
+time.elapsed<- system.time( # keeping track of time for run
+
+invisible(shell(paste0(EM_name),wait=T)))
 
 } #end running the OM/EM together
+
 
 
 #########################################################
@@ -118,15 +118,15 @@ years<-seq(1:out$nyrs)
 ages<-seq(1:out$nages)
 
 
-#to use the current code with meta pop example. Will have to fix this if more complex
+#for running the meta pop example. Might need fixing if more complex
 if(npops>1){
   nreg=sum(nreg)}
-
 
 
 ##############################
 #### RECRUITMENT PLOTS #######
 ##############################
+
 #rec total
 rec.total<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Est = as.vector(t(out$recruits_BM)), Rec_True=as.vector(t(out$recruits_BM_TRUE)))
 
@@ -255,7 +255,6 @@ rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Recruitment Residuals")
-
 
 
 #################################
@@ -923,10 +922,15 @@ if(npops>1){
 }
 
 
-#not sure what I am doing here but whatever
+# subset the data by release region
 
-tags.resid.plot<-
-  ggplot(tags.long, aes(x = Rel_age, y=as.character(variable))) + 
+split.by.reg<-split(tags.long,tags.long$Rel_Reg)
+
+
+#not sure what I am doing here but whatever
+tags.plot<-function(j=1) {
+  
+  ggplot(split.by.reg[[j]], aes(x = Rel_age, y=as.factor(variable))) + 
   geom_raster(aes(fill=value)) + 
   #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-10, 10))+
   scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
@@ -936,11 +940,19 @@ tags.resid.plot<-
   #facet_grid(Rel_Reg ~ Rel_year)+
   facet_grid(Rel_Reg~Rel_year)+
   theme_bw() + 
-  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+  theme(#axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+        axis.text.x=element_blank(),
         axis.text.y=element_text(size=9),
-        plot.title=element_text(size=11))+
-  #theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
+        plot.title=element_text(size=11),
+        #legend.title = element_blank()),
+    strip.text.x = element_text(size = 10, colour = "black", face="bold"),
+    panel.spacing = unit(0.05, "lines"))
+
+}
+
+
+
+#tags.plot(3)
 
 
 
@@ -1011,16 +1023,11 @@ gt <- gTree(children=gList(OM_table, title))
 
 
 
-###################################
-##EM Error Parameters
+##################################
+##EM Error Parameters  
 ##################################
 
-
-# coming soon
-
-
-
-
+# probably don't need this if the errors are going to be matching
 
 ##########################################
 # SAVE THE OUTPUTS
@@ -1050,8 +1057,10 @@ if(diagnostic==0)
 if(diagnostic==1)
 {text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
 
+text3<-paste0("Run Time of Estimation: ",round(as.vector(time.elapsed)[3],5))
 
-text.all<-paste(text1,text2,sep = "\n")
+
+text.all<-paste(text1,text2,text3,sep = "\n")
 
 
 # Create a text grob
@@ -1061,6 +1070,7 @@ tgrob <- textGrob(text.all,just = "centre")
 ################################################
 ###############################################
 #print these plots to pdf in the EM folder
+
 setwd(EM_direct)
 
 #generate pdf with plots
@@ -1119,12 +1129,17 @@ grid.arrange(ncol = 1,
     top ="Fits to Data continued",
     survey.comp.plot, fishery.comp.plot)
 
-grid.arrange(ncol = 1,
-    top ="Tag Proportion Residuals",
-    tags.resid.plot)
+#grid.arrange(ncol = 1,
+#    top ="Tag Proportion Residuals",
+#    tags.resid.plot)
 
 dev.off()
   
+pdf("Tag_Residuals.pdf",paper='a4r',width=11,height=8) 
+for(k in 1:nreg){
+  print(tags.plot(k))}
+
+dev.off()
 
 #print(rec2)
 
@@ -1149,6 +1164,12 @@ print(out$R_ave)
 
 print("$R_ave_TRUE")
 print(out$R_ave_TRUE)
+
+print("$R_apport")
+print(out$Rec_Prop)
+
+print("$R_apport_True")
+print(out$Rec_Prop_TRUE)
 
 print("$steep")
 print(out$steep)
@@ -1253,7 +1274,7 @@ sink()
 
 make.plots()
 
-} #end loops
+#} #end loops if doing many runs
   
 
 
