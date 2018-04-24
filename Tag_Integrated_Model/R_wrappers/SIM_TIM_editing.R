@@ -39,7 +39,7 @@ load_libraries()
 
 
 
-nsim <-10   # How many simulations to perform
+nsim <-25   # How many simulations to perform
 
 
 
@@ -218,7 +218,8 @@ for(i in 1:nsim){conv[i,2]<-ls[[i]]}
  
 #ending
 unlink(getwd())
-setwd(direct_master)
+setwd(diag_direct)
+write.csv(file="Convergence.csv",conv)
 
 
 ##############################################################
@@ -276,8 +277,8 @@ vg=foreach(i=1:nsim,.options.snow = opts,.combine='cbind',.packages = c('PBSmode
   ssb_est_temp<-data.table(SSB_Est = c(t(out$SSB_region)))
   
 #Save_apport
-  apport_sim_temp<-data.table(Apport_Sim = c(t(out$Rec_apport_TRUE)))
-  apport_est_temp<-data.table(Apport_Est = c(t(out$Rec_apport)))
+  apport_sim_temp<-data.table(Apport_Sim = c(t(out$Rec_Prop_TRUE)))
+  apport_est_temp<-data.table(Apport_Est = c(t(out$Rec_Prop)))
 
 #
 
