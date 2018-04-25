@@ -24,23 +24,39 @@ load_libraries<-function() {
   library(matrixStats) 
   library(gridExtra)
   library(grid)
-  library(tictoc)
   }
 load_libraries()
 
 
+######################################################################
+########### PLOT SETTINGS ############################################
+######################################################################
+
 ##############################################
-#plot color set up if what something different
+#plot set up 
 ##############################################
 #set up the colors you want to use for TRUE and ESTIMATED
-t.col="black"
-e.col="blue"
+t.col="black" #true
+e.col="blue"  #estimated
 
-#set up the color that are wanted for movement plot - used a color ramp
+#set up the color that are wanted for MOVEMENT plot - used a color ramp
 mycols=colorRampPalette(c("blue", "cyan","black"))
 
+# Select Line width
+line.wd=0.8
 
-  
+
+
+##############################################
+#Residual values
+##############################################
+
+#set residual switch for different values plotted
+resid.switch=1
+# =1 straight residual (TRUE-ESTIMATED; not % of true)
+# =2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
+
+
 #################################################################################
 ########### INPUTS FOR RUNNING MODELS ###########################################
 #################################################################################
@@ -135,7 +151,7 @@ rec.total.plot$Reg<-as.factor(rec.total.plot$Reg)
 
 
 rec1<-ggplot(rec.total.plot,aes(Year,value))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
@@ -206,7 +222,7 @@ if(npops==1){
 rec.devs.plot<-melt(rec.devs,id=c("Year"))
   
 rec2<-ggplot(rec.devs.plot,aes(Year,value))+
-    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
     theme_bw()+
     #facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
@@ -229,10 +245,15 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 ##########################
 #recruit residual plot
 
-
+if(resid.switch==1){
 #calculate the resids as Relative % Diff
-rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)
+rec.total$resids<-(rec.total$Rec_True-rec.total$Rec_Est)
+}
   
+if(resid.switch==2){
+  #calculate the resids as Relative % Diff
+  rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)*100
+}
   
 #preparing for plotting
   rec.resids.plot<-melt(rec.total[,c(1,2,5)],id=c("Reg","Year"))
@@ -244,7 +265,7 @@ rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Relative % Difference (True-Estimated)")+
+    ylab("Difference (True-Estimated)")+
     facet_wrap(~Reg)+
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -309,7 +330,7 @@ if(npops==1){
 
 #plot
   init.ab<-ggplot(init.abund.plot,aes(Age, value))+
-    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
     facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
@@ -327,7 +348,16 @@ if(npops==1){
   
 
  #Init Abundance residuals 
+
+if(resid.switch==1){
+  init.abund$resids<-(init.abund$In_ab_True-init.abund$In_ab_Est)
+}
+  
+if(resid.switch==2){
   init.abund$resids<-((init.abund$In_ab_True-init.abund$In_ab_Est)/init.abund$In_ab_True)*100
+}
+  
+  
   init.abund.resid.plot<-melt(init.abund[,c(1,2,5)],id=c("Reg","Age"))
   init.abund.resid.plot$Reg<-as.factor(init.abund.resid.plot$Reg) 
   
@@ -337,7 +367,7 @@ if(npops==1){
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Relative % Difference (True-Estimated)")+
+    ylab("Difference (True-Estimated)")+
     
     facet_wrap(~Reg)+
     theme(panel.grid.major = element_blank(),
@@ -361,7 +391,7 @@ bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est =
   bio.plot$Reg<-as.factor(bio.plot$Reg)
   
   bio.p<-ggplot(bio.plot,aes(Year,value))+
-    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
     facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
@@ -378,11 +408,17 @@ bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est =
     ggtitle("Total Biomass")
   
   
+#calculate resids
   
+if(resid.switch==1){ 
+    bio.dat$resid<-(bio.dat$Bio_True-bio.dat$Bio_est)
+}
   
-  #Biomass residual plot
+if(resid.switch==2){ 
   bio.dat$resid<-((bio.dat$Bio_True-bio.dat$Bio_est)/bio.dat$Bio_True)*100
+}
   
+
   bio.resid.plot<-melt(bio.dat[,c(1,2,5)],id=c("Reg","Year"))
   bio.resid.plot$Reg<-as.factor(bio.resid.plot$Reg)
   
@@ -414,7 +450,7 @@ ssb.plot<-melt(ssb.dat,id=c("Reg","Year"))
 ssb.plot$Reg<-as.factor(ssb.plot$Reg)
 
 ssb.p<-ggplot(ssb.plot,aes(Year,value))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
@@ -435,7 +471,13 @@ ssb.p<-ggplot(ssb.plot,aes(Year,value))+
 
 #SSB residual plot
 
-ssb.dat$resid<-((ssb.dat$SSB_True-ssb.dat$SSB_est)/ssb.dat$SSB_True)*100
+if(resid.switch==1){ 
+ssb.dat$resid<-(ssb.dat$SSB_True-ssb.dat$SSB_est)
+}
+
+if(resid.switch==2){
+  ssb.dat$resid<-((ssb.dat$SSB_True-ssb.dat$SSB_est)/ssb.dat$SSB_True)*100
+}
 
 ssb.resid.plot<-melt(ssb.dat[,c(1,2,5)],id=c("Reg","Year"))
 ssb.resid.plot$Reg<-as.factor(ssb.resid.plot$Reg)
@@ -445,7 +487,7 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Relative % Difference (True-Estimated)")+
+  ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -473,7 +515,7 @@ f.select.plot<-melt(f.select,id=c("Reg","Age"))
 f.select.plot$Reg<-as.factor(f.select$Reg)
 
 f.select.p<-ggplot(f.select.plot,aes(Age, value))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
@@ -490,7 +532,13 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
   ggtitle("Fishery Selectivity")
 
 #fishery selectivity resid
+if(resid.switch==1){
+  f.select$resid<-(out$selectivity_age_TRUE-out$selectivity_age)
+}
+
+if(resid.switch==2){
 f.select$resid<-((out$selectivity_age_TRUE-out$selectivity_age)/out$selectivity_age_TRUE)*100
+}
 
 f.select.resid.plot<-melt(f.select[,c(1,2,5)],id=c("Reg","Age"))
 f.select.resid.plot$Reg<-as.factor(f.select.resid.plot$Reg)
@@ -502,7 +550,7 @@ f.select.resid<-ggplot(f.select.resid.plot,aes(Age,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Relative % Difference (True-Estimated)")+
+  ylab("Difference (True-Estimated)")+
   
   facet_wrap(~Reg)+
   theme(panel.grid.major = element_blank(),
@@ -525,7 +573,7 @@ s.select.plot<-melt(s.select,id=c("Reg","Age"))
 s.select.plot$Reg<-as.factor(s.select$Reg)
 
 s.select.p<-ggplot(s.select.plot,aes(Age, value))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
@@ -545,6 +593,15 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
 
 # survey selectivity resids plot
 s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age)/out$survey_selectivity_age_TRUE)*100
+
+if(resid.switch==1){
+  s.select$resid<-(out$survey_selectivity_age_TRUE-out$survey_selectivity_age)}
+
+
+if(resid.switch==2){
+  s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age)/out$survey_selectivity_age_TRUE)*100}
+  
+
 s.select.resid.plot<-melt(s.select[,c(1,2,5)],id=c("Reg","Age"))
 s.select.resid.plot$Reg<-as.factor(s.select.resid.plot$Reg)
 
@@ -582,7 +639,7 @@ F.plot<-melt(F.year,id=c("Reg","Year"))
 F.plot$Reg<-as.factor(F.plot$Reg)
 
 F.plot.p<-ggplot(F.plot,aes(Year,value))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   theme_bw()+
   facet_wrap(~Reg)+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
@@ -600,7 +657,16 @@ F.plot.p<-ggplot(F.plot,aes(Year,value))+
 
 
 #F resids
-F.year$resid<-((F.year$F_year_T-F.year$F_year)/out$F_year_T)*100
+
+if(resid.switch==1){
+F.year$resid<-(F.year$F_year_T-F.year$F_year)}
+
+if(resid.switch==2){
+  F.year$resid<-((F.year$F_year_T-F.year$F_year)/F.year$F_year_T)*100
+}
+
+
+
 F.resid.p<-melt(F.year[,c(1,2,5)],id=c("Reg","Year"))
 F.resid.p$Reg<-as.factor(F.resid.p$Reg)
 
@@ -609,7 +675,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Relative % Difference (True-Estimated)")+
+  ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -632,13 +698,19 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 if(npops==1){
   T_est<-data.frame(out$T_year)
   T_true<-data.frame(out$T_year_TRUE)
-  T_resid<-((T_true-T_est)/T_true)*1
   
-  for(i in 1:nreg){
+if(resid.switch==1){
+  T_resid<-(T_true-T_est)}
+  
+if(resid.switch==2){
+  T_resid<-((T_true-T_est)/T_true)*100}
+  
+}
+  
+for(i in 1:nreg){
     names(T_est)[i]<-paste0("Est_",i)
     names(T_true)[i]<-paste0("True_",i)
     names(T_resid)[i]<-paste0("Resid_",i)}
-}
 
 
 
@@ -650,7 +722,13 @@ pull<-out[grep("alt", names(out), value = TRUE)]
 
 T_est<-data.frame(matrix(unlist(pull),nyrs*npops,npops,byrow=TRUE))
 T_true<-data.frame(matrix(out$T_year_TRUE,nyrs*npops,npops,byrow=TRUE))
-T_resid<-((T_true-T_est)/T_true)*100
+
+if(resid.switch==1){
+  T_resid<-(T_true-T_est)}
+
+if(resid.switch==2){
+  T_resid<-((T_true-T_est)/T_true)*100}
+
   
 for(i in 1:npops){
 names(T_est)[i]<-paste0("Est_",i)
@@ -680,7 +758,7 @@ if(nreg==1 && npops==1){
 T.col<-mycols(2)}
 
 T.year.p<-ggplot(T.year.plot,aes(Year,value))+
-  geom_line(aes(col = variable,linetype=variable),lwd=1,stat = "identity")+
+  geom_line(aes(col = variable,linetype=variable),lwd=line.wd,stat = "identity")+
   theme_bw()+
   facet_wrap(~Reg)+
   scale_color_manual(values = T.col)+
@@ -700,6 +778,7 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
 
 #T_matrix resids
 pull2<-T.year[grep("Resid", colnames(T.year), value = TRUE)]
+
 T.resid.temp<-cbind(T.year[,c(1,2)],pull2)
 
 T.year.resid<-melt(T.resid.temp,id=c("Reg","Year"))
@@ -710,7 +789,7 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Relative % Difference (True-Estimated)")+
+  ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -728,14 +807,15 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
 ########## Fits to data ####################################
 ############################################################
 
-# Yields
+##############
+# Yield
 
-Y.year<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
+Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
 
-Y.year.plot<-melt(Y.year, id=c("Reg","Years"))
+Y.year.plot<-melt(Y.year, id=c("Reg","Year"))
 
-yield.p<-ggplot(Y.year.plot,aes(Years,value,shape=variable))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   geom_point(size=2, alpha = 0.5)+
   scale_shape_manual(values=c(NA,16),labels = c("Estimated","Observed"))+
   facet_wrap(~Reg)+
@@ -754,14 +834,47 @@ yield.p<-ggplot(Y.year.plot,aes(Years,value,shape=variable))+
   ggtitle("Yield")
 
 
+# calculate residuals
+
+#if(resid.switch==1){
+#  Y.year$resid<-(Y.year$Observed-Y.year$Estimated)}
+
+#if(resid.switch==2){
+  Y.year$resid<-((Y.year$Observed-Y.year$Estimated)/Y.year$Observed)*100
+#}
+
+y.resid.p<-melt(Y.year[,c(1,2,5)],id=c("Reg","Year"))
+
+
+#
+Y.resid.plot<-ggplot(y.resid.p,aes(Year,value))+
+  geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+  geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+  theme_bw()+
+  scale_color_gradient2(low="red",mid="grey",high ="blue")+
+  ylab("Difference (True-Estimated)")+
+  facet_wrap(~Reg)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        legend.background = element_rect(fill="transparent"),
+        panel.border = element_rect(colour = "black"))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  theme(legend.position = "none", legend.justification = c(1,1))+
+  ggtitle("Yield Residuals")
+
+
+
+################
 # Survey Index
 
-Survey.year<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), SI_Est=out$survey_fleet_bio,SI_True=out$OBS_survey_fleet_bio ) 
+Survey.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), SI_Est=out$survey_fleet_bio,SI_Obs=out$OBS_survey_fleet_bio ) 
 
-Survey.year.plot<-melt(Survey.year, id=c("Reg","Years"))
+Survey.year.plot<-melt(Survey.year, id=c("Reg","Year"))
 
-survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
-  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+survey.p<-ggplot(Survey.year.plot,aes(Year,value,shape=variable))+
+  geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
   geom_point(size=2, alpha = 0.5)+
   scale_shape_manual(values=c(NA,16),labels = c("Estimated","Observed"))+
   facet_wrap(~Reg)+
@@ -780,6 +893,38 @@ survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
   ggtitle("Survey Biomass")
 
 
+#Calc resids
+#if(resid.switch==1){
+#  Survey.year$resid<-(Survey.year$SI_Obs-Survey.year$SI_Est)}
+
+#if(resid.switch==2){
+  Survey.year$resid<-((Survey.year$SI_Obs-Survey.year$SI_Est)/Survey.year$SI_Obs)*100
+#}
+
+surv.resid.p<-melt(Survey.year[,c(1,2,5)],id=c("Reg","Year"))
+
+
+#
+Surv.resid.plot<-ggplot(surv.resid.p,aes(Year,value))+
+  geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+  geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+  theme_bw()+
+  scale_color_gradient2(low="red",mid="grey",high ="blue")+
+  ylab("Difference (True-Estimated)")+
+  facet_wrap(~Reg)+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        legend.background = element_rect(fill="transparent"),
+        panel.border = element_rect(colour = "black"))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  theme(legend.position = "none", legend.justification = c(1,1))+
+  ggtitle("Survey Index Residuals")
+
+
+
+
 ###################################################
 # Age Compositions
 ##################################################
@@ -787,14 +932,16 @@ survey.p<-ggplot(Survey.year.plot,aes(Years,value,shape=variable))+
 ####################
 #survey age comps
 
-survey.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
+survey.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
 
 
 if(npops==1){
-#survey.prop.resid<-data.frame(((out$OBS_survey_prop-out$EST_survey_age_prop)/(out$OBS_survey_prop)))*100
-survey.prop.resid<-data.frame(out$OBS_survey_prop-out$EST_survey_prop)*100
+  
+
+survey.prop.resid<-data.frame((out$OBS_survey_prop-out$EST_survey_prop))
+
 survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
-survey.long<-melt(survey.comps.resid,id.vars=c("Years","Reg"))
+survey.long<-melt(survey.comps.resid,id.vars=c("Year","Reg"))
 }
 
 
@@ -807,16 +954,17 @@ if(npops>1){
   surv_obs<-data.frame(matrix(unlist(pull.surv.obs),nyrs*npops,na,byrow=TRUE))
   surv_est<-data.frame(matrix(unlist(pull.surv.est),nyrs*npops,na,byrow=TRUE))
   
-  surv_resid<-(surv_obs-surv_est)*100
-    
+  survey.prop.resid<-(surv_obs-surv_est)
+
+  
 survey.comps.resid<-cbind(survey.comps.resid,surv_resid)
-survey.long<-melt(survey.comps.resid,id.vars=c("Years","Reg"))
+survey.long<-melt(survey.comps.resid,id.vars=c("Year","Reg"))
 
 }
 
 
 survey.comp.plot<-
-  ggplot(survey.long, aes(x = as.numeric(variable), y = Years)) + 
+  ggplot(survey.long, aes(x = as.numeric(variable), y = Year)) + 
   geom_raster(aes(fill=value)) + 
   #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
   scale_fill_gradient2(low="red",mid="grey99",high ="blue")+
@@ -837,14 +985,17 @@ survey.comp.plot<-
 ######################
 #fishery age comps
 
-fishery.comps.resid<-data.frame(Years=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
+fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
 
 
 if(npops==1){
-#fishery.prop.resid<-data.frame(((out$OBS_catch_prop-out$EST_catch_age_fleet_prop)/(out$OBS_catch_prop))*100)
-fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)*100
+
+    fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)
+  
+#    fishery.prop.resid<-data.frame((out$OBS_catch_prop-out$EST_catch_age_fleet_prop)/out$OBS_catch_prop)
+  
 fishery.comps.resid<-cbind(fishery.comps.resid,fishery.prop.resid)
-fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
+fishery.long<-melt(fishery.comps.resid,id.vars=c("Year","Reg"))
 }
 
 
@@ -857,7 +1008,7 @@ if(npops>1){
   catch_obs<-data.frame(matrix(unlist(pull.catch.obs),nyrs*npops,na,byrow=TRUE))
   catch_est<-data.frame(matrix(unlist(pull.catch.est),nyrs*npops,na,byrow=TRUE))
   
-  fishery_resid<-(catch_obs-catch_est)*100
+  fishery_resid<-(catch_obs-catch_est)
   
   fishery.comps.resid<-cbind(fishery.comps.resid,fishery_resid)
   fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
@@ -865,7 +1016,7 @@ if(npops>1){
 
 
 fishery.comp.plot<-
-  ggplot(fishery.long, aes(x = as.numeric(variable), y = Years)) + 
+  ggplot(fishery.long, aes(x = as.numeric(variable), y = Year)) + 
   geom_raster(aes(fill=value)) + 
   #scale_fill_gradient2(low="red",mid="grey99",high ="blue",limits=c(-100, 100))+
   labs(fill = "% Dif")+
@@ -898,7 +1049,7 @@ colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"NoCapture"))
 if(npops==1){
   tags_obs<-out$OBS_tag_prop_final
   tags_est<-out$EST_tag_prop_final
-  tag_resid<-data.frame((tags_obs-tags_est)*100)
+  tag_resid<-data.frame((tags_obs-tags_est))
   names(tag_resid)<-colnamesindex
   
   tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
@@ -914,7 +1065,7 @@ if(npops>1){
   tags_obs<-data.frame(matrix(unlist(pull.tags.obs),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
   tags_est<-data.frame(matrix(unlist(pull.tags.est),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
   
-  tag_resid<-(tags_obs-tags_est)*100
+  tag_resid<-(tags_obs-tags_est)
   names(tag_resid)<-colnamesindex
 
   tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
@@ -1057,10 +1208,17 @@ if(diagnostic==0)
 if(diagnostic==1)
 {text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
 
-text3<-paste0("Run Time of Estimation: ",round((as.vector(time.elapsed)[3]/60),5)," minutes")
+if(resid.switch==1)
+{text3<-"\nResidual plots represent STRAIGHT difference; (TRUE-ESTIMATED)"}
+
+if(resid.switch==2)
+{text3<-"Residual plots represent RELATIVE difference; ((TRUE-ESTIMATED)/TRUE)*100"}
 
 
-text.all<-paste(text1,text2,text3,sep = "\n")
+text4<-paste0("\nRun Time of Estimation: ",round((as.vector(time.elapsed)[3]/60),5)," minutes")
+
+
+text.all<-paste(text1,text2,text3,text4,sep = "\n")
 
 
 # Create a text grob
@@ -1123,7 +1281,11 @@ grid.arrange(ncol = 1,
 #other stuff
 grid.arrange(ncol = 1,
   top ="Fits to Data",
-   yield.p, survey.p)
+   yield.p,Y.resid.plot)
+
+grid.arrange(ncol = 1,
+             top ="Fits to Data continued",
+             survey.p,Surv.resid.plot)
 
 grid.arrange(ncol = 1,
     top ="Fits to Data continued",
