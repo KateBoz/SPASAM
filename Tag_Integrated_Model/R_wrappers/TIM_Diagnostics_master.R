@@ -6,7 +6,7 @@
 # Manually make changes in the OM .dat and run both OM and EM together
 
 #remove junk from workspace
-rm(list=(ls()))
+#rm(list=(ls()))
 
 
 #load libraries
@@ -64,25 +64,25 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"G:\\TIM_editing\\"
+direct_master<-getwd()
 
 #list files in the directory
-files<-list.files(direct_master)
+#files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+#i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
 
   #OM Location
-  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-  OM_name<-"TIM_OM" #name of the OM you are wanting to run
+#  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+#  OM_name<-"TIM_OM" #name of the OM you are wanting to run
   
   #EM Location
-  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
-  EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+#  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
+#  EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 ###########################################################################
   
 
