@@ -39,37 +39,52 @@ load_libraries()
 
 
 
-##################################
+#######################################################################
 #Setting up the simulations
 ##################################
 
 
-diag.run<-0
+diag.run<-1
 # ==0 NO Do NOT run the diagnostics plots for a single run
 # ==1 YES run the diagnostics plots for a single run
 
 
 # Set number of simulations to perform
-nsim <-16   
+nsim <-24  
+
+######################
+#plot parameters
+#####################
+
+# Select color for violins
+vio.col<-"lightskyblue3"
+
+#select color for median points
+median.col<-"grey95"
 
 
-
-##################################
+###########################################################
 ### setting up the directories
+###############################
 
+# To run this simulation a folder for each scenario will need to be placed in the master directory. Each folder will need separate folders named 'Operating_Model' and 'EM_model' with the exe files and .DAT for the OM only. The Code will do the rest. Be sure that the TIM_diagnostics.R code is also in the master directory. 
+#
 
-# master file with holding the runs 
-direct_master<-setwd("F:\\TIM_editing\\Testing")
+# set master file with holding the runs 
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SIM_TEST"
+setwd(direct_master)
 
 #list files in the directory
-files<-list.files(direct_master)
+files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
 
-#select the file you want to run
+#select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+folder.num=1
 
-#if running the whole folder - This will come later
-#for(i in 1:length(files)){
+i=folder.num
+
+#if running the several folders use the loop - This will come later
+#for(i in 1:3){
 
 ##############################################################
 
@@ -90,6 +105,8 @@ diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 # SKIP TO PLOTTING SECTION IF SIMS ARE COMPLETED!
 #
 
+{ #run the hold dang thing...
+
 ###############################################################
 # RUN TIM DIAGNOSTICS
 ###############################################################
@@ -108,6 +125,8 @@ invisible(file.rename(from=paste0(EM_direct,"\\Tag_Residuals.pdf",sep=""),to=pas
 ############################################################
 ############## Run simulations #############################
 ############################################################
+
+{ # run the simulations section
 
 #Set up convergence record to holds likelihood components and eventually gradient 
 
@@ -241,19 +260,32 @@ setwd(diag_direct)
 #save convergence file
 write.csv(file="Sim_Stats.csv",Sim.Stats)
 
-
+} # end of simulations and value save
 
 ##############################################################
 #Grabbing Values from EM runs
 ##############################################################
 
+{ # run the value grab
+
 # create a data frame for the run to hold true and estimated values from OM/EM
 
+#reload directories if we are skipping the sims
+setwd(direct_master)
+files<-list.files(direct_master)
+
+#i=folder.num # if you are working only one folder or if you are running this section separate from sims
+
+OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+OM_name<-"TIM_OM" #name of the OM you are wanting to run
+EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
+EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
+
 #pull dimensions for building data frames for plotting
-df_build<-(paste0(diag_direct,"\\Run",1,"\\Estimation_Model"))
 
 #get dimensions for scenario
-out<-readList(paste0(df_build,"\\",EM_name,".rep")) #read in .rep file
+out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
 
 #pull info about the model
 na<-out$nages
@@ -263,10 +295,9 @@ nreg<-out$nregions
 years<-seq(1:out$nyrs)
 ages<-seq(1:out$nages)
 
-
+#for metapop
 if(npops>1){
   nreg=sum(nreg)}
-
 
 ########################################################################
 # Building Run in parallel to save the values we want to keep
@@ -283,13 +314,10 @@ pb <- txtProgressBar(max = nsim, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
 
-
-#i=1
-
-vg=foreach(i=1:nsim,.options.snow = opts,.combine='cbind',.packages = c('PBSmodelling','data.table','matrixStats')) %dopar% {
+vg=foreach(k=1:nsim,.options.snow = opts,.combine='cbind',.packages = c('PBSmodelling','data.table','matrixStats')) %dopar% {
 
 #read in rep
-out<-readList(paste0(diag_direct,"\\Run",i,"\\Estimation_Model\\",EM_name,".rep",sep=""))
+out<-readList(paste0(diag_direct,"\\Run",k,"\\Estimation_Model\\",EM_name,".rep",sep=""))
   
 #Save R_ave
 meanR_sim_temp<-out$R_ave_TRUE
@@ -352,11 +380,11 @@ close(pb)
 stopCluster(cl) #end the cluster for parallel processing
 closeAllConnections() 
 
-#save this for later
-setwd(diag_direct)
-
 #saves all the results in a list for later plotting
+setwd(diag_direct)
 saveRDS(vg, file="Sim_run.RData")
+
+}
 
 ################################################################################
 # Load Sim results for plotting
@@ -364,40 +392,45 @@ saveRDS(vg, file="Sim_run.RData")
 #reload directory information for plotting
  
 { #start here if you have already completed the SIMS and saved the data
-  
-#if we are just working with a sim that has already been done, we can start here...
-direct_master<-setwd("F:\\TIM_editing\\Testing")
-files<-list.files(direct_master)
-i=1
 
-OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
-EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
-diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
+####################################
+# ONLY NEED THIS IF NOT RUNNING SIMS
+####################################
+#if we are just working with a sim that has already been done, we can start here...
+#setwd(direct_master)
+#files<-list.files(direct_master)
+#i=1
+
+#OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+#OM_name<-"TIM_OM" #name of the OM you are wanting to run
+#EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
+#EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+#diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 
 #pull dimensions for building data frames for plotting
 
 #get dimensions for scenario
-out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
+#out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
 
 #pull info about the model
-na<-out$nages
-nyrs<-out$nyrs
-npops<-out$npops
-nreg<-out$nregions
-years<-seq(1:out$nyrs)
-ages<-seq(1:out$nages)
+#na<-out$nages
+#nyrs<-out$nyrs
+#npops<-out$npops
+#nreg<-out$nregions
+#years<-seq(1:out$nyrs)
+#ages<-seq(1:out$nages)
 
 #for metapop
-if(npops>1){
-  nreg=sum(nreg)}
+#if(npops>1){
+#  nreg=sum(nreg)}
+################################################################
 
+  
 
 ###############################################################
 # Start plotting
 ###############################################################
-
+  
 #load up the results
 setwd(diag_direct)
 Sim_Results<-readRDS('Sim_run.RData')
@@ -423,6 +456,13 @@ catch_df_est<-matrix(NA,nyrs*nreg,nsim)
 survey_df_sim<-matrix(NA,nyrs*nreg,nsim)
 survey_df_est<-matrix(NA,nyrs*nreg,nsim)
 
+#fmax
+fmax_df_sim<-matrix(NA,nyrs*nreg,nsim)
+fmax_df_est<-matrix(NA,nyrs*nreg,nsim)
+
+
+
+# F and T to come later
 
 # populate the matrices for plotting
 for(i in 1:nsim){
@@ -432,8 +472,15 @@ ssb_df_sim[,i]<-unlist(Sim_Results[7,i])
 ssb_df_est[,i]<-unlist(Sim_Results[8,i])
 bio_df_sim[,i]<-unlist(Sim_Results[9,i])
 bio_df_est[,i]<-unlist(Sim_Results[10,i])
-}
+catch_df_sim[,i]<-unlist(Sim_Results[11,i])
+catch_df_est[,i]<-unlist(Sim_Results[12,i])
+survey_df_sim[,i]<-unlist(Sim_Results[13,i])
+survey_df_est[,i]<-unlist(Sim_Results[14,i])
+fmax_df_sim[,i]<-unlist(Sim_Results[15,i])
+fmax_df_est[,i]<-unlist(Sim_Results[16,i])
+# add in survey and catch... KB
 
+}
 
 
 #######################################
@@ -473,11 +520,11 @@ ggplot(Sim.Stats, aes(x=Sim.Stats[j])) +
 }
 
 
-
 #######################################
 # Extracting only the "good" converged runs 
 #######################################
 
+#soon
 
 
 
@@ -520,10 +567,10 @@ rec.meds <- rec.est %>% group_by(Reg) %>%
 
 #generate Rec Plot
 rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=log(value))) +
-  geom_hline(aes(yintercept = log(med), group = Reg), colour = 'darkred', lwd=0.5)+
-  geom_violin(fill="lightblue",trim=T)+
-  geom_line(data = rec.est.med, aes(x=Years,y=log(med.sim)),lty=2) + 
-  geom_point(data = rec.est.med, aes(x=Years,y=log(med.sim)), fill="grey90", shape=21,size=1.5) + 
+  geom_hline(aes(yintercept = log(med), group = Reg), colour = 'darkred', size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = rec.est.med, aes(x=Years,y=log(med.sim)),lty=1) + 
+  geom_point(data = rec.est.med, aes(x=Years,y=log(med.sim)), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Total Recruitment")+
   ylab("log(Recruitment)")+
@@ -535,15 +582,15 @@ rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=log(value))) +
 
 #generate Rec bias plot
 rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred')+
-  geom_violin(fill="lightblue",trim=T)+
-  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill="grey90", shape=21,size=1.5) + 
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Recruitment Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
- ylim(-500,500)+
+  ylim(-500,500)+
   my_theme
 
 
@@ -588,9 +635,9 @@ ssb.meds <- ssb.est %>% group_by(Reg) %>%
 
 #generate ssb Plot
 ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
-  geom_violin(fill="lightblue",trim=T)+
-  geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=2) + 
-  geom_point(data = ssb.est.med, aes(x=Years,y=med.sim), fill="grey90", shape=21,size=1.5) + 
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1) + 
+  geom_point(data = ssb.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("SSB")+
   ylab("SSB")+
@@ -602,9 +649,9 @@ ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
 
 #generate Rec bias plot
 ssb.bias.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred')+
-  geom_violin(fill="lightblue",trim=T)+
-  geom_point(data = ssb.est.med, aes(x=Years,y=med.bias), fill="grey90", shape=21,size=1.5) + 
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = ssb.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("SSB Bias")+
   ylab("Relative % Difference")+
@@ -620,6 +667,136 @@ write.csv(ssb.est.med,"SSB_Bias.csv")
 
 ######################################
 # Biomass
+
+#build data.frame
+bio.data<-data.frame(Dat=c(rep("SIM",nrow(bio_df_sim)),rep("EST",nrow(bio_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+
+bio.data<-cbind(bio.data,rbind(bio_df_sim,bio_df_est))
+bio.long<-melt(bio.data, id=c("Dat","Years","Reg"))
+bio.long$Reg<-as.character(bio.data$Reg)
+
+#calculate the sum across areas 
+total.bio<-data.frame(bio.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
+
+total.bio$Reg<-rep("System",nrow(total.bio))
+bio.long<-rbind(total.bio,bio.long)
+
+
+#separate again for plotting
+bio.est<-bio.long[bio.long$Dat=="EST",]
+bio.sim<-bio.long[bio.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+bio.est$val.true<-bio.sim$value
+bio.est$bias=((bio.est$val.true-bio.est$value)/bio.est$val.true)*100
+
+#calc medians table
+bio.est.med <- bio.est %>% group_by(Reg,Years) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+#calc vals for plots
+bio.meds <- bio.est %>% group_by(Reg) %>%
+  mutate(med = median(value),med.true=median(val.true))
+
+
+#generate bio Plot
+bio.plot.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=value)) +
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = bio.est.med, aes(x=Years,y=med.sim),lty=1) + 
+  geom_point(data = bio.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("Biomass")+
+  ylab("Biomass")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#generate Rec bias plot
+bio.bias.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = bio.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("Biomass Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  #ylim(-500,500)+
+  my_theme
+
+
+#save rec bias calcs
+write.csv(bio.est.med,"Biomass_Bias.csv")
+
+
+##############################################################
+###F Max
+
+#build data.frame
+fmax.data<-data.frame(Dat=c(rep("SIM",nrow(fmax_df_sim)),rep("EST",nrow(fmax_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+
+fmax.data<-cbind(fmax.data,rbind(fmax_df_sim,fmax_df_est))
+fmax.long<-melt(fmax.data, id=c("Dat","Years","Reg"))
+fmax.long$Reg<-as.character(fmax.data$Reg)
+
+#calculate the sum across areas 
+total.fmax<-data.frame(fmax.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
+
+total.fmax$Reg<-rep("System",nrow(total.fmax))
+fmax.long<-rbind(total.fmax,fmax.long)
+
+
+#separate again for plotting
+fmax.est<-fmax.long[fmax.long$Dat=="EST",]
+fmax.sim<-fmax.long[fmax.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+fmax.est$val.true<-fmax.sim$value
+fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
+
+#calc medians table
+fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+#calc vals for plots
+fmax.meds <- fmax.est %>% group_by(Reg) %>%
+  mutate(med = median(value),med.true=median(val.true))
+
+
+#generate fmax Plot
+fmax.plot.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=value)) +
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = fmax.est.med, aes(x=Years,y=med.sim),lty=1) + 
+  geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("Fully Selected F")+
+  ylab("F")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#generate Rec bias plot
+fmax.bias.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = fmax.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("F Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  #ylim(-500,500)+
+  my_theme
+
+
+#save rec bias calcs
+write.csv(fmax.est.med,"Fmax_Bias.csv")
 
 
 
@@ -672,10 +849,20 @@ grid.arrange(ncol = 1,
              rec.plot.gg, rec.bias.gg)
 
 
-#add rec plots
+#add ssb plots
 grid.arrange(ncol = 1,
              top="SSB",
              ssb.plot.gg, ssb.bias.gg)
+
+#add bio plots
+grid.arrange(ncol = 1,
+             top="Biomass",
+             bio.plot.gg, bio.bias.gg)
+
+#add fmax plots
+grid.arrange(ncol = 1,
+             top="Fully Selected F",
+             fmax.plot.gg, fmax.bias.gg)
 
 
 
@@ -701,7 +888,7 @@ dev.off()
 
 } #end plotting/data section
 
-
+} # the whole kit and caboodle
 ###############################################
 #some notes for things to add
 
