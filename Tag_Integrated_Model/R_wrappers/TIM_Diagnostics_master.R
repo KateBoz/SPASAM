@@ -67,22 +67,22 @@ resid.switch=1
 direct_master<-getwd()
 
 #list files in the directory
-#files<-list.files(direct_master)
+files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-#i=1
+i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
 
   #OM Location
-#  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-#  OM_name<-"TIM_OM" #name of the OM you are wanting to run
+  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+  OM_name<-"TIM_OM" #name of the OM you are wanting to run
   
   #EM Location
-#  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
-#  EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
+  EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 ###########################################################################
   
 
@@ -139,6 +139,27 @@ if(npops>1){
   nreg=sum(nreg)}
 
 
+###################################
+#Set my theme for ggplot plotting
+#################################
+
+diag_theme<-
+  theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        strip.background = element_blank(),
+        legend.background = element_rect(fill="transparent"),
+        panel.border = element_rect(colour = "black"))+
+  theme(legend.title = element_blank())+
+  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
+
+
+
+
+
+
+
+
 ##############################
 #### RECRUITMENT PLOTS #######
 ##############################
@@ -156,14 +177,7 @@ rec1<-ggplot(rec.total.plot,aes(Year,value))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Recruitment")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("Recruitment Total")
 
@@ -204,13 +218,7 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
   #geom_hline(data=rec_ave,aes(yintercept=R_ave), col = e.col)+
   #geom_hline(data=rec_ave, aes(yintercept = R_ave_TRUE),col=t.col,lty=2)+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("Recruitment Deviations")
 }
@@ -228,15 +236,7 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
     ylab("Recruitment")+
-    geom_hline(yintercept = out$R_ave, col = e.col)+
-    geom_hline(yintercept = out$R_ave_TRUE,col=t.col,lty=2)+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
-    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    diag_theme+
     theme(legend.position = c(1, 1), legend.justification = c(1,1))+
     ggtitle("Recruitment Deviations")
   
@@ -267,15 +267,59 @@ if(resid.switch==2){
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
     ylab("Difference (True-Estimated)")+
     facet_wrap(~Reg)+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
-    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Recruitment Residuals")
+
+  
+#################  
+#Rec Apportionment
+  
+rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Prop_Est = as.vector(t(out$Rec_Prop)), Rec_Prop_True=as.vector(t(out$Rec_Prop_TRUE)))
+  
+  rec.apport.plot<-melt(rec.apport,id=c("Reg","Year"))
+  rec.apport.plot$Reg<-as.factor(rec.apport.plot$Reg)
+  
+  
+  rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
+    facet_wrap(~Reg)+
+    scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
+    scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
+    ylab("Apportionment Proportion")+
+    theme_bw()+
+    diag_theme+
+    theme(legend.position = c(1, 1), legend.justification = c(1,1))+
+    ggtitle("Recruitment Apportionment")
+ 
+   
+#resids  
+  if(resid.switch==1){
+    #calculate the resids as Relative % Diff
+    rec.apport$resids<-(rec.apport$Rec_Prop_True-rec.apport$Rec_Prop_Est)
+  }
+  
+  if(resid.switch==2){
+    #calculate the resids as Relative % Diff
+    rec.apport$resids<-((rec.apport$Rec_Prop_True-rec.apport$Rec_Prop_Est)/rec.apport$Rec_Prop_True)*100
+  }
+  
+  #preparing for plotting
+  rec.apport.resids.plot<-melt(rec.apport[,c(1,2,5)],id=c("Reg","Year"))
+  rec.apport.resids.plot$Reg<-as.factor(rec.resids.plot$Reg)
+  
+  #rec resids plot  
+  R.apport.resid<-ggplot(rec.apport.resids.plot,aes(Year,value))+
+    geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+    geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+    theme_bw()+
+    scale_color_gradient2(low="red",mid="grey",high ="blue")+
+    ylab("Difference (True-Estimated)")+
+    facet_wrap(~Reg)+
+    diag_theme+
+    theme(legend.position = "none", legend.justification = c(1,1))+
+    ggtitle("Recruitment Apportionment Residuals")
+  
 
 
 #################################
@@ -335,14 +379,7 @@ if(npops==1){
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
     ylab("Abundance")+
-    theme_bw()+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
-    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    diag_theme+
     theme(legend.position = c(1, 1), legend.justification = c(1,1))+
     ggtitle("Initial Abundance")  
   
@@ -368,20 +405,12 @@ if(resid.switch==2){
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
     ylab("Difference (True-Estimated)")+
-    
     facet_wrap(~Reg)+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
-    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Initial Abundance Residuals")
   
-  
-  
+
 #################################
 # Total Biomass
   
@@ -396,14 +425,7 @@ bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est =
     scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
     ylab("Total Biomass")+
-    theme_bw()+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
-    theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+    diag_theme+
     theme(legend.position = c(1, 1), legend.justification = c(1,1))+
     ggtitle("Total Biomass")
   
@@ -429,16 +451,10 @@ if(resid.switch==2){
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
     ylab("Relative % Difference (True-Estimated)")+
     facet_wrap(~Reg)+
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          strip.background = element_blank(),
-          legend.background = element_rect(fill="transparent"),
-          panel.border = element_rect(colour = "black"))+
-    theme(legend.title = element_blank())+
+    diag_theme+
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Biomass Residuals") 
-  
   
   
 ###############################
@@ -455,17 +471,9 @@ ssb.p<-ggplot(ssb.plot,aes(Year,value))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Predicted","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Predicted","True"))+
   ylab("SSB")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("SSB")
-
 
 
 
@@ -489,13 +497,7 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("SSB Residuals")
 
@@ -520,14 +522,7 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Selectivity")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 0), legend.justification = c(1,0))+
   ggtitle("Fishery Selectivity")
 
@@ -551,15 +546,8 @@ f.select.resid<-ggplot(f.select.resid.plot,aes(Age,value))+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Difference (True-Estimated)")+
-  
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Fishery Selectivity Residuals")
 
@@ -578,22 +566,13 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("Selectivity")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 0), legend.justification = c(1,0))+
   ggtitle("Survey Selectivity")
 
 
 
 # survey selectivity resids plot
-s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age)/out$survey_selectivity_age_TRUE)*100
-
 if(resid.switch==1){
   s.select$resid<-(out$survey_selectivity_age_TRUE-out$survey_selectivity_age)}
 
@@ -612,13 +591,7 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Relative % Difference (True-Estimated)")+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Survey Selectivity Residuals")
 
@@ -645,13 +618,7 @@ F.plot.p<-ggplot(F.plot,aes(Year,value))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
   ylab("F")+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("Fully selected F by Year")
 
@@ -666,7 +633,6 @@ if(resid.switch==2){
 }
 
 
-
 F.resid.p<-melt(F.year[,c(1,2,5)],id=c("Reg","Year"))
 F.resid.p$Reg<-as.factor(F.resid.p$Reg)
 
@@ -677,13 +643,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Fully Selected F Residuals")
 
@@ -691,7 +651,6 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 ############################################################
 ########## Movement by year ################################
 ############################################################
-
 
 #Panmictic and multi-area
 
@@ -765,13 +724,7 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
   #scale_linetype_manual(values=T.lines,guide=FALSE)+
   scale_linetype_manual(values=T.lines)+
   ylab("Movement Rate")+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "right", legend.justification = c(1,1))+
   ggtitle("Yearly Movement Rate")
 
@@ -811,7 +764,6 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
 # Yield
 
 Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
-
 Y.year.plot<-melt(Y.year, id=c("Reg","Year"))
 
 yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
@@ -822,14 +774,7 @@ yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","Observed"))+
   scale_linetype_manual(values=c(1,0),labels = c("Estimated","Observed"))+
   ylab("Yield")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("Yield")
 
@@ -840,7 +785,7 @@ yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
 #  Y.year$resid<-(Y.year$Observed-Y.year$Estimated)}
 
 #if(resid.switch==2){
-  Y.year$resid<-((Y.year$Observed-Y.year$Estimated)/Y.year$Observed)*100
+Y.year$resid<-((Y.year$Observed-Y.year$Estimated)/Y.year$Observed)*100
 #}
 
 y.resid.p<-melt(Y.year[,c(1,2,5)],id=c("Reg","Year"))
@@ -854,13 +799,7 @@ Y.resid.plot<-ggplot(y.resid.p,aes(Year,value))+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Yield Residuals")
 
@@ -881,14 +820,7 @@ survey.p<-ggplot(Survey.year.plot,aes(Year,value,shape=variable))+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","Observed"))+
   scale_linetype_manual(values=c(1,0),labels = c("Estimated","Observed"))+
   ylab("Survey Index")+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = c(1, 1), legend.justification = c(1,1))+
   ggtitle("Survey Biomass")
 
@@ -912,13 +844,7 @@ Surv.resid.plot<-ggplot(surv.resid.p,aes(Year,value))+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
   ylab("Difference (True-Estimated)")+
   facet_wrap(~Reg)+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        legend.background = element_rect(fill="transparent"),
-        panel.border = element_rect(colour = "black"))+
-  theme(legend.title = element_blank())+
-  theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
+  diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Survey Index Residuals")
 
@@ -1243,6 +1169,11 @@ grid.arrange(ncol = 1,
   #top="Recrutiment",
   rec1, R.resid
   )
+
+grid.arrange(ncol = 1,
+             #top="Recruitment ",
+             rec.prop, R.apport.resid
+             )
 
 grid.arrange(ncol = 1,
   #top="Initial Abundance",
