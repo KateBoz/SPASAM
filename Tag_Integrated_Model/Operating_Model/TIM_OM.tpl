@@ -343,15 +343,6 @@ DATA_SECTION
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
 
-  init_number larval_move_switch_EM
-  ///// Changes the type of larval movement pattern (sets age class 1 movements)
-  //==0 no movement
-  //==1 input movement
-  //==2 movement within population only based on residency (symmetric)
-  //==3 symmetric movement but only allow movement within a population (ie regions within a population) not across populations
-  //==4 symmetric movement across all populations and regions
-  //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off-diag)
-
   init_number move_switch_EM
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
   //==0 no movement, set T phases=-1
@@ -5730,8 +5721,6 @@ REPORT_SECTION
   report<<tsurvey_EM<<endl;
   report<<"#diagnostics_switch"<<endl;
   report<<diagnostics_switch<<endl;
-  report<<"#larval_move_switch"<<endl;
-  report<<larval_move_switch_EM<<endl;
   report<<"#move_switch"<<endl;
   report<<move_switch_EM<<endl;
   report<<"#natal_homing_switch"<<endl;
