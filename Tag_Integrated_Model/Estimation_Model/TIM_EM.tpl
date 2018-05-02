@@ -62,15 +62,6 @@ DATA_SECTION
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
   
-  init_number larval_move_switch
-  ///// Changes the type of larval movement pattern (sets age class 1 movements)
-  //==0 no movement
-  //==1 input movement
-  //==2 movement within population only based on residency (symmetric)
-  //==3 symmetric movement but only allow movement within a population (ie regions within a population) not across populations
-  //==4 symmetric movement across all populations and regions
-  //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off-diag)
-
   init_number move_switch
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
   //==0 no movement, set T phases=-1
@@ -278,6 +269,8 @@ DATA_SECTION
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
 
+  //!!cout<<ntags<<endl;
+  //!!exit(56);
 
   //##########################################################################################################################################
 //#########################################################################################################################################
@@ -1432,7 +1425,7 @@ FUNCTION get_vitals
           }
     }
 
-   if(natal_homing_switch==0) //estimate parameters to distribute a population across multiplemultiple regions
+   if(natal_homing_switch==0) //estimate parameters to distribute a population across multiple regions
     {
    if(ph_reg_init>0)
    {
