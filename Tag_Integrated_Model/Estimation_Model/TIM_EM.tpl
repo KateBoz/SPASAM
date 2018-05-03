@@ -246,7 +246,7 @@ DATA_SECTION
   init_4darray OBS_tag_prop_N(1,np,1,nreg,1,ny_rel,1,na) //eff_N for tag mult tag_prop
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
  //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
-   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
+   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg) //Input T for EM
 
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
@@ -3340,8 +3340,10 @@ FUNCTION get_tag_recaptures
   // using subscript notation this equals= (a+y-xx)
   // similarly because account for release age, do not need to worry about plus group calcs as carry recaptures out to max_life_tags and never assume plus group (just use plus group mortality and movement values in calcs where a>=max_age)
   /////////////////////////////////////////////////////////////////////////////
+
  if(do_tag==1)
   {
+
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -3385,7 +3387,7 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
                }
              }
             }
@@ -3414,7 +3416,7 @@ FUNCTION get_tag_recaptures
              }
             }
            }
-              total_rec(i,n,x,a)=sum(total_recap_temp);
+             total_rec(i,n,x,a)=sum(total_recap_temp);
              not_rec(i,n,x,a)=ntags(i,n,x,a)-total_rec(i,n,x,a);  //for ntags  at a given age all entries represent all tags released so can just use any of the entries (hence the i,x,a,1 subscripts)
            }
           }
@@ -3453,12 +3455,13 @@ FUNCTION get_tag_recaptures
         }
        }
 
+  
  //in order to use the multinomial RNG, need to have a vector of probabilities
  //this essentially requires stacking the tag_prop array into vectors for each release cohort covering all recap states (recap year, population, region)
  //need to extract each recap prob vector and store, then combine into array where can extract the last index (essentially the columns of the array)
  //can then use the fill.multinomial with that vector of probabilities
 
-
+ nreg_temp=rowsum(nregions_temp);
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3518,7 +3521,8 @@ FUNCTION get_tag_recaptures
           }
          }
         }
- }
+       }
+
 
 FUNCTION evaluate_the_objective_function
    //f=dummy; //in case all the estimated parameters are turned off
@@ -3616,7 +3620,6 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-
               if(diagnostics_switch==1){
                catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
                fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
@@ -3690,9 +3693,7 @@ FUNCTION evaluate_the_objective_function
          }
          for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
            {
-           if(diagnostics_switch==1){
-            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
-            }
+           if(diagnostics_switch==0){
             if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
              {
               tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
@@ -3709,9 +3710,41 @@ FUNCTION evaluate_the_objective_function
                 }
                tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
              }
+            }
+            
+          if(diagnostics_switch==1){
+            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
+             {
+              tag_like -= OBS_tag_prop_N(i,n,x,a) * ((tag_prop_final_TRUE(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
+             }
+            if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+             {
+               if(s<((nyrs-xx+1)*sum(nregions)+1))
+                {
+                 tag_like_temp +=((tag_prop_final_TRUE(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
+                }
+               if(s==((nyrs-xx+1)*sum(nregions)+1))
+                {
+                 tag_like_temp += ((tag_prop_final_TRUE(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
+                }
+               tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
+             }
+            }
+            }
+            }
+            }
+            }
+            }
+            }
 
 
-            }}}}}}
+
+
+
+
+
+
+
 
 
 
@@ -3768,7 +3801,7 @@ REPORT_SECTION
   //report<<"$T_terminal"<<endl; ///need to fix this for reporting out the 6D array
   //report<<T_terminal<<endl;
 
-  report<<"$init_abund"<<endl;
+  report<<"$Init_Abund"<<endl;
   report<<init_abund<<endl;
   report<<"$alpha"<<endl;
   report<<alpha<<endl;
@@ -3872,8 +3905,6 @@ REPORT_SECTION
   report<<F_year_TRUE<<endl;
   report<<"$Init_Abund_TRUE"<<endl;
   report<<init_abund_TRUE<<endl;
-  report<<"$Init_Abund"<<endl;
-  report<<init_abund<<endl;
   report<<"$Init_Abund_Devs"<<endl;
   report<<abund_devs<<endl;
   report<<"$biomass_AM_TRUE"<<endl;
@@ -3949,10 +3980,13 @@ REPORT_SECTION
   report<<"$SR"<<endl;
   report<<SR<<endl;
 
+
+
 ////////////////////////////////////////////////////////////////////
 //reporting hi dimensional arrays
  if(npops==1)// for panmictic and metamictic population outputs
      {
+  
         report<<"$T_year"<<endl;
         report<<T_year<<endl;
         report<<"$EST_survey_prop"<<endl;
@@ -3961,6 +3995,8 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop<<endl;
         report<<"$EST_tag_prop_final"<<endl;
         report<<tag_prop_final<<endl;
+        report<<"$TRUE_tag_prop_final"<<endl;
+        report<<tag_prop_final_TRUE<<endl;
 
      if(diagnostics_switch==1){
        report<<"$OBS_survey_prop"<<endl;
@@ -4000,6 +4036,9 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop[p]<<endl;
         report<<"$EST_tag_prop_final"<<p<<endl;
         report<<tag_prop_final[p]<<endl;
+        report<<"$TRUE_tag_prop_final"<<p<<endl;
+        report<<tag_prop_final_TRUE[p]<<endl;
+
 
      //OBS Values
      if(diagnostics_switch==1){
