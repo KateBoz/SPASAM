@@ -5325,11 +5325,6 @@ FUNCTION get_tag_recaptures
       }
      }
      
- //cout<<ntags<<endl;
- //cout<<true_survey_total_abundance<<endl;
- //(43);
-
-
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
