@@ -165,6 +165,10 @@ DATA_SECTION
   init_number ub_sel_beta1
   init_number lb_sel_beta2
   init_number ub_sel_beta2
+  init_number lb_sel_beta1_surv
+  init_number ub_sel_beta1_surv
+  init_number lb_sel_beta2_surv
+  init_number ub_sel_beta2_surv
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -464,8 +468,8 @@ PARAMETER_SECTION
    init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
    init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
-   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,lb_sel_beta1_surv,ub_sel_beta1_surv,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,lb_sel_beta2_surv,ub_sel_beta2_surv,ph_sel_log_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
   
@@ -485,7 +489,7 @@ PARAMETER_SECTION
   4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
   4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
   
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,15,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,5,ph_q)
  
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
@@ -545,9 +549,9 @@ PARAMETER_SECTION
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-   init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-40,40,ph_rec)
+  init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-20,20,ph_rec)
   
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs) //for initial abundance
+  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-7,7,ph_abund_devs) //for initial abundance
 
   init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-10,10,ph_non_natal_init)
   init_bounded_matrix ln_reg(1,nps,1,nr-1,-10,10,ph_reg_init)
@@ -560,7 +564,7 @@ PARAMETER_SECTION
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,2,20,ph_lmr) //estimated parameter Average Recruitment
+  init_bounded_vector ln_R_ave(1,parpops,0.2,20,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
@@ -767,7 +771,7 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
- //INITIALIZATION_SECTION  //set initial values
+ INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
  //  ln_R_ave 7;
@@ -776,7 +780,8 @@ PARAMETER_SECTION
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
- //  ln_rec_devs_RN 0;
+     ln_rec_devs_RN 0;
+     ln_abund_devs 0;
 
 PROCEDURE_SECTION
  
@@ -1582,7 +1587,8 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j);z++)
                   {
                    init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
-                  if(ph_abund_devs<0)
+ 
+                   if(ph_abund_devs<0)
                    {
                      init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
                    }
@@ -3387,8 +3393,9 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-               }
+                 //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+              }
              }
             }
            }
@@ -3738,16 +3745,6 @@ FUNCTION evaluate_the_objective_function
             }
 
 
-
-
-
-
-
-
-
-
-
-
   
   // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
 
@@ -4066,7 +4063,8 @@ REPORT_SECTION
 
  save_gradients(gradients);
 RUNTIME_SECTION
-  convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
+  //convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
+  convergence_criteria .001
   maximum_function_evaluations 10000
   
 
