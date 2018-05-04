@@ -729,7 +729,7 @@
 #diagnostics_switch
   #==0 allow OBS data to be used for estimation
   #==1 allow TRUE data from OM without error to be used for estimation
-0
+1
 
 ##removed larval move switch for EM. Confusing and not used.
 
@@ -988,27 +988,27 @@
 ##### Phases for estimation ####
 ################################
 #ph_lmr
--1
+1
 #ph_rec
--2
+3
 #ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
--4
+4
 #ph_rec_app_YR
--4
+-3
 #ph_init_abund
--1
+2
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
--1
+2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #ph_F
--3
+5
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
--5
+6
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
@@ -1016,23 +1016,31 @@
 #lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
-2 
+2
+#lb_sel_beta1  //lower bound on survey selectivity parameters in ln space
+-10 
+#ub_sel_beta1  //upper bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta2  //lower bound on survey selectivity parameters in ln space
+-10 
+#ub_sel_beta2  //upper bound on survey selectivity parameters in ln space
+2
 #ph_sel_log_surv
--5
+6
 #ph_sel_dubl
 -1
 #ph_sel_dubl_surv
 -1
 #ph_q
--1
+1
 #ph_F_rho
 -1
 #ph_T_YR
--6
+-7
 #ph_T_CNST
--6
+-7
 #ph_dummy
-1
+-1
 
 ##################################
 ### likelihood weights
@@ -1052,14 +1060,16 @@
 
 #abund_pen_switch
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
- #//==0 no move pen in log space
- #//==1 include move pen in log space
-0
+ #//==0 no pen in log space
+ #//==1 include pen in log space
+1
+
 #move_pen_switch
  #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
  #// ==0 no move pen in log space
  #// ==1 include move pen in log space
 1
+
 #Tpen
 #value below which move_pen enacted (log space)
 -5

@@ -439,6 +439,10 @@ DATA_SECTION
   init_number ub_sel_beta1 //upper bound on fishery selectivity parameters in ln space
   init_number lb_sel_beta2 //lower bound on fishery selectivity parameters in ln space
   init_number ub_sel_beta2 //upper bound on fishery selectivity parameters in ln space
+  init_number lb_sel_beta1_surv //lower bound on survey selectivity parameters in ln space
+  init_number ub_sel_beta1_surv //upper bound on survey selectivity parameters in ln space
+  init_number lb_sel_beta2_surv //lower bound on survey selectivity parameters in ln space
+  init_number ub_sel_beta2_surv //upper bound on survey selectivity parameters in ln space
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -5368,8 +5372,9 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-               }
+                 //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+                 }
              }
             }
            }
@@ -5788,6 +5793,14 @@ REPORT_SECTION
   report<<lb_sel_beta2<<endl;
   report<<"#ub_sel_beta2"<<endl;
   report<<ub_sel_beta2<<endl;
+  report<<"#lb_sel_beta1_surv"<<endl;
+  report<<lb_sel_beta1_surv<<endl;
+  report<<"#ub_sel_beta1_surv"<<endl;
+  report<<ub_sel_beta1_surv<<endl;
+  report<<"#lb_sel_beta2_surv"<<endl;
+  report<<lb_sel_beta2_surv<<endl;
+  report<<"#ub_sel_beta2_surv"<<endl;
+  report<<ub_sel_beta2_surv<<endl;
   report<<"#ph_sel_log_surv"<<endl;
   report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
