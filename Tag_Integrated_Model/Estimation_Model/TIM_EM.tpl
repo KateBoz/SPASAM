@@ -774,14 +774,15 @@ PARAMETER_SECTION
  INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
- //  ln_R_ave 7;
+ //    ln_R_ave 3;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
-     ln_rec_devs_RN 0;
+ //    ln_rec_devs_RN 0;
      ln_abund_devs 0;
+ //    ln_rec_prop_CNST -0.5; // setting this to start.
 
 PROCEDURE_SECTION
  
@@ -1302,6 +1303,10 @@ FUNCTION get_vitals
    }
   }
 
+//  cout<<Rec_Prop<<endl;
+//  exit(43);
+
+
  //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
   if(apportionment_type==4)
    {
@@ -1511,7 +1516,8 @@ FUNCTION get_vitals
 
                   if(ph_rec<0)
                   {            
-                    rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
+                   //rec_devs(j,y)=rec_devs_TRUE(j,y+1);
+                  rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
                   }     
              //    if(recruit_randwalk_switch==1)
              //    {
@@ -3350,7 +3356,7 @@ FUNCTION get_tag_recaptures
  if(do_tag==1)
   {
 
- //assume tags released in natal population
+//assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3393,9 +3399,8 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
-              }
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+               }
              }
             }
            }
@@ -3529,6 +3534,7 @@ FUNCTION get_tag_recaptures
          }
         }
        }
+
 
 
 FUNCTION evaluate_the_objective_function
@@ -3700,7 +3706,9 @@ FUNCTION evaluate_the_objective_function
          }
          for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
            {
-           if(diagnostics_switch==0){
+           if(diagnostics_switch==1){
+            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
+            }
             if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
              {
               tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
@@ -3717,33 +3725,9 @@ FUNCTION evaluate_the_objective_function
                 }
                tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
              }
-            }
-            
-          if(diagnostics_switch==1){
-            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
-             {
-              tag_like -= OBS_tag_prop_N(i,n,x,a) * ((tag_prop_final_TRUE(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
-             }
-            if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
-             {
-               if(s<((nyrs-xx+1)*sum(nregions)+1))
-                {
-                 tag_like_temp +=((tag_prop_final_TRUE(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
-                }
-               if(s==((nyrs-xx+1)*sum(nregions)+1))
-                {
-                 tag_like_temp += ((tag_prop_final_TRUE(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
-                }
-               tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
-             }
-            }
-            }
-            }
-            }
-            }
-            }
-            }
 
+
+            }}}}}}
 
   
   // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
@@ -3763,6 +3747,7 @@ FUNCTION evaluate_the_objective_function
    f           += survey_age_like*wt_srv_age;
    f           += rec_like*wt_rec;
    f           += tag_like*wt_tag;
+   
   
 REPORT_SECTION
   report<<"$nages"<<endl;
