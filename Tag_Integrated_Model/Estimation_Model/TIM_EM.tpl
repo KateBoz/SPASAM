@@ -165,10 +165,6 @@ DATA_SECTION
   init_number ub_sel_beta1
   init_number lb_sel_beta2
   init_number ub_sel_beta2
-  init_number lb_sel_beta1_surv
-  init_number ub_sel_beta1_surv
-  init_number lb_sel_beta2_surv
-  init_number ub_sel_beta2_surv
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -250,7 +246,7 @@ DATA_SECTION
   init_4darray OBS_tag_prop_N(1,np,1,nreg,1,ny_rel,1,na) //eff_N for tag mult tag_prop
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
  //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
-   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg) //Input T for EM
+   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
 
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
@@ -468,8 +464,8 @@ PARAMETER_SECTION
    init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
    init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
-   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,lb_sel_beta1_surv,ub_sel_beta1_surv,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,lb_sel_beta2_surv,ub_sel_beta2_surv,ph_sel_log_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
   
@@ -489,7 +485,7 @@ PARAMETER_SECTION
   4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
   4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
   
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,5,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,15,ph_q)
  
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
@@ -549,9 +545,9 @@ PARAMETER_SECTION
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-  init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-20,20,ph_rec)
+   init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-40,40,ph_rec)
   
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-7,7,ph_abund_devs) //for initial abundance
+  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs) //for initial abundance
 
   init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-10,10,ph_non_natal_init)
   init_bounded_matrix ln_reg(1,nps,1,nr-1,-10,10,ph_reg_init)
@@ -564,7 +560,7 @@ PARAMETER_SECTION
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,0.2,20,ph_lmr) //estimated parameter Average Recruitment
+  init_bounded_vector ln_R_ave(1,parpops,2,20,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
@@ -771,18 +767,16 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
- INITIALIZATION_SECTION  //set initial values
+ //INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
- //    ln_R_ave 3;
+ //  ln_R_ave 7;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
- //    ln_rec_devs_RN 0;
-     ln_abund_devs 0;
- //    ln_rec_prop_CNST -0.5; // setting this to start.
+ //  ln_rec_devs_RN 0;
 
 PROCEDURE_SECTION
  
@@ -1303,10 +1297,6 @@ FUNCTION get_vitals
    }
   }
 
-//  cout<<Rec_Prop<<endl;
-//  exit(43);
-
-
  //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
   if(apportionment_type==4)
    {
@@ -1516,8 +1506,7 @@ FUNCTION get_vitals
 
                   if(ph_rec<0)
                   {            
-                   //rec_devs(j,y)=rec_devs_TRUE(j,y+1);
-                  rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
+                    rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
                   }     
              //    if(recruit_randwalk_switch==1)
              //    {
@@ -1593,8 +1582,7 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j);z++)
                   {
                    init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
- 
-                   if(ph_abund_devs<0)
+                  if(ph_abund_devs<0)
                    {
                      init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
                    }
@@ -3352,11 +3340,9 @@ FUNCTION get_tag_recaptures
   // using subscript notation this equals= (a+y-xx)
   // similarly because account for release age, do not need to worry about plus group calcs as carry recaptures out to max_life_tags and never assume plus group (just use plus group mortality and movement values in calcs where a>=max_age)
   /////////////////////////////////////////////////////////////////////////////
-
  if(do_tag==1)
   {
-
-//assume tags released in natal population
+ //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3399,8 +3385,10 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-               }
+                 //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                  recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+              
+              }
              }
             }
            }
@@ -3428,7 +3416,7 @@ FUNCTION get_tag_recaptures
              }
             }
            }
-             total_rec(i,n,x,a)=sum(total_recap_temp);
+              total_rec(i,n,x,a)=sum(total_recap_temp);
              not_rec(i,n,x,a)=ntags(i,n,x,a)-total_rec(i,n,x,a);  //for ntags  at a given age all entries represent all tags released so can just use any of the entries (hence the i,x,a,1 subscripts)
            }
           }
@@ -3467,13 +3455,12 @@ FUNCTION get_tag_recaptures
         }
        }
 
-  
  //in order to use the multinomial RNG, need to have a vector of probabilities
  //this essentially requires stacking the tag_prop array into vectors for each release cohort covering all recap states (recap year, population, region)
  //need to extract each recap prob vector and store, then combine into array where can extract the last index (essentially the columns of the array)
  //can then use the fill.multinomial with that vector of probabilities
 
- nreg_temp=rowsum(nregions_temp);
+
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -3533,9 +3520,7 @@ FUNCTION get_tag_recaptures
           }
          }
         }
-       }
-
-
+ }
 
 FUNCTION evaluate_the_objective_function
    //f=dummy; //in case all the estimated parameters are turned off
@@ -3633,6 +3618,7 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets(j);z++)
               {
+
               if(diagnostics_switch==1){
                catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
                fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
@@ -3729,6 +3715,8 @@ FUNCTION evaluate_the_objective_function
 
             }}}}}}
 
+
+
   
   // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
 
@@ -3747,7 +3735,6 @@ FUNCTION evaluate_the_objective_function
    f           += survey_age_like*wt_srv_age;
    f           += rec_like*wt_rec;
    f           += tag_like*wt_tag;
-   
   
 REPORT_SECTION
   report<<"$nages"<<endl;
@@ -3962,13 +3949,10 @@ REPORT_SECTION
   report<<"$SR"<<endl;
   report<<SR<<endl;
 
-
-
 ////////////////////////////////////////////////////////////////////
 //reporting hi dimensional arrays
  if(npops==1)// for panmictic and metamictic population outputs
      {
-  
         report<<"$T_year"<<endl;
         report<<T_year<<endl;
         report<<"$EST_survey_prop"<<endl;
@@ -3977,8 +3961,6 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop<<endl;
         report<<"$EST_tag_prop_final"<<endl;
         report<<tag_prop_final<<endl;
-        report<<"$TRUE_tag_prop_final"<<endl;
-        report<<tag_prop_final_TRUE<<endl;
 
      if(diagnostics_switch==1){
        report<<"$OBS_survey_prop"<<endl;
@@ -4018,9 +4000,6 @@ REPORT_SECTION
         report<<catch_at_age_fleet_prop[p]<<endl;
         report<<"$EST_tag_prop_final"<<p<<endl;
         report<<tag_prop_final[p]<<endl;
-        report<<"$TRUE_tag_prop_final"<<p<<endl;
-        report<<tag_prop_final_TRUE[p]<<endl;
-
 
      //OBS Values
      if(diagnostics_switch==1){
@@ -4048,8 +4027,7 @@ REPORT_SECTION
 
  save_gradients(gradients);
 RUNTIME_SECTION
-  //convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
-  convergence_criteria .001
+  convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
   maximum_function_evaluations 10000
   
 
