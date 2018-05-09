@@ -1852,9 +1852,6 @@ FUNCTION get_abundance
            }
           }
          } //end age loop
-
-
-
  ///////////////////////////////////////////////////////////////////////////////////
  ////////////////NEWTON-RAPHSON for YEAR 1////////////////////////////////////////////////////////////////////////////
  //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5332,6 +5329,11 @@ FUNCTION get_tag_recaptures
       }
      }
      
+ //cout<<ntags<<endl;
+ //cout<<true_survey_total_abundance<<endl;
+ //(43);
+
+
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -5375,9 +5377,8 @@ FUNCTION get_tag_recaptures
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
-                 }
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+               }
              }
             }
            }
@@ -5803,7 +5804,7 @@ REPORT_SECTION
   report<<"#lb_sel_beta2_surv"<<endl;
   report<<lb_sel_beta2_surv<<endl;
   report<<"#ub_sel_beta2_surv"<<endl;
-  report<<ub_sel_beta2_surv<<endl;
+  report<<ub_sel_beta2_surv<<endl;;
   report<<"#ph_sel_log_surv"<<endl;
   report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
