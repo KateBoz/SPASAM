@@ -165,6 +165,10 @@ DATA_SECTION
   init_number ub_sel_beta1
   init_number lb_sel_beta2
   init_number ub_sel_beta2
+  init_number lb_sel_beta1_surv
+  init_number ub_sel_beta1_surv
+  init_number lb_sel_beta2_surv
+  init_number ub_sel_beta2_surv
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -269,9 +273,6 @@ DATA_SECTION
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
 
-  //!!cout<<ntags<<endl;
-  //!!exit(56);
-
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -301,7 +302,8 @@ DATA_SECTION
 
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
-  
+
+
 //these are fixed to EM dimensions
   init_5darray catch_at_age_fleet_prop_TRUE(1,np,1,nreg,1,ny,1,nf,1,na)
   init_4darray yield_fleet_TRUE(1,np,1,nreg,1,ny,1,nf)
@@ -317,9 +319,9 @@ DATA_SECTION
   init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
   init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
 
-//need to fix to EM dim 
-  init_5darray tag_prop_final_TRUE(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
 
+//need to fix to EM dim 
+  init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt)
 
   !! int xn=na*ny;
   init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
@@ -329,6 +331,7 @@ DATA_SECTION
 
 // end of file marker
    init_int debug;
+
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -464,10 +467,10 @@ PARAMETER_SECTION
    init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
    init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
-   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,-10,5,ph_sel_log_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,lb_sel_beta1_surv,ub_sel_beta1_surv,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,lb_sel_beta2_surv,ub_sel_beta2_surv,ph_sel_log_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
    init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv) ;  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
   
 
   3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -537,10 +540,10 @@ PARAMETER_SECTION
 //  vector G_app_temp(1,nps);
 
  //#########################################################################################################################
-  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-5,5,ph_rec_app_CNST)
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr,-5,5,ph_rec_app_CNST)//check this too!
   init_bounded_matrix ln_rec_prop_YR(1,nps,1,nyr-1,-5,5,ph_rec_app_YR) //needs work
 
-  matrix G_app(1,nps,1,nr);
+  matrix G_app(1,nps,1,nr);//check this
   vector G_app_temp(1,nps);
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
@@ -560,7 +563,7 @@ PARAMETER_SECTION
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,2,20,ph_lmr) //estimated parameter Average Recruitment
+  init_bounded_vector ln_R_ave(1,parpops,0,20,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
@@ -770,13 +773,14 @@ PARAMETER_SECTION
  //INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
- //  ln_R_ave 7;
+ //  ln_R_ave 3;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
  //  ln_rec_devs_RN 0;
+//    ln_rec_prop_CNST -1.1;
 
 PROCEDURE_SECTION
  
@@ -1177,18 +1181,13 @@ FUNCTION get_vitals
         }
        }
       }
-    
-//set R_ave to true if neg phase
-  if(ph_lmr<0){
-  R_ave=R_ave_TRUE;
-  }
-  else{
-  R_ave=mfexp(ln_R_ave+square(sigma_recruit)*0.5);
-   }
-  for (int p=1;p<=npops;p++)
-   {
+
+
     for (int j=1;j<=npops;j++)
-     {  
+     {
+    if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
+    if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
+    
       for (int r=1;r<=nregions(j);r++)   
        {       
         for (int y=1;y<=nyrs;y++)
@@ -1196,7 +1195,7 @@ FUNCTION get_vitals
           for (int a=1;a<=nages;a++)
            {
             for (int z=1;z<=nfleets(j);z++)
-             {
+             {           
               M(j,r,y,a)=input_M(j,a);
               weight_population(j,r,y,a)=input_weight(j,r,a);
               weight_catch(j,r,y,a)=input_catch_weight(j,r,a);
@@ -1230,8 +1229,6 @@ FUNCTION get_vitals
            }         
          }
        }
-     }
-
 
  for(int y=1;y<=nyrs;y++)
   {
@@ -1258,31 +1255,39 @@ FUNCTION get_vitals
  }
  }
  }
+
+
   if(apportionment_type==3)
    {
    if(ph_rec_app_CNST>0) 
     {
     G_app=0;
      G_app_temp=0;
-      for (int j=1;j<=npops;j++)
-       {
+  
+     for (int j=1;j<=npops;j++)
+        {
         for (int i=1;i<=nregions(j);i++) 
          {
-            if(j==i)
-            {
-            G_app(j,i)=1;
-            }
-            if(i>j)
-            {
-            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
-            }
-            if(j!=i && i<j)
-            {
+            
+       //  if(j==i)
+       //   {
+       //    G_app(j,i)=1;
+      //      }
+
+          // if(i>j)
+         //   {
+         //   G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
+         //   }
+        //    if(j!=i && i<j)
+         //   {
             G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i));
             }
            }
-          }    
-      G_app_temp=rowsum(G_app);
+         }
+         
+       G_app_temp=rowsum(G_app);
+
+
 
  for(int y=1;y<=nyrs;y++)
   {
@@ -1295,7 +1300,8 @@ FUNCTION get_vitals
      }
     }
    }
-  }
+   
+
 
  //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
   if(apportionment_type==4)
@@ -1336,7 +1342,7 @@ FUNCTION get_vitals
     }
    }
   }
- 
+
 
 //###################### ALT YEARLY APPORTIONEMENT APPROACH, NEITHER VERSION APPEARS TO WORK
   //if(apportionment_type==4)
@@ -1385,7 +1391,8 @@ FUNCTION get_vitals
           abund_devs(j,a)=mfexp(ln_abund_devs(j,a)); //age based abund devs by population
          }
        }
-     
+
+
    if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
     {
    if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
@@ -1423,7 +1430,8 @@ FUNCTION get_vitals
             } 
            }
           }
-    }
+         }
+
 
    if(natal_homing_switch==0) //estimate parameters to distribute a population across multiple regions
     {
@@ -1490,11 +1498,11 @@ FUNCTION get_vitals
            }
          }
     }
-
+  
     for (int j=1;j<=npops;j++)
-     { 
+     {              
         for (int y=1;y<=nyrs-1;y++)
-         {
+              {
                if(recruit_devs_switch==0)  //use population recruit relationship directly
                 {
                  rec_devs(j,y)=1;
@@ -1576,7 +1584,7 @@ FUNCTION get_abundance
            for (int p=1;p<=npops;p++)
             {
              for (int j=1;j<=npops;j++)
-              {
+              {             
                for (int r=1;r<=nregions(j);r++)
                 {
                  for (int z=1;z<=nfleets(j);z++)
@@ -4027,8 +4035,9 @@ REPORT_SECTION
 
  save_gradients(gradients);
 RUNTIME_SECTION
-  convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
-  maximum_function_evaluations 10000
-  
+ // convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
+  convergence_criteria .001
+  //maximum_function_evaluations 10000
+  maximum_function_evaluations 4000  
 
 
