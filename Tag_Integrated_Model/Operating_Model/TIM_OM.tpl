@@ -425,6 +425,8 @@ DATA_SECTION
 
 
   init_int ph_lmr
+  init_int lb_R_ave//lower bound on R_ave
+  init_int ub_R_ave//upper bound on R_ave
   init_int ph_rec
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
@@ -5769,6 +5771,10 @@ REPORT_SECTION
   report<<sigma_recruit_EM<<endl;
   report<<"#ph_lmr"<<endl;
   report<<ph_lmr<<endl;
+  report<<"#lb_R_ave"<<endl;
+  report<<lb_R_ave<<endl;
+  report<<"#ub_R_ave"<<endl;
+  report<<ub_R_ave<<endl;
   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
   report<<"#ph_rec_app_CNST"<<endl;

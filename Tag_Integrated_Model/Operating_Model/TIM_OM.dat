@@ -989,6 +989,10 @@
 ################################
 #ph_lmr
 1
+#lb_R_ave
+2
+#ub_R_ave
+20
 #ph_rec
 2
 #ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
