@@ -151,6 +151,8 @@ DATA_SECTION
 //phases and bounds for est parameters
 
   init_int ph_lmr
+  init_int lb_R_ave
+  init_int ub_R_ave
   init_int ph_rec
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
@@ -488,7 +490,7 @@ PARAMETER_SECTION
   4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
   4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
   
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-30,15,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-5,5,ph_q)
  
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
@@ -563,7 +565,7 @@ PARAMETER_SECTION
  //###################################################################################################################################
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,0,20,ph_lmr) //estimated parameter Average Recruitment
+  init_bounded_vector ln_R_ave(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
@@ -770,17 +772,17 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
- //INITIALIZATION_SECTION  //set initial values
+ INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
- //  ln_R_ave 3;
+   ln_R_ave 3;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
  //  ln_rec_devs_RN 0;
-//    ln_rec_prop_CNST -1.1;
+   ln_rec_prop_CNST -1.1;
 
 PROCEDURE_SECTION
  
@@ -1185,8 +1187,8 @@ FUNCTION get_vitals
 
     for (int j=1;j<=npops;j++)
      {
-    if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
-    if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
+      if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
+      if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
     
       for (int r=1;r<=nregions(j);r++)   
        {       
@@ -1259,6 +1261,9 @@ FUNCTION get_vitals
 
   if(apportionment_type==3)
    {
+    if(ph_rec_app_CNST<0) 
+    {Rec_Prop=Rec_Prop_TRUE;}
+   
    if(ph_rec_app_CNST>0) 
     {
     G_app=0;
@@ -1282,9 +1287,7 @@ FUNCTION get_vitals
          //   {
             G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i));
             }
-           }
-         }
-         
+           } 
        G_app_temp=rowsum(G_app);
 
 
@@ -1300,7 +1303,7 @@ FUNCTION get_vitals
      }
     }
    }
-   
+  }
 
 
  //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
@@ -1514,7 +1517,7 @@ FUNCTION get_vitals
 
                   if(ph_rec<0)
                   {            
-                    rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
+                   rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
                   }     
              //    if(recruit_randwalk_switch==1)
              //    {
@@ -1527,8 +1530,7 @@ FUNCTION get_vitals
                 }
                }
               }
-              
-             
+
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
 FUNCTION get_SPR
