@@ -6,7 +6,8 @@
 # Manually make changes in the OM .dat and run both OM and EM together
 
 #remove junk from workspace
-#rm(list=(ls()))
+rm(list=(ls()))
+
 
 
 #load libraries
@@ -64,14 +65,15 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-getwd()
+#direct_master<-getwd()
+direct_master<-"G:\\MisMatch_Edit\\MS2\\Uniform_OM"
 
 #list files in the directory
 files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+i=2
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -118,7 +120,6 @@ invisible(shell(paste0(EM_name),wait=T)))
 #########################################################
 ##### Look at the outputs ###############################
 #########################################################
-
 make.plots<-function(direct=EM_direct){ #run diagnostics plotting
   
 #Read in model .rep
@@ -154,12 +155,6 @@ diag_theme<-
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
 
-
-
-
-
-
-
 ##############################
 #### RECRUITMENT PLOTS #######
 ##############################
@@ -182,8 +177,39 @@ rec1<-ggplot(rec.total.plot,aes(Year,value))+
   ggtitle("Recruitment Total")
 
 
+##########################
+#recruit residual plot
 
-#rec devs
+if(resid.switch==1){
+  #calculate the resids as Relative % Diff
+  rec.total$resids<-(rec.total$Rec_True-rec.total$Rec_Est)
+}
+
+if(resid.switch==2){
+  #calculate the resids as Relative % Diff
+  rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)*100
+}
+
+#preparing for plotting
+rec.resids.plot<-melt(rec.total[,c(1,2,5)],id=c("Reg","Year"))
+rec.resids.plot$Reg<-as.factor(rec.resids.plot$Reg)
+
+#rec resids plot  
+R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
+  geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+  geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+  theme_bw()+
+  scale_color_gradient2(low="red",mid="grey",high ="blue")+
+  ylab("Difference (True-Estimated)")+
+  facet_wrap(~Reg)+
+  diag_theme+
+  theme(legend.position = "none", legend.justification = c(1,1))+
+  ggtitle("Recruitment Residuals")
+
+
+###################################
+# Recruitment Deviations
+
 if(npops>1){
 
 Rec_Est_temp<-out$rec_devs 
@@ -225,14 +251,21 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 
 
 if(npops==1){
-  rec.devs<-data.frame(Year=years[-1],Rec_Est=out$rec_devs*out$R_ave, Rec_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]*out$R_ave_TRUE)
+#  rec.devs<-data.frame(Year=years[-1],Rec_Est=out$rec_devs*out$R_ave, Rec_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]*out$R_ave_TRUE)
+  
+rec.devs<-data.frame(Year=years[-1],Rec_Est=out$rec_devs, Rec_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)])
   
 rec.devs.plot<-melt(rec.devs,id=c("Year"))
+
+
+#add the rec_ave
   
 rec2<-ggplot(rec.devs.plot,aes(Year,value))+
     geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
     theme_bw()+
     #facet_wrap(~Reg)+
+    #geom_hline(aes(yintercept=out$R_ave), col = e.col)+
+    #geom_hline(aes(yintercept=out$R_ave_TRUE), col = t.col, lty=2)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
     ylab("Recruitment")+
@@ -242,35 +275,36 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
   
 }
 
-##########################
-#recruit residual plot
 
-if(resid.switch==1){
-#calculate the resids as Relative % Diff
-rec.total$resids<-(rec.total$Rec_True-rec.total$Rec_Est)
-}
+######################
+#Rec_dev resid plot
   
-if(resid.switch==2){
-  #calculate the resids as Relative % Diff
-  rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)*100
-}
+  devs.true=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]
   
-#preparing for plotting
-  rec.resids.plot<-melt(rec.total[,c(1,2,5)],id=c("Reg","Year"))
-  rec.resids.plot$Reg<-as.factor(rec.resids.plot$Reg)
+  if(resid.switch==1){
+    #calculate the resids as Relative % Diff
+    rec.devs$resids<-(devs.true-out$rec_devs)
+  }
   
-#rec resids plot  
-  R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
+  if(resid.switch==2){
+    #calculate the resids as Relative % Diff
+    rec.devs$resids<-((devs.true-out$rec_devs)/devs.true)*100
+  }
+  
+  #preparing for plotting
+  rec.dev.resids.plot<-melt(rec.devs[,c(1,4)],id="Year")
+  
+  #rec resids plot  
+  R.dev.resid<-ggplot(rec.dev.resids.plot,aes(Year,value))+
     geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
     ylab("Difference (True-Estimated)")+
-    facet_wrap(~Reg)+
     diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
-    ggtitle("Recruitment Residuals")
-
+    ggtitle("Recruitment Devs Residuals")
+  
   
 #################  
 #Rec Apportionment
@@ -287,6 +321,7 @@ rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Pr
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
     scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
     ylab("Apportionment Proportion")+
+    ylim(0,1)+
     theme_bw()+
     diag_theme+
     theme(legend.position = c(1, 1), legend.justification = c(1,1))+
@@ -339,7 +374,7 @@ if(npops==1){
 #other pop types
   #might need to fine tune this for mismatch
   if(npops>1||nreg<1){
-    i.ab_temp<-data.frame(out$init_abund)
+    i.ab_temp<-data.frame(out$Init_Abund)
     pops_temp<-rep(1:npops,each=npops)
     t<-split(i.ab_temp,pops_temp)
     
@@ -664,12 +699,12 @@ if(resid.switch==1){
 if(resid.switch==2){
   T_resid<-((T_true-T_est)/T_true)*100}
   
-}
-  
 for(i in 1:nreg){
     names(T_est)[i]<-paste0("Est_",i)
     names(T_true)[i]<-paste0("True_",i)
     names(T_resid)[i]<-paste0("Resid_",i)}
+    
+}
 
 
 
@@ -862,10 +897,7 @@ survey.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs
 
 
 if(npops==1){
-  
-
 survey.prop.resid<-data.frame((out$OBS_survey_prop-out$EST_survey_prop))
-
 survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
 survey.long<-melt(survey.comps.resid,id.vars=c("Year","Reg"))
 }
@@ -877,16 +909,13 @@ if(npops>1){
   pull.surv.obs<-out[grep("OBS_survey_prop", names(out), value = TRUE)]
   pull.surv.est<-out[grep("EST_survey_age_prop", names(out), value = TRUE)]
   
-  surv_obs<-data.frame(matrix(unlist(pull.surv.obs),nyrs*npops,na,byrow=TRUE))
-  surv_est<-data.frame(matrix(unlist(pull.surv.est),nyrs*npops,na,byrow=TRUE))
+  surv_obs<-data.frame(do.call("rbind",pull.surv.obs))
+  surv_est<-data.frame(do.call("rbind",pull.surv.est))
   
   survey.prop.resid<-(surv_obs-surv_est)
-
-  
-survey.comps.resid<-cbind(survey.comps.resid,surv_resid)
-survey.long<-melt(survey.comps.resid,id.vars=c("Year","Reg"))
-
-}
+  survey.comps.resid<-cbind(survey.comps.resid,survey.prop.resid)
+  survey.long<-melt(survey.comps.resid,id.vars=c("Year","Reg"))
+  }
 
 
 survey.comp.plot<-
@@ -916,10 +945,8 @@ fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyr
 
 if(npops==1){
 
-    fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)
-  
+fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)
 #    fishery.prop.resid<-data.frame((out$OBS_catch_prop-out$EST_catch_age_fleet_prop)/out$OBS_catch_prop)
-  
 fishery.comps.resid<-cbind(fishery.comps.resid,fishery.prop.resid)
 fishery.long<-melt(fishery.comps.resid,id.vars=c("Year","Reg"))
 }
@@ -931,13 +958,13 @@ if(npops>1){
   pull.catch.obs<-out[grep("OBS_catch_prop", names(out), value = TRUE)]
   pull.catch.est<-out[grep("EST_catch_age_fleet_prop", names(out), value = TRUE)]
   
-  catch_obs<-data.frame(matrix(unlist(pull.catch.obs),nyrs*npops,na,byrow=TRUE))
-  catch_est<-data.frame(matrix(unlist(pull.catch.est),nyrs*npops,na,byrow=TRUE))
+  catch_obs<-data.frame(do.call("rbind",pull.catch.obs))
+  catch_est<-data.frame(do.call("rbind",pull.catch.est))
   
   fishery_resid<-(catch_obs-catch_est)
   
   fishery.comps.resid<-cbind(fishery.comps.resid,fishery_resid)
-  fishery.long<-melt(fishery.comps.resid,id.vars=c("Years","Reg"))
+  fishery.long<-melt(fishery.comps.resid,id.vars=c("Year","Reg"))
 }
 
 
@@ -974,14 +1001,20 @@ colnamesindex<-as.character(c((colnamesindex1+colnamesindex2),"NoCapture"))
 #not there yet
 if(npops==1){
   tags_obs<-out$OBS_tag_prop_final
+  #tags_est<-out$TRUE_tag_prop_final
   tags_est<-out$EST_tag_prop_final
-  tag_resid<-data.frame((tags_obs-tags_est))
+  tag_resid<-(tags_obs-tags_est)
+  tag_resid<-data.frame(tag_resid)
   names(tag_resid)<-colnamesindex
-  
-  tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
-  tags.long<-melt(tag.prop.resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
+   
+tag_resid$Rel_Reg<-tag.prop.resid[,1]
+tag_resid$Rel_year<-tag.prop.resid[,2]
+tag_resid$Rel_age<-tag.prop.resid[,3]
+tags.long<-melt(tag_resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
+
 }
 
+#write.csv(tag_resid,"tags.csv")
 
 if(npops>1){
   #combine movements age_comps
@@ -992,10 +1025,13 @@ if(npops>1){
   tags_est<-data.frame(matrix(unlist(pull.tags.est),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
   
   tag_resid<-(tags_obs-tags_est)
+  tag_resid<-data.frame(tag_resid)
   names(tag_resid)<-colnamesindex
 
-  tag.prop.resid<-cbind(tag.prop.resid,tag_resid)
-  tags.long<-melt(tag.prop.resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
+  tag_resid$Rel_Reg<-tag.prop.resid[,1]
+  tag_resid$Rel_year<-tag.prop.resid[,2]
+  tag_resid$Rel_age<-tag.prop.resid[,3]
+  tags.long<-melt(tag_resid,id.vars=c("Rel_Reg","Rel_year","Rel_age"))
 }
 
 
@@ -1005,7 +1041,7 @@ split.by.reg<-split(tags.long,tags.long$Rel_Reg)
 
 
 #not sure what I am doing here but whatever
-tags.plot<-function(j=1) {
+tags.plot<-function(j) {
   
   ggplot(split.by.reg[[j]], aes(x = Rel_age, y=as.factor(variable))) + 
   geom_raster(aes(fill=value)) + 
@@ -1027,11 +1063,7 @@ tags.plot<-function(j=1) {
 
 }
 
-
-
 #tags.plot(3)
-
-
 
 ##############################################
 # Generate Table of Error Values from OM .dat
@@ -1063,11 +1095,10 @@ OM_error_table[2,2]<-OM_dat[rec_app_om]
 
 if(npops>1){
 rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
-OM_error_table[1,2:(1+npops)]<-OM_dat[rec_om:(rec_om+1)]
+OM_error_table[1,2:(1+nreg)]<-OM_dat[rec_om:(rec_om+(nreg-1))]
 
 rec_app_om<-grep("_sigma_rec_prop",OM_dat, fixed = T)+1
-OM_error_table[2,2:(1+nreg)]<-OM_dat[rec_app_om:(rec_app_om+1)]
-
+OM_error_table[2,2:(1+nreg)]<-OM_dat[rec_app_om:(rec_app_om+(nreg-1))]
 }
 
 
@@ -1169,6 +1200,12 @@ grid.arrange(ncol = 1,
   #top="Recrutiment",
   rec1, R.resid
   )
+
+grid.arrange(ncol = 1,
+             #top="Recrutiment",
+             rec2, R.dev.resid
+)
+
 
 grid.arrange(ncol = 1,
              #top="Recruitment ",
@@ -1313,7 +1350,7 @@ print("$Rec_devs_TRUE")
 print(out$rec_devs_TRUE)
 
 print("$init_abund")
-print(out$init_abund)
+print(out$Init_Abund)
 
 print("$init_abund_TRUE")
 print(out$Init_Abund_TRUE)
