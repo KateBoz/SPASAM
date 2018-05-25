@@ -772,17 +772,17 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
- INITIALIZATION_SECTION  //set initial values
+ //INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
-   ln_R_ave 3;
+ //  ln_R_ave 3;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
  //  ln_rec_devs_RN 0;
-   ln_rec_prop_CNST -1.1;
+ //   ln_rec_prop_CNST -1.1;
 
 PROCEDURE_SECTION
  
@@ -1512,7 +1512,8 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
+                //rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
+                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
           //     rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
 
                   if(ph_rec<0)
@@ -1568,6 +1569,7 @@ FUNCTION get_SPR
       }
     }
 
+ 
 FUNCTION get_abundance
 
        for (int y=1;y<=nyrs;y++)
@@ -1965,6 +1967,7 @@ FUNCTION get_abundance
            }
           }//end age loop          
         } //end yr 1
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////Recruitment Calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3270,6 +3273,8 @@ FUNCTION get_abundance
                  }
                 }
                }
+
+
 FUNCTION get_survey_CAA_prop      
   for (int p=1;p<=npops;p++)
    {
@@ -3709,22 +3714,21 @@ FUNCTION evaluate_the_objective_function
              {
               tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
              }
-            if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
-             {
-               if(s<((nyrs-xx+1)*sum(nregions)+1))
-                {
-                 tag_like_temp +=((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
-                }
-               if(s==((nyrs-xx+1)*sum(nregions)+1))
-                {
-                 tag_like_temp += ((OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
-                }
-               tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
+           // if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+           //  {
+           //    if(s<((nyrs-xx+1)*sum(nregions)+1))
+           //     {
+           //      tag_like_temp +=((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
+           //     }
+           //    if(s==((nyrs-xx+1)*sum(nregions)+1))
+           //     {
+           //      tag_like_temp += ((OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
+           //     }
+           //    tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
              }
 
 
-            }}}}}}
-
+            }}}}}
 
 
   
@@ -3747,6 +3751,25 @@ FUNCTION evaluate_the_objective_function
    f           += tag_like*wt_tag;
   
 REPORT_SECTION
+    //likelihoods
+  report<<"$likelihood components"<<endl;
+  report<<"$f"<<endl;
+  report<<f<<endl;
+  report<<"$tag_like"<<endl;
+  report<<tag_like<<endl;
+  report<<"$fish_age_like"<<endl;
+  report<<fish_age_like<<endl;
+  report<<"$survey_age_like"<<endl;
+  report<<survey_age_like<<endl;
+  report<<"$survey_like"<<endl;
+  report<<survey_like<<endl;
+  report<<"$catch_like"<<endl;
+  report<<catch_like<<endl;
+  report<<"$rec_like"<<endl;
+  report<<rec_like<<endl;
+
+
+//EM structure
   report<<"$nages"<<endl;
   report<<nages<<endl;
   report<<"$nyrs"<<endl;
@@ -3835,12 +3858,15 @@ REPORT_SECTION
   report<<SSB_region<<endl;
   report<<"$Bratio_population"<<endl;
   report<<Bratio_population<<endl;
-
-//estimated values
   report<<"$survey_fleet_bio"<<endl;
   report<<survey_fleet_bio<<endl;
   report<<"$yield_fleet"<<endl;
   report<<yield_fleet<<endl;
+
+  report<<"$total_recruit"<<endl;
+  report<<total_recruits<<endl;
+  report<<"$SR"<<endl;
+  report<<SR<<endl;
 
 
  /// TRUE VALUES
@@ -3930,21 +3956,8 @@ REPORT_SECTION
   report<<"$ntags"<<endl;
   report<<ntags<<endl;
 
-//likelihoods
-  report<<"$likelihood components"<<endl;
-  report<<"$tag_like"<<endl;
-  report<<tag_like<<endl;
-  report<<"$fish_age_like"<<endl;
-  report<<fish_age_like<<endl;
-  report<<"$survey_age_like"<<endl;
-  report<<survey_age_like<<endl;
-  report<<"$survey_like"<<endl;
-  report<<survey_like<<endl;
-  report<<"$catch_like"<<endl;
-  report<<catch_like<<endl;
-  report<<"$rec_like"<<endl;
-  report<<rec_like<<endl;
 
+//Additional Params
   report<<"$selectivity_age"<<endl;
   report<<selectivity_age<<endl;
   report<<"$selectivity_age_TRUE"<<endl;
@@ -3954,10 +3967,7 @@ REPORT_SECTION
   report<<"$survey_selectivity_age_TRUE"<<endl;
   report<<survey_selectivity_age_TRUE<<endl;
 
-  report<<"$total_recruit"<<endl;
-  report<<total_recruits<<endl;
-  report<<"$SR"<<endl;
-  report<<SR<<endl;
+
 
 ////////////////////////////////////////////////////////////////////
 //reporting hi dimensional arrays
@@ -4034,12 +4044,12 @@ REPORT_SECTION
    }
 
 
-
  save_gradients(gradients);
+
+
 RUNTIME_SECTION
- // convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
-  convergence_criteria .001
+ convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
   //maximum_function_evaluations 10000
-  maximum_function_evaluations 4000  
+ maximum_function_evaluations 4000  
 
 
