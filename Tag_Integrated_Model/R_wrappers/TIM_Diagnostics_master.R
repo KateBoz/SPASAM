@@ -10,6 +10,7 @@ rm(list=(ls()))
 
 
 
+
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
@@ -65,15 +66,15 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-#direct_master<-getwd()
-direct_master<-"G:\\MisMatch_Edit\\MS2\\Uniform_OM"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area\\Test_Runs"
+
 
 #list files in the directory
 files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=2
+i=5
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -212,23 +213,11 @@ R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
 
 if(npops>1){
 
-Rec_Est_temp<-out$rec_devs 
-Rec_TRUE_temp<-out$rec_devs_TRUE
+Rec_Dev_Est=as.vector(t(Rec_Dev_Est_temp))
+Rec_Dev_True=as.vector(t(Rec_Dev_TRUE_temp[,2:ncol(Rec_Dev_TRUE_temp)]))
 
-for(i in 1:ncol(out$rec_devs)){
-Rec_Est_temp[,i]=out$rec_devs[,i]*out$R_ave
-}
-  
-for(i in 2:ncol(out$rec_devs_TRUE)){
-  Rec_TRUE_temp[,i]=out$rec_devs_TRUE[,i]*out$R_ave_TRUE
-}
+rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
 
-rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)))
-
-Rec_Est=as.vector(t(Rec_Est_temp))
-Rec_True=as.vector(t(Rec_TRUE_temp[,2:ncol(Rec_TRUE_temp)]))
-
-rec.devs<-cbind(rec.devs,Rec_Est,Rec_True)
 
 rec.devs.plot<-melt(rec.devs,id=c("Reg","Year"))
 rec.devs.plot$Reg<-as.factor(rec.devs.plot$Reg)
@@ -251,9 +240,8 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 
 
 if(npops==1){
-#  rec.devs<-data.frame(Year=years[-1],Rec_Est=out$rec_devs*out$R_ave, Rec_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]*out$R_ave_TRUE)
-  
-rec.devs<-data.frame(Year=years[-1],Rec_Est=out$rec_devs, Rec_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)])
+
+rec.devs<-data.frame(Year=years[-1],Rec_Dev_Est=out$rec_devs, Rec_Dev_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)])
   
 rec.devs.plot<-melt(rec.devs,id=c("Year"))
 
@@ -279,19 +267,22 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 ######################
 #Rec_dev resid plot
   
-  devs.true=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]
-  
+
   if(resid.switch==1){
     #calculate the resids as Relative % Diff
-    rec.devs$resids<-(devs.true-out$rec_devs)
+    rec.devs$resids<-(rec.devs$Rec_Dev_True-rec.devs$Rec_Dev_Est)
   }
   
+
   if(resid.switch==2){
     #calculate the resids as Relative % Diff
-    rec.devs$resids<-((devs.true-out$rec_devs)/devs.true)*100
+    rec.devs$resids<-((rec.devs$Rec_Dev_True-rec.devs$Rec_Dev_Est)/rec.devs$Rec_Dev_True)*100
   }
   
-  #preparing for plotting
+
+if(npops==1){  
+  
+#preparing for plotting
   rec.dev.resids.plot<-melt(rec.devs[,c(1,4)],id="Year")
   
   #rec resids plot  
@@ -304,6 +295,24 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
     diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Recruitment Devs Residuals")
+}
+  
+  if(npops>1){ 
+    #preparing for plotting
+    rec.dev.resids.plot<-melt(rec.devs[,c(1,2,5)],id=c("Year","Reg"))
+   
+     #rec resids plot  
+    R.dev.resid<-ggplot(rec.dev.resids.plot,aes(Year,value))+
+      geom_hline(aes(yintercept=0), col = "grey20", lty = 2)+
+      geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
+      theme_bw()+
+      scale_color_gradient2(low="red",mid="grey",high ="blue")+
+      ylab("Difference (True-Estimated)")+
+      facet_wrap(~Reg)+
+      diag_theme+
+      theme(legend.position = "none", legend.justification = c(1,1))+
+      ggtitle("Recruitment Devs Residuals")
+  }
   
   
 #################  
