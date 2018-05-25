@@ -66,7 +66,7 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area\\Test_Runs"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area\\Simple_Runs"
 
 
 #list files in the directory
@@ -74,7 +74,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=5
+i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -213,8 +213,8 @@ R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
 
 if(npops>1){
 
-Rec_Dev_Est=as.vector(t(Rec_Dev_Est_temp))
-Rec_Dev_True=as.vector(t(Rec_Dev_TRUE_temp[,2:ncol(Rec_Dev_TRUE_temp)]))
+Rec_Dev_Est=as.vector(t(out$rec_devs))
+Rec_Dev_True=as.vector(t(out$rec_devs_TRUE[,2:ncol(out$rec_devs_TRUE)]))
 
 rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
 
