@@ -542,7 +542,7 @@ PARAMETER_SECTION
 //  vector G_app_temp(1,nps);
 
  //#########################################################################################################################
-  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr,-5,5,ph_rec_app_CNST)//check this too!
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-5,5,ph_rec_app_CNST)//check this too!
   init_bounded_matrix ln_rec_prop_YR(1,nps,1,nyr-1,-5,5,ph_rec_app_YR) //needs work
 
   matrix G_app(1,nps,1,nr);//check this
@@ -772,7 +772,7 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
- //INITIALIZATION_SECTION  //set initial values
+//INITIALIZATION_SECTION  //set initial values
  //  steep .814;
  //  ln_q 0;
  //  ln_R_ave 3;
@@ -782,7 +782,8 @@ PARAMETER_SECTION
  //  log_sel_beta2surv 2;
  //  ln_F -.7
  //  ln_rec_devs_RN 0;
- //   ln_rec_prop_CNST -1.1;
+ //  ln_rec_prop_CNST -1.1;
+ //  ln_abund_devs 0;
 
 PROCEDURE_SECTION
  
@@ -1006,6 +1007,7 @@ FUNCTION get_movement
          }
         }
 
+
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
 
@@ -1184,11 +1186,14 @@ FUNCTION get_vitals
        }
       }
 
+//see if this helps
+      if(ph_lmr<0){R_ave=R_ave_TRUE;}
+      if(ph_lmr>0){R_ave=mfexp(ln_R_ave+square(sigma_recruit)*0.5);}
 
     for (int j=1;j<=npops;j++)
      {
-      if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
-      if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
+      //if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
+      //if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
     
       for (int r=1;r<=nregions(j);r++)   
        {       
@@ -1274,23 +1279,21 @@ FUNCTION get_vitals
         for (int i=1;i<=nregions(j);i++) 
          {
             
-       //  if(j==i)
-       //   {
-       //    G_app(j,i)=1;
-      //      }
-
-          // if(i>j)
-         //   {
-         //   G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
-         //   }
-        //    if(j!=i && i<j)
-         //   {
+         if(j==i)
+          {
+           G_app(j,i)=1;
+            }
+           if(i>j)
+            {
+            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
+            }
+            if(j!=i && i<j)
+            {
             G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i));
             }
-           } 
+           }
+          }
        G_app_temp=rowsum(G_app);
-
-
 
  for(int y=1;y<=nyrs;y++)
   {
@@ -1345,7 +1348,6 @@ FUNCTION get_vitals
     }
    }
   }
-
 
 //###################### ALT YEARLY APPORTIONEMENT APPROACH, NEITHER VERSION APPEARS TO WORK
   //if(apportionment_type==4)
@@ -1512,10 +1514,10 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                //rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
-                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
-          //     rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
-
+                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
+               // rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
+              //rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
+                 
                   if(ph_rec<0)
                   {            
                    rec_devs(j,y)=rec_devs_TRUE(j,y+1); //rec_devs vector in OM has length=nyrs, but only begins being used in year 2
@@ -3867,6 +3869,8 @@ REPORT_SECTION
   report<<total_recruits<<endl;
   report<<"$SR"<<endl;
   report<<SR<<endl;
+  report<<"$frac_natal"<<endl;
+  report<<frac_natal<<endl;
 
 
  /// TRUE VALUES

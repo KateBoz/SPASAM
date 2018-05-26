@@ -21,7 +21,7 @@
 #tsurvey_EM
  0.5 0.5 0.5
 #diagnostics_switch
-1
+0
 #move_switch
 5
 #natal_homing_switch
@@ -135,7 +135,7 @@
 #wt_tag
 1
 #abund_pen_switch
-0
+1
 #move_pen_switch
 1
 #Tpen
