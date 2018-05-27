@@ -74,7 +74,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+i=2
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -229,7 +229,7 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
   theme_bw()+
   scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
   scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
-  ylab("Recruitment")+
+  ylab("Deviations")+
   #geom_hline(data=rec_ave,aes(yintercept=R_ave), col = e.col)+
   #geom_hline(data=rec_ave, aes(yintercept = R_ave_TRUE),col=t.col,lty=2)+
   facet_wrap(~Reg)+
@@ -1030,8 +1030,9 @@ if(npops>1){
   pull.tags.obs<-out[grep("OBS_tag_prop", names(out), value = TRUE)]
   pull.tags.est<-out[grep("EST_tag_prop", names(out), value = TRUE)]
   
-  tags_obs<-data.frame(matrix(unlist(pull.tags.obs),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
-  tags_est<-data.frame(matrix(unlist(pull.tags.est),(na*out$nyrs_release*npops),((out$max_life_tags*npops)+1),byrow=TRUE))
+  tags_obs<-do.call(rbind, pull.tags.obs)
+  tags_est<-do.call(rbind, pull.tags.est)
+
   
   tag_resid<-(tags_obs-tags_est)
   tag_resid<-data.frame(tag_resid)
@@ -1415,5 +1416,4 @@ make.plots()
 
 #} #end loops if doing many runs
   
-
 
