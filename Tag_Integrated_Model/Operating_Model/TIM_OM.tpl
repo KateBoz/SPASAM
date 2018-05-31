@@ -5627,8 +5627,24 @@ FUNCTION evaluate_the_objective_function
  
 REPORT_SECTION
 
- //Aggregating OBS values for panmictic mismatch
+ //for the mismatch calculate the abundance fraction by region/population
+  for (int y=1;y<=nyrs;y++)
+   {
+   for (int p=1;p<=npops;p++)
+    {
+    for (int r=1;r<=nregions(p);r++)
+      {
+      for (int z=1;z<=nfleets(p);z++)
+        {
+         for(int a=1;a<=nages;a++)
+          {
+        abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
+        abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
+        abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
+        }}}}}
 
+
+ //Aggregating OBS values and vitals for panmictic EM
  if(EM_structure==0 && OM_structure>0){ 
   for (int y=1;y<=nyrs;y++)
    {
@@ -5640,12 +5656,6 @@ REPORT_SECTION
         {
          for(int a=1;a<=nages;a++)
           {
-
-        //calculate the abundance fraction by region/population
-        abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
-        abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
-        abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
-
        //aggregating weight at age
         input_weight_region_temp(p,a,r)=input_weight(p,r,a)*abund_frac_region(p,r);//rearrange to summarize and weight for output
         input_weight_region(p,a)=sum(input_weight_region_temp(p,a));
@@ -5705,10 +5715,11 @@ REPORT_SECTION
         rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));// combined by region
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
         rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
-
+        
       } //end pop loop          
      } //end year loop
   }
+
 
 //Additional model structure parameters
   report<<"#nages"<<endl;
@@ -5870,8 +5881,8 @@ REPORT_SECTION
 ////////////////////////////////////////////////////
 
 //Spatial to panmictic EM inputs
-   if(EM_structure==0 && OM_structure>0){ 
-            report<<"#input_weight"<<endl;
+   if(EM_structure==0 && OM_structure>=0){ 
+      report<<"#input_weight"<<endl;
       report<<input_weight_population<<endl;
       report<<"#input_catch_weight"<<endl;
       report<<input_catch_weight_population<<endl;
@@ -5920,7 +5931,6 @@ REPORT_SECTION
       report<<"#OBS_tag_prop_pan_final"<<endl;
       report<<OBS_tag_prop_pan_final<<endl;
       }
-
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
      if((EM_structure>0 && OM_structure>0) || (EM_structure==0 && OM_structure==0)){
