@@ -1,5 +1,4 @@
-
-/////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
 // Spatial Estimation Model based on Operating Model by Daniel Goethel (NMFS SEFSC)  
 // started by Dana Hanselman (AFSC) //Further screwed up by Jon Deroba (NEFSC)//Terrorized by Dan Goethel (SEFSC)
 // Agonized over again by Dana Hanselman between bloodlettings...
@@ -238,7 +237,7 @@ DATA_SECTION
  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)  // standard error on catch
  init_5darray OBS_catch_at_age_fleet_prop(1,np,1,nreg,1,ny,1,nf,1,na) 
  init_4darray OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //sample size
-
+ 
 //Catch Prop
 //tagging data parameters
   init_int nyrs_release //number of years with tag release events  
@@ -257,12 +256,14 @@ DATA_SECTION
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
   !! ivector nt(1,nyr_rel);
+  !! ivector nt_om(1,nyr_rel);
 
   !!  for(int x=1; x<=nyrs_release; x++)
   !!   {
   !!    xx=yrs_releases(x);
   !!    xy(x)=min(max_life_tags,nyrs-xx+1);
   !!    nt(x)=xy(x)*sum(nregions)+1;
+  !!    nt_om(x)=xy(x)*sum(nregions_OM)+1;
   !!   }
   //!! cout<<"nt"<<endl<<nt<<endl;
    init_5darray OBS_tag_prop_final(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
@@ -275,7 +276,8 @@ DATA_SECTION
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
 
-  //##########################################################################################################################################
+  
+//##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
  // TRUE VALUES IN OM DIMENSIONS
@@ -305,12 +307,11 @@ DATA_SECTION
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
 
-
-//these are fixed to EM dimensions
-  init_5darray catch_at_age_fleet_prop_TRUE(1,np,1,nreg,1,ny,1,nf,1,na)
-  init_4darray yield_fleet_TRUE(1,np,1,nreg,1,ny,1,nf)
-  init_5darray survey_fleet_prop_TRUE(1,np,1,nreg,1,ny,1,nfs,1,na)
-  init_4darray survey_fleet_bio_TRUE(1,np,1,nreg,1,ny,1,nfs)
+//these are fixed to EM dimensions when doing a diagnostics run
+  init_5darray catch_at_age_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nf,1,na)
+  init_4darray yield_fleet_TRUE(1,np_om,1,nreg_om,1,ny,1,nf)
+  init_5darray survey_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om,1,na)
+  init_4darray survey_fleet_bio_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
 
 //OM dimensions
   init_3darray harvest_rate_region_bio_TRUE(1,np_om,1,nreg_om,1,ny)
@@ -318,22 +319,23 @@ DATA_SECTION
   init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix Bratio_population_TRUE(1,np_om,1,ny)
   init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
+     
   init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
   init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
 
 
-//need to fix to EM dim 
-  init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt)
+//need to fix to EM dim when doing diagnostics run
+  init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)
 
   !! int xn=na*ny;
   init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
-  //##########################################################################################################################################
+
+//##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
 
 // end of file marker
    init_int debug;
-
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -395,10 +397,11 @@ DATA_SECTION
 
  !! cout << "end setup of containers" << endl;
 
-
- // !!exit(54);
     vector offset(1,2);                                    // Multinomial "offset"
- // !!exit(54);
+
+
+ //!!exit(54);
+
 LOCAL_CALCS
 // Calculate "offset" for multinomials - survey age, fishery size, survey size
 //   "Offset" value lets the multinomial likelihood equal zero when the observed and
@@ -550,7 +553,7 @@ PARAMETER_SECTION
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-   init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-40,40,ph_rec)
+   init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-10,10,ph_rec)
   
   init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs) //for initial abundance
 
@@ -3944,8 +3947,6 @@ REPORT_SECTION
     report<<OBS_yield_fleet<<endl;
     }
 
-
-
 /// TAG INFORMATION
   report<<"$nyrs_release"<<endl;
   report<<nyrs_release<<endl;
@@ -4055,5 +4056,3 @@ RUNTIME_SECTION
  convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
   //maximum_function_evaluations 10000
  maximum_function_evaluations 4000  
-
-
