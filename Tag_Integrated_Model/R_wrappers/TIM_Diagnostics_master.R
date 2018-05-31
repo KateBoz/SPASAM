@@ -72,7 +72,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=2
+i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -865,16 +865,16 @@ if(npops_OM>1 && nreg==1){
 #build the data frame
 
 if(nreg_OM==nreg){ 
-T.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs)) 
+T.temp<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs)) 
 }
 
 #plotting OM movements
 if(nreg==1 && nreg_OM>1){
-T.year<-data.frame(Year=rep(years,nreg_OM), Reg=rep(c(1:nreg_OM),each=nyrs)) 
+T.temp<-data.frame(Year=rep(years,nreg_OM), Reg=rep(c(1:nreg_OM),each=nyrs)) 
 }
 
-T.year<-cbind(T.year,T_est,T_true)
-T.year.resid<-cbind(T.year,T_resid)
+T.year<-cbind(T.temp,T_est,T_true)
+T.year.resid<-cbind(T.temp,T_resid)
 
 #primary plot
 T.year.plot<-melt(T.year,id=c("Reg","Year"))
@@ -914,7 +914,7 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
 
 #T_matrix resids
 
-T.year.resid<-melt(T.resid.temp,id=c("Reg","Year"))
+T.year.resid<-melt(T.year.resid,id=c("Reg","Year"))
 T.year.resid$Reg<-as.factor(T.year.resid$Reg)
 
 T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
@@ -1223,8 +1223,8 @@ OM_dat<-readLines(paste0(OM_direct,"\\TIM_OM.dat"))
 OM_error_table<-data.frame(Parameter=c("Sigma_Rec","Sigma_Rec_Apport","Sigma_F","Rec_Index_sigma","Survey_Sigma","Catch_Sigma","SIM_N_Catch","SIM_N_Survey"))
 
 #set up matrix to fill in the values
-temp<-matrix(NA,dim(OM_error_table)[1],nreg)
-names(temp)<-1:nreg
+temp<-matrix(NA,dim(OM_error_table)[1],nreg_OM)
+names(temp)<-1:nreg_OM
 OM_error_table<-cbind(OM_error_table,temp)
 
 ###building table
@@ -1241,30 +1241,30 @@ OM_error_table[2,2]<-OM_dat[rec_app_om]
 
 if(npops>1){
 rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
-OM_error_table[1,2:(1+nreg)]<-OM_dat[rec_om:(rec_om+(nreg-1))]
+OM_error_table[1,2:(1+nreg_OM)]<-OM_dat[rec_om:(rec_om+(nreg_OM-1))]
 
 rec_app_om<-grep("_sigma_rec_prop",OM_dat, fixed = T)+1
-OM_error_table[2,2:(1+nreg)]<-OM_dat[rec_app_om:(rec_app_om+(nreg-1))]
+OM_error_table[2,2:(1+nreg_OM)]<-OM_dat[rec_app_om:(rec_app_om+(nreg_OM-1))]
 }
 
 
 F_om<-grep("_sigma_F",OM_dat, fixed = T)+1
-OM_error_table[3,2:(1+nreg)]<-OM_dat[F_om:(F_om+(nreg-1))]
+OM_error_table[3,2:(1+nreg_OM)]<-OM_dat[F_om:(F_om+(nreg_OM-1))]
 
 rec_ind_om<-grep("_rec_index_sigma",OM_dat, fixed = T)+1
-OM_error_table[4,2:(1+nreg)]<-OM_dat[rec_ind_om:(rec_ind_om+(nreg-1))]
+OM_error_table[4,2:(1+nreg_OM)]<-OM_dat[rec_ind_om:(rec_ind_om+(nreg_OM-1))]
 
 surv_ind_om<-grep("_sigma_survey",OM_dat, fixed = T)+1
-OM_error_table[5,2:(1+nreg)]<-OM_dat[surv_ind_om:(surv_ind_om+(nreg-1))]
+OM_error_table[5,2:(1+nreg_OM)]<-OM_dat[surv_ind_om:(surv_ind_om+(nreg_OM-1))]
 
 catch_om<-grep("_sigma_catch",OM_dat, fixed = T)+1
-OM_error_table[6,2:(1+nreg)]<-OM_dat[catch_om:(catch_om+(nreg-1))]
+OM_error_table[6,2:(1+nreg_OM)]<-OM_dat[catch_om:(catch_om+(nreg_OM-1))]
 
 ncatch_om<-grep("_SIM_ncatch",OM_dat, fixed = T)+1
-OM_error_table[7,2:(1+nreg)]<-OM_dat[ncatch_om:(ncatch_om+(nreg-1))]
+OM_error_table[7,2:(1+nreg_OM)]<-OM_dat[ncatch_om:(ncatch_om+(nreg_OM-1))]
 
 nsurvey_om<-grep("_SIM_nsurvey",OM_dat, fixed = T)+1
-OM_error_table[8,2:(1+nreg)]<-OM_dat[nsurvey_om:(nsurvey_om+(nreg-1))]
+OM_error_table[8,2:(1+nreg_OM)]<-OM_dat[nsurvey_om:(nsurvey_om+(nreg_OM-1))]
 
 
 OM_table<-tableGrob(OM_error_table)
