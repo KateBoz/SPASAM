@@ -9,8 +9,6 @@
 rm(list=(ls()))
 
 
-
-
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
@@ -66,7 +64,7 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area\\Simple_Runs"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch\\Simple_Runs"
 
 
 #list files in the directory
@@ -130,16 +128,20 @@ out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep fi
 #pull info about the model
 na<-out$nages
 nyrs<-out$nyrs
+npops_OM<-out$npops_OM
 npops<-out$npops
+nreg_OM<-out$nregions_OM
 nreg<-out$nregions
 years<-seq(1:out$nyrs)
 ages<-seq(1:out$nages)
 
 
 #for running the meta pop example. Might need fixing if more complex
+if(npops_OM>1){
+  nreg_OM=sum(nreg_OM)}
 if(npops>1){
   nreg=sum(nreg)}
-
+   
 
 ###################################
 #Set my theme for ggplot plotting
@@ -161,11 +163,21 @@ diag_theme<-
 ##############################
 
 #rec total
-rec.total<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Est = as.vector(t(out$recruits_BM)), Rec_True=as.vector(t(out$recruits_BM_TRUE)))
+
+#Matching - might need to refine for additional mismatches
+if(nreg_OM==nreg){ 
+rec.total<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Est = as.vector(t(out$recruits_BM)), Rec_True=as.vector(t(out$recruits_BM_TRUE)))}
+
+#spatial to panmictic
+if(nreg_OM>1 && nreg==1){ 
+#aggregating rec true  
+Rec_True=colSums(out$recruits_BM_TRUE)
+
+rec.total<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Rec_Est = as.vector(t(out$recruits_BM)),Rec_True=Rec_True)}
+    
 
 rec.total.plot<-melt(rec.total,id=c("Reg","Year"))
 rec.total.plot$Reg<-as.factor(rec.total.plot$Reg)
-
 
 rec1<-ggplot(rec.total.plot,aes(Year,value))+
   geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
@@ -211,7 +223,8 @@ R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
 ###################################
 # Recruitment Deviations
 
-if(npops>1){
+#matching metapop/natal homing
+if(npops>1 && npops_OM>1){
 
 Rec_Dev_Est=as.vector(t(out$rec_devs))
 Rec_Dev_True=as.vector(t(out$rec_devs_TRUE[,2:ncol(out$rec_devs_TRUE)]))
@@ -239,7 +252,8 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 }
 
 
-if(npops==1){
+#matching panmictic/metamictic or mismatch spatial to panmictic
+if(npops==1 && npops_OM==1){
 
 rec.devs<-data.frame(Year=years[-1],Rec_Dev_Est=out$rec_devs, Rec_Dev_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)])
   
@@ -262,6 +276,7 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
     ggtitle("Recruitment Deviations")
   
 }
+
 
 
 ######################
@@ -317,14 +332,23 @@ if(npops==1){
   
 #################  
 #Rec Apportionment
-  
+
+#matching panmictic or metamictic
+
+if(nreg_OM==nreg){ 
 rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Prop_Est = as.vector(t(out$Rec_Prop)), Rec_Prop_True=as.vector(t(out$Rec_Prop_TRUE)))
+}
   
-  rec.apport.plot<-melt(rec.apport,id=c("Reg","Year"))
-  rec.apport.plot$Reg<-as.factor(rec.apport.plot$Reg)
+#taking the mean for a mismatch spatial to panmictic
+if(nreg_OM>1 && nreg==1){ 
+rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Prop_Est = as.vector(t(out$Rec_Prop)), Rec_Prop_True=colMeans(out$Rec_Prop_TRUE))
+}
+
+rec.apport.plot<-melt(rec.apport,id=c("Reg","Year"))
+rec.apport.plot$Reg<-as.factor(rec.apport.plot$Reg)
   
   
-  rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
+rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
     geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=line.wd)+
     facet_wrap(~Reg)+
     scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
@@ -336,6 +360,8 @@ rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Pr
     theme(legend.position = c(1, 1), legend.justification = c(1,1))+
     ggtitle("Recruitment Apportionment")
  
+  
+  
    
 #resids  
   if(resid.switch==1){
@@ -373,16 +399,20 @@ rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Pr
 ####################
 #initial abundance
   
-  
-#panmictic  
-if(npops==1){ 
+#panmictic/metamictic matching  
+if(nreg_OM==nreg){ 
     init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est = as.vector(t(out$Init_Abund)), In_ab_True=as.vector(t(out$Init_Abund_TRUE)))
   }
-  
 
+#mismatch spatial to panmictic  
+if(nreg_OM>1 && nreg==1){ 
+  init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est=out$Init_Abund,In_ab_True=colSums(out$Init_Abund_TRUE))
+  }
+  
+  
 #other pop types
   #might need to fine tune this for mismatch
-  if(npops>1||nreg<1){
+  if(npops>1){
     i.ab_temp<-data.frame(out$Init_Abund)
     pops_temp<-rep(1:npops,each=npops)
     t<-split(i.ab_temp,pops_temp)
@@ -458,7 +488,14 @@ if(resid.switch==2){
 #################################
 # Total Biomass
   
+if(nreg_OM==nreg){ 
 bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est = as.vector(t(out$biomass_AM)), Bio_True=as.vector(t(out$biomass_AM_TRUE)))
+}
+  
+if(nreg_OM>1 && nreg==1){ 
+bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est = out$biomass_AM, Bio_True=colSums(out$biomass_AM_TRUE))
+  }
+  
   
   bio.plot<-melt(bio.dat,id=c("Reg","Year"))
   bio.plot$Reg<-as.factor(bio.plot$Reg)
@@ -504,7 +541,16 @@ if(resid.switch==2){
 ###############################
 #SSB
 
+
+#matching
+if(nreg_OM==nreg){ 
 ssb.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),SSB_est = as.vector(t(out$SSB_region)), SSB_True=as.vector(t(out$SSB_region_TRUE)))
+}
+  
+#aggregated
+if(nreg_OM>1 && nreg==1){ 
+ssb.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),SSB_est = out$SSB_region, SSB_True=colSums(out$SSB_region_TRUE))}
+  
 
 ssb.plot<-melt(ssb.dat,id=c("Reg","Year"))
 ssb.plot$Reg<-as.factor(ssb.plot$Reg)
@@ -554,8 +600,17 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
 #####################
 #Fishery Selectivity
 
+if(nreg_OM==nreg){ 
 f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = as.vector(t(out$selectivity_age)), Select_T=as.vector(t(out$selectivity_age_TRUE)))
+}
 
+if(nreg_OM>1 && nreg==1){ 
+#aggreagating
+temp1<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg_OM),each=na),Select_T=as.vector(t(out$selectivity_age_TRUE)))
+temp2<-group_by(temp1,Age) %>% summarise(Select_T = mean(Select_T))
+
+f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = out$selectivity_age, Select_T=temp2$Select_T)
+}
 
 f.select.plot<-melt(f.select,id=c("Reg","Age"))
 f.select.plot$Reg<-as.factor(f.select$Reg)
@@ -572,11 +627,11 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
 
 #fishery selectivity resid
 if(resid.switch==1){
-  f.select$resid<-(out$selectivity_age_TRUE-out$selectivity_age)
+  f.select$resid<-(f.select$Select_T-f.select$Select_Est)
 }
 
 if(resid.switch==2){
-f.select$resid<-((out$selectivity_age_TRUE-out$selectivity_age)/out$selectivity_age_TRUE)*100
+f.select$resid<-((f.select$Select_T-f.select$Select_Est)/f.select$Select_T)*100
 }
 
 f.select.resid.plot<-melt(f.select[,c(1,2,5)],id=c("Reg","Age"))
@@ -599,7 +654,18 @@ f.select.resid<-ggplot(f.select.resid.plot,aes(Age,value))+
 ########################
 #Survey Selectivity
 
+if(nreg_OM==nreg){ 
 s.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = as.vector(t(out$survey_selectivity_age)),Select_T=as.vector(t(out$survey_selectivity_age_TRUE)))
+}
+
+if(nreg_OM>1 && nreg==1){ 
+  #aggreagating
+  temp1<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg_OM),each=na),Select_T=as.vector(t(out$survey_selectivity_age_TRUE)))
+  temp2<-group_by(temp1,Age) %>% summarise(Select_T = mean(Select_T))
+  
+  s.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = out$survey_selectivity_age, Select_T=temp2$Select_T)
+}
+
 
 s.select.plot<-melt(s.select,id=c("Reg","Age"))
 s.select.plot$Reg<-as.factor(s.select$Reg)
@@ -618,12 +684,12 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
 
 # survey selectivity resids plot
 if(resid.switch==1){
-  s.select$resid<-(out$survey_selectivity_age_TRUE-out$survey_selectivity_age)}
-
+  s.select$resid<-(s.select$Select_T-s.select$Select_Est)
+}
 
 if(resid.switch==2){
-  s.select$resid<-((out$survey_selectivity_age_TRUE-out$survey_selectivity_age)/out$survey_selectivity_age_TRUE)*100}
-  
+  s.select$resid<-((s.select$Select_T-s.select$Select_Est)/s.select$Select_T)*100
+}
 
 s.select.resid.plot<-melt(s.select[,c(1,2,5)],id=c("Reg","Age"))
 s.select.resid.plot$Reg<-as.factor(s.select.resid.plot$Reg)
@@ -649,7 +715,20 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
 #combining true and estimated together
 f.max<-rowMaxs(out$F)
 f.max.t<-rowMaxs(out$F_TRUE)
+
+
+if(nreg_OM==nreg){ 
 F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=f.max.t)
+}
+
+
+if(nreg_OM>1 && nreg==1){ 
+  #aggreagating
+  temp1<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg_OM),each=nyrs),F_year_T=f.max.t)
+  temp2<-group_by(temp1,Year) %>% summarise(F_year_T = mean(F_year_T))
+  
+  F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=temp2$F_year_T)
+}
 
 
 F.plot<-melt(F.year,id=c("Reg","Year"))
@@ -696,9 +775,9 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 ########## Movement by year ################################
 ############################################################
 
-#Panmictic and multi-area
 
-if(npops==1){
+#matching Panmictic and multi-area
+if(nreg_OM==nreg){ 
   T_est<-data.frame(out$T_year)
   T_true<-data.frame(out$T_year_TRUE)
   
@@ -716,9 +795,8 @@ for(i in 1:nreg){
 }
 
 
-
-#other population types
-if(npops>1){
+#other matching population types
+if(npops==npops_OM && npops>1){
   
 #combine movements
 pull<-out[grep("alt", names(out), value = TRUE)]
@@ -741,24 +819,84 @@ names(T_resid)[i]<-paste0("Resid_",i)
 }}
 
 
+
+# for mismatch spatial to panmictic only plotting spatial movements
+if(nreg==1 && nreg_OM>1){
+  T_est<-data.frame(matrix(NA,nyrs*nreg_OM,nreg_OM))
+  T_true<-data.frame(out$T_year_TRUE)
+  
+  if(resid.switch==1){
+    T_resid<-(T_true-T_est)}
+  
+  if(resid.switch==2){
+    T_resid<-((T_true-T_est)/T_true)*100}
+  
+  for(i in 1:nreg_OM){
+    names(T_est)[i]<-paste0("Est_",i)
+    names(T_true)[i]<-paste0("True_",i)
+    names(T_resid)[i]<-paste0("Resid_",i)}
+}
+  
+
+if(npops_OM>1 && nreg==1){ 
+  
+  #combine movements
+  pull<-out[grep("alt", names(out), value = TRUE)]
+  
+  T_est<-data.frame(matrix(unlist(pull),nyrs*npops,npops,byrow=TRUE))
+  T_true<-data.frame(matrix(NA,nyrs*npops,npops,byrow=TRUE)) #just setting the estimated movement = 1
+  
+  if(resid.switch==1){
+    T_resid<-(T_true-T_est)}
+  
+  if(resid.switch==2){
+    T_resid<-((T_true-T_est)/T_true)*100}
+  
+  
+  for(i in 1:npops){
+    names(T_est)[i]<-paste0("Est_",i)
+    names(T_true)[i]<-paste0("True_",i)
+    names(T_resid)[i]<-paste0("Resid_",i)
+    
+  }}
+
+
+
 #build the data frame
+
+if(nreg_OM==nreg){ 
 T.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs)) 
-T.year<-cbind(T.year,T_est,T_true,T_resid)
+}
+
+#plotting OM movements
+if(nreg==1 && nreg_OM>1){
+T.year<-data.frame(Year=rep(years,nreg_OM), Reg=rep(c(1:nreg_OM),each=nyrs)) 
+}
+
+T.year<-cbind(T.year,T_est,T_true)
+T.year.resid<-cbind(T.year,T_resid)
 
 #primary plot
-T.year.plot<-melt(T.year[,c(1:(ncol(T.year)-sum(nreg)))], id=c("Reg","Year"))
+T.year.plot<-melt(T.year,id=c("Reg","Year"))
 T.year.plot$Reg<-as.factor(T.year.plot$Reg)
 
 T.lines<-c(rep(1,nreg),rep(6,nreg))
 
-#if multiple pops or multiple reg
+#if multiple pops or multiple reg matching
 if(nreg>1 || npops>1){
 T.col<-rep(mycols(nreg),nreg)}
 
-#for panmictic
-if(nreg==1 && npops==1){
 
-T.col<-mycols(2)}
+#for panmictic matching
+if(nreg==1 && npops==1){
+  T.col<-mycols(2)}
+
+
+#if spatial to panmictic
+if(nreg_OM>1 && npops==1){
+  T.lines<-c(rep(1,nreg_OM),rep(6,nreg_OM))
+  T.col<-rep(mycols(nreg_OM),nreg_OM)}
+
 
 T.year.p<-ggplot(T.year.plot,aes(Year,value))+
   geom_line(aes(col = variable,linetype=variable),lwd=line.wd,stat = "identity")+
@@ -773,10 +911,8 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
   ggtitle("Yearly Movement Rate")
 
 
-#T_matrix resids
-pull2<-T.year[grep("Resid", colnames(T.year), value = TRUE)]
 
-T.resid.temp<-cbind(T.year[,c(1,2)],pull2)
+#T_matrix resids
 
 T.year.resid<-melt(T.resid.temp,id=c("Reg","Year"))
 T.year.resid$Reg<-as.factor(T.year.resid$Reg)
@@ -1164,6 +1300,15 @@ if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions>1){
 if(out$npops_OM==1 && out$nregions_OM==1 && out$npops==1 && out$nregions==1){
   text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Panmictic", sep = "\n")
 }
+
+if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions==1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Mismatch","OM Population Structure: Spatial Heterogeneity", "EM Population Structure: Panmictic", sep = "\n")
+}
+
+if(out$npops_OM>1 && out$npops==1 && out$nregions==1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Mismatch","OM Population Structure: Metapopulation", "EM Population Structure: Panmictic", sep = "\n")
+}
+
 
 
 #is this a diagnostics run?
