@@ -72,7 +72,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+i=6
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -341,7 +341,7 @@ rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Pr
   
 #taking the mean for a mismatch spatial to panmictic
 if(nreg_OM>1 && nreg==1){ 
-rec.apport<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Rec_Prop_Est = as.vector(t(out$Rec_Prop)), Rec_Prop_True=colMeans(out$Rec_Prop_TRUE))
+rec.apport<-data.frame(Year=rep(years,nreg_OM), Reg=rep(c(1:nreg_OM),each=nyrs),Rec_Prop_Est = NA, Rec_Prop_True=as.vector(t(out$Rec_Prop_TRUE)))
 }
 
 rec.apport.plot<-melt(rec.apport,id=c("Reg","Year"))
@@ -361,8 +361,7 @@ rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
     ggtitle("Recruitment Apportionment")
  
   
-  
-   
+
 #resids  
   if(resid.switch==1){
     #calculate the resids as Relative % Diff
