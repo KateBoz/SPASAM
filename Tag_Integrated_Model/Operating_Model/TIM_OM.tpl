@@ -343,6 +343,10 @@ DATA_SECTION
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
 
+  init_number fleets_as_areas_switch // bypasses some challlenging portions of the code  - temporary
+  //==0 not fleets as areas
+  //==1 fleets as areas approach for EM
+
   init_number move_switch_EM
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
   //==0 no movement, set T phases=-1
@@ -418,6 +422,7 @@ DATA_SECTION
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
+  init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
   init_vector sigma_recruit_EM(1,np_em) 
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
@@ -896,6 +901,11 @@ PARAMETER_SECTION
  vector rec_index_pan(1,nyr)
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
+
+ 4darray selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray selectivity_age_pop(1,nps,1,nag,1,nfl)
+ 4darray survey_selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray survey_selectivity_age_pop(1,nps,1,nag,1,nfl)
 
 //weighted average of age comps
  5darray OBS_survey_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
@@ -5680,6 +5690,12 @@ REPORT_SECTION
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a));
 
+        //aggregating selectivity
+        selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        selectivity_age_pop(p,a,z)=sum(selectivity_age_temp(p,a,z));
+        survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        survey_selectivity_age_pop(p,a,z)=sum(survey_selectivity_age_temp(p,a,z));
+
         //aggregating the age comps
 
         //survey
@@ -5752,6 +5768,8 @@ REPORT_SECTION
   report<<tsurvey_EM<<endl;
   report<<"#diagnostics_switch"<<endl;
   report<<diagnostics_switch<<endl;
+  report<<"#fleets_as_areas_switch"<<endl;
+  report<<fleets_as_areas_switch<<endl;
   report<<"#move_switch"<<endl;
   report<<move_switch_EM<<endl;
   report<<"#natal_homing_switch"<<endl;
@@ -5894,6 +5912,9 @@ REPORT_SECTION
       report<<prop_fem_pan<<endl;
       report<<"#OBS_rec_index_BM"<<endl;
       report<<rec_index_pan<<endl;
+
+ //for straight panmictic EM 
+    if(sum(nfleets_EM)==1){
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
       report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
@@ -5930,6 +5951,49 @@ REPORT_SECTION
       report<<input_T_EM<<endl;
       report<<"#OBS_tag_prop_pan_final"<<endl;
       report<<OBS_tag_prop_pan_final<<endl;
+      }
+
+
+ //for fleets-as-areas approach
+      if(sum(nfleets_EM)>1){
+      //fleet specific outputs for fishery, panmictic for survey
+      report<<"#OBS_survey_fleet"<<endl;
+      report<<OBS_survey_total_bio<<endl;
+      report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
+      report<<OBS_survey_fleet_bio_se_EM<<endl;
+      report<<"#OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop_pan<<endl;
+      report<<"#OBS_survey_prop_N_EM"<<endl;
+      report<<OBS_survey_prop_N_EM<<endl;
+      report<<"#OBS_yield_fleet"<<endl;
+      report<<OBS_yield_fleet<<endl;
+      report<<"#OBS_yield_fleet_se_EM"<<endl;
+      report<<OBS_yield_fleet_se_EM<<endl;
+      report<<"#OBS_catch_prop"<<endl;
+      report<<OBS_catch_prop<<endl;
+      report<<"#OBS_catch_prop_N_EM"<<endl;
+      report<<OBS_catch_prop_N_EM<<endl;
+      
+//tagging information
+      report<<"#nyrs_release"<<endl;
+      report<<nyrs_release<<endl;
+      report<<"#years_of_tag_releases "<<endl;
+      report<<yrs_releases<<endl;
+      report<<"#max_life_tags"<<endl;
+      report<<max_life_tags<<endl;
+      report<<"#report_rate_EM"<<endl;
+      report<<report_rate_EM<<endl;
+      report<<"#ntags"<<endl;
+      report<<ntags_pan<<endl;
+      report<<"#ntags_total"<<endl;
+      report<<ntags_total<<endl;
+      report<<"#tag_N_EM"<<endl;
+      report<<tag_N_EM<<endl;
+      report<<"#input_T_EM"<<endl;
+      report<<input_T_EM<<endl;
+      report<<"#OBS_tag_prop_pan_final"<<endl;
+      report<<OBS_tag_prop_pan_final<<endl;
+      }
       }
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
@@ -5992,7 +6056,9 @@ REPORT_SECTION
 //Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
- // report<<"#init_abund_EM"<<endl;
+  report<<"#input_Rec_Prop_EM"<<endl;
+  report<<input_rec_prop_EM<<endl;
+ //report<<"#init_abund_EM"<<endl;
  // report<<init_abund_EM<<endl;
 
 
@@ -6061,22 +6127,36 @@ REPORT_SECTION
   report<<Bratio_population<<endl;
   report<<"#T_year"<<endl;
   report<<T_year<<endl;
+
+//reporting true aggregated selectivity if fleets ==1
+  if(EM_structure==0 && sum(nfleets_EM)==1)
+  {
+  report<<"#selectivity_age"<<endl;
+  report<<selectivity_age_pop<<endl;
+  report<<"#survey_selectivity_age"<<endl;
+  report<<survey_selectivity_age_pop<<endl;}
+  
+  else{
   report<<"#selectivity_age"<<endl;
   report<<selectivity_age<<endl;
   report<<"#survey_selectivity_age"<<endl;
-  report<<survey_selectivity_age<<endl;
-
+  report<<survey_selectivity_age<<endl;}
+  
  //true tag information
   report<<"#TRUE_tag_prop"<<endl;
   report<<tag_prop_final<<endl;
-
   report<<"#T"<<endl;
   report<<T<<endl;
- 
-  //report<<"abund_at_age"<<endl;
-  //report<<abundance_at_age_AM<<endl;
 
- 
+//report the abundance_frac for later calcs if needed
+  report<<"#abund_frac_age_region"<<endl;
+  report<<abund_frac_age_region<<endl;
+  report<<"#abund_frac_year"<<endl;
+  report<<abund_frac_region_year<<endl;
+  report<<"#abund_frac_region"<<endl;
+  report<<abund_frac_region<<endl;
+
+
   report<<"#debug"<<endl;
   report<<debug<<endl;
 

@@ -81,7 +81,7 @@
   #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
-1
+0
 
 #move_switch
   #==0 no movement
@@ -95,13 +95,13 @@
   #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   #//uses use_input_Bstar switch
-1
+8
 
 
 #use_input_Bstar
   #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
   #==1 use input_Bstar
-0
+1
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -382,9 +382,9 @@
 0.079128779	0.282292939	0.638578281
 
 #input_residency_larval
-0.675326638
-0.37060034
-0.638578281
+0.7
+0.6
+0.8
 
 #input_residency
 0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7
@@ -640,7 +640,11 @@
   #==1 allow TRUE data from OM without error to be used for estimation
 1
 
-##removed larval move switch for EM. Confusing and not used.
+
+#fleets_as_areas_switch / bypasses some challlenging portions of the code  - temporary
+#  //==0 not fleets as areas
+#  //==1 fleets as areas approach for EM
+0
 
 #move_switch
  # ///// Sets the type of adult movement pattern (sets age class>1 movements)
@@ -650,7 +654,7 @@
  # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
  # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
  # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
-5
+3
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -839,6 +843,11 @@
 0.079128779	0.282292939	0.638578281
 0.079128779	0.282292939	0.638578281
 
+#input_rec_prop_EM(1,np_em,1_nreg_em,1_nyr)
+1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1
+
 #sigma_rec_em(1,np_em)
 1.2
 
@@ -919,9 +928,9 @@
 #ph_F_rho
 -1
 #ph_T_YR
--6
-#ph_T_CNST
 6
+#ph_T_CNST
+-6
 #ph_dummy
 -1
 
@@ -945,7 +954,7 @@
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
  #//==0 no move pen in log space
  #//==1 include move pen in log space
-0
+1
 #move_pen_switch
  #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
  #// ==0 no move pen in log space
