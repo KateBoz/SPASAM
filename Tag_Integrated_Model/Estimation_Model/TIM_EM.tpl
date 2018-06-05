@@ -60,6 +60,10 @@ DATA_SECTION
   init_number diagnostics_switch
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
+
+  init_number fleets_as_areas_switch
+  //==0 not fleets as areas
+  //==1 fleets as areas approach for EM
   
   init_number move_switch
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
@@ -237,6 +241,8 @@ DATA_SECTION
  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)  // standard error on catch
  init_5darray OBS_catch_at_age_fleet_prop(1,np,1,nreg,1,ny,1,nf,1,na) 
  init_4darray OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //sample size
+
+
  
 //Catch Prop
 //tagging data parameters
@@ -252,7 +258,7 @@ DATA_SECTION
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
  //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
    init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
-
+  
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
   !! ivector nt(1,nyr_rel);
@@ -267,6 +273,7 @@ DATA_SECTION
   !!   }
   //!! cout<<"nt"<<endl<<nt<<endl;
    init_5darray OBS_tag_prop_final(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
+   
    matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
    3darray input_residency(1,np,1,nreg,1,na) //
 // probably need to calculate quantity below  or omit *dh
@@ -275,6 +282,7 @@ DATA_SECTION
   
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+   init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
 
   
 //##########################################################################################################################################
@@ -303,13 +311,12 @@ DATA_SECTION
   init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
   init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
-
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
 
 //these are fixed to EM dimensions when doing a diagnostics run
-  init_5darray catch_at_age_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nf,1,na)
-  init_4darray yield_fleet_TRUE(1,np_om,1,nreg_om,1,ny,1,nf)
+  init_5darray catch_at_age_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om,1,na)
+  init_4darray yield_fleet_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om)
   init_5darray survey_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om,1,na)
   init_4darray survey_fleet_bio_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
 
@@ -319,16 +326,19 @@ DATA_SECTION
   init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix Bratio_population_TRUE(1,np_om,1,ny)
   init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
-     
+
   init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
   init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
 
-
 //need to fix to EM dim when doing diagnostics run
-  init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)
+  init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)//
 
   !! int xn=na*ny;
   init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
+
+  init_4darray abund_frac_age_region(1,np_om,1,nreg_om,1,ny,1,na)
+  init_3darray abund_frac_region_year(1,np_om,1,nreg_om,1,ny)
+  init_matrix abund_frac_region(1,np_om,1,nreg_om)
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -403,6 +413,8 @@ DATA_SECTION
  //!!exit(54);
 
 LOCAL_CALCS
+  if(fleets_as_areas_switch==!1){ //this is a quick fix to skip this with fleets as areas
+
 // Calculate "offset" for multinomials - survey age, fishery size, survey size
 //   "Offset" value lets the multinomial likelihood equal zero when the observed and
 //     predicted are equal as in Fournier (1990) "robustifies"
@@ -436,7 +448,9 @@ LOCAL_CALCS
             }
            }
           }
-  
+
+      }
+
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
 
@@ -463,8 +477,9 @@ PARAMETER_SECTION
      init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,-10,3,phase_T_CNST);
      matrix G(1,T_lgth,1,T_lgth);
      vector G_temp(1,T_lgth);
-     
-  // selectivity parameters
+
+
+// selectivity parameters
 
    !! int sel_lgth=sum(nr);
 
@@ -790,7 +805,7 @@ PARAMETER_SECTION
 
 PROCEDURE_SECTION
  
-   get_movement();
+   get_movement(); 
    get_selectivity();
    get_F_age();
    get_vitals();
@@ -835,6 +850,7 @@ FUNCTION get_movement
         }
        }
       }
+ 
  if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
 // if T fixed set it to input T
   {
@@ -1248,7 +1264,7 @@ FUNCTION get_vitals
      {
                if(apportionment_type==1) //input recruitment apportionment directly by population and region
                 {
-                 Rec_Prop(j,r,y)=Rec_Prop_TRUE(j,r,y);
+                 Rec_Prop(j,r,y)=input_rec_prop(j,r,y);
                 }
                if(apportionment_type==2) //equal apportionment by nregions
                 {
@@ -1260,7 +1276,7 @@ FUNCTION get_vitals
                 }
                if((ph_rec_app_YR<0 & ph_rec_app_CNST<0) & (apportionment_type!=2 || apportionment_type!=(-1))) //input recruitment apportionment directly by population and region
                 {
-                 Rec_Prop(j,r,y)=Rec_Prop_TRUE(j,r,y);
+                 Rec_Prop(j,r,y)=input_rec_prop(j,r,y);
                 }
  }
  }
@@ -1270,7 +1286,7 @@ FUNCTION get_vitals
   if(apportionment_type==3)
    {
     if(ph_rec_app_CNST<0) 
-    {Rec_Prop=Rec_Prop_TRUE;}
+    {Rec_Prop=input_rec_prop;}
    
    if(ph_rec_app_CNST>0) 
     {
@@ -4047,6 +4063,15 @@ REPORT_SECTION
 
      }
    }
+
+
+  //report the abundance_frac from OM for later calcs in wrapper if needed
+  report<<"$abund_frac_age_region_OM"<<endl;
+  report<<abund_frac_age_region<<endl;
+  report<<"$abund_frac_year_OM"<<endl;
+  report<<abund_frac_region_year<<endl;
+  report<<"$abund_frac_region_OM"<<endl;
+  report<<abund_frac_region<<endl;
 
 
  save_gradients(gradients);
