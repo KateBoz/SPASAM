@@ -72,7 +72,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=6
+i=4
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -604,12 +604,18 @@ f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est =
 }
 
 if(nreg_OM>1 && nreg==1){ 
-#aggreagating
+  
+if(out$nfleets>out$nfleets_OM){
+f.select<-data.frame(Age=rep(ages,nreg_OM), Reg=rep(c(1:nreg_OM),each=na), Select_Est = as.vector(out$selectivity_age), Select_T=as.vector(out$selectivity_age_TRUE))}
+  
+else{
+#aggregating
 temp1<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg_OM),each=na),Select_T=as.vector(t(out$selectivity_age_TRUE)))
 temp2<-group_by(temp1,Age) %>% summarise(Select_T = mean(Select_T))
 
 f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = out$selectivity_age, Select_T=temp2$Select_T)
-}
+ }
+  }
 
 f.select.plot<-melt(f.select,id=c("Reg","Age"))
 f.select.plot$Reg<-as.factor(f.select$Reg)
@@ -942,7 +948,10 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
 ##############
 # Yield
 
+#need to fix this for fleets as areas 
 Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
+
+
 Y.year.plot<-melt(Y.year, id=c("Reg","Year"))
 
 yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
@@ -1009,7 +1018,7 @@ survey.p<-ggplot(Survey.year.plot,aes(Year,value,shape=variable))+
 #  Survey.year$resid<-(Survey.year$SI_Obs-Survey.year$SI_Est)}
 
 #if(resid.switch==2){
-  Survey.year$resid<-((Survey.year$SI_Obs-Survey.year$SI_Est)/Survey.year$SI_Obs)*100
+Survey.year$resid<-((Survey.year$SI_Obs-Survey.year$SI_Est)/Survey.year$SI_Obs)*100
 #}
 
 surv.resid.p<-melt(Survey.year[,c(1,2,5)],id=c("Reg","Year"))
