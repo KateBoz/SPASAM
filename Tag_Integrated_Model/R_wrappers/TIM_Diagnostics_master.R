@@ -64,7 +64,7 @@ resid.switch=1
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch\\Simple_Runs"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Tagging"
 
 
 #list files in the directory
@@ -72,7 +72,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=4
+i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
@@ -782,7 +782,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 
 
 #matching Panmictic and multi-area
-if(nreg_OM==nreg){ 
+if(nreg_OM==nreg && npops==1){ 
   T_est<-data.frame(out$T_year)
   T_true<-data.frame(out$T_year_TRUE)
   
@@ -918,7 +918,6 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
 
 
 #T_matrix resids
-
 T.year.resid<-melt(T.year.resid,id=c("Reg","Year"))
 T.year.resid$Reg<-as.factor(T.year.resid$Reg)
 
