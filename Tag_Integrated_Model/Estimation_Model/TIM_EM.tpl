@@ -91,6 +91,9 @@ DATA_SECTION
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
   /////////////////////////////////////////////////////
   init_number select_switch_survey
+  //==0 input selectivity
+  //==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
@@ -283,6 +286,8 @@ DATA_SECTION
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
   // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
    init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
+   init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf)
+   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)
 
   
 //##########################################################################################################################################
@@ -346,7 +351,7 @@ DATA_SECTION
 
 // end of file marker
    init_int debug;
-
+  
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -1095,16 +1100,16 @@ FUNCTION get_selectivity
                 {
                 selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1(j,r,z)*(a-sel_beta2(j,r,z)))); 
                 }
-        //       if(select_switch==0) //input selectivity at age constant by year
-           //     {
-               //  selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
-             //   }
+               if(select_switch==0) //input selectivity at age constant by year
+                {
+                selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
+                }
               }
             }
           }
         }
       }
-     
+
 //survey selectivity
  for (int j=1;j<=npops;j++)
     {
@@ -1124,11 +1129,15 @@ FUNCTION get_selectivity
                 {
                  survey_selectivity(j,r,y,a,z)=1/(1+mfexp(-sel_beta1surv(j,r,z)*(a-sel_beta2surv(j,r,z)))); //
                 }
-              }
+                if(select_switch_survey==0) //input selectivity at age constant by year
+                {
+                survey_selectivity(j,r,y,a,z)=input_survey_selectivity(j,r,a,z);
+                }
+                }
+               }
              }
-            }
+           }
           }
-        }
 
   for (int j=1;j<=npops;j++)
    {
@@ -1138,15 +1147,19 @@ FUNCTION get_selectivity
             {
             for (int z=1;z<=nfleets(j);z++)
               {
-                selectivity_age(j,r,a,z)=selectivity(j,r,nyrs,a,z);
+               selectivity_age(j,r,a,z)=selectivity(j,r,nyrs,a,z); 
               }
              for (int z=1;z<=nfleets_survey(j);z++)
                {
+                //if(select_switch_survey==1) //two parameter logistic selectivity
+               // {
                 survey_selectivity_age(j,r,a,z)=survey_selectivity(j,r,nyrs,a,z);
                }
               }
              }
             }
+           
+
 ///////FISHING MORTALITY CALCULATIONS///////
 FUNCTION get_F_age
 
