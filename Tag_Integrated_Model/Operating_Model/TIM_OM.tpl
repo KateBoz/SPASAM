@@ -368,6 +368,11 @@ DATA_SECTION
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
 
+  init_number select_switch_survey_EM
+  //==0 input selectivity
+  //==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
+
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil_EM
   //==0 for equal by area or average
@@ -426,6 +431,8 @@ DATA_SECTION
   init_vector sigma_recruit_EM(1,np_em) 
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
+  init_4darray input_selectivity_EM(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
+  init_4darray input_survey_selectivity_EM(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
 
@@ -5779,7 +5786,7 @@ REPORT_SECTION
   report<<"#select_switch"<<endl;
   report<<select_switch_EM<<endl;
   report<<"#select_switch_survey"<<endl;
-  report<<select_switch_survey<<endl;
+  report<<select_switch_survey_EM<<endl;
   report<<"#maturity_switch_equil"<<endl;
   report<<maturity_switch_equil_EM<<endl;
   report<<"#SSB_type"<<endl;
@@ -6058,9 +6065,13 @@ REPORT_SECTION
   report<<input_M_EM<<endl;
   report<<"#input_Rec_Prop_EM"<<endl;
   report<<input_rec_prop_EM<<endl;
+  report<<"#input_selectivity_EM"<<endl;
+  report<<input_selectivity_EM<<endl;
+  report<<"#input_survey_selectivity_EM"<<endl;
+  report<<input_survey_selectivity_EM<<endl;
+
  //report<<"#init_abund_EM"<<endl;
  // report<<init_abund_EM<<endl;
-
 
 /// TRUE VALUES FROM OM
   report<<"#input_M_TRUE"<<endl;
@@ -6159,6 +6170,11 @@ REPORT_SECTION
 
   report<<"#debug"<<endl;
   report<<debug<<endl;
+
+
+//to get abundance after movement
+//  report<<"Abund_AM"<<endl;
+//  report<<abundance_at_age_AM<<endl;
 
 
 
