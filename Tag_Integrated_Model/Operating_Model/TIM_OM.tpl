@@ -302,9 +302,6 @@ DATA_SECTION
   init_number NR_dev
 
 
-
-
-
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -346,14 +343,9 @@ DATA_SECTION
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
 
-  init_number larval_move_switch_EM
-  ///// Changes the type of larval movement pattern (sets age class 1 movements)
-  //==0 no movement
-  //==1 input movement
-  //==2 movement within population only based on residency (symmetric)
-  //==3 symmetric movement but only allow movement within a population (ie regions within a population) not across populations
-  //==4 symmetric movement across all populations and regions
-  //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off-diag)
+  init_number fleets_as_areas_switch // bypasses some challlenging portions of the code  - temporary
+  //==0 not fleets as areas
+  //==1 fleets as areas approach for EM
 
   init_number move_switch_EM
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
@@ -372,6 +364,11 @@ DATA_SECTION
    //==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpopsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 
   init_number select_switch_EM
+  //==0 input selectivity
+  //==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
+
+  init_number select_switch_survey_EM
   //==0 input selectivity
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
@@ -430,16 +427,18 @@ DATA_SECTION
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
-  init_vector sigma_recruit_EM(1,np_em) 
+  init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
+  init_vector sigma_recruit_EM(1,np_em)
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
+
+  init_4darray input_selectivity_EM(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
+  init_4darray input_survey_selectivity_EM(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
-  //!!cout<<input_T_EM<<endl;
-  //!!exit(43);
-
-
   init_int ph_lmr
+  init_number lb_R_ave//lower bound on R_ave
+  init_number ub_R_ave//upper bound on R_ave
   init_int ph_rec
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
@@ -454,6 +453,10 @@ DATA_SECTION
   init_number ub_sel_beta1 //upper bound on fishery selectivity parameters in ln space
   init_number lb_sel_beta2 //lower bound on fishery selectivity parameters in ln space
   init_number ub_sel_beta2 //upper bound on fishery selectivity parameters in ln space
+  init_number lb_sel_beta1_surv //lower bound on survey selectivity parameters in ln space
+  init_number ub_sel_beta1_surv //upper bound on survey selectivity parameters in ln space
+  init_number lb_sel_beta2_surv //lower bound on survey selectivity parameters in ln space
+  init_number ub_sel_beta2_surv //upper bound on survey selectivity parameters in ln space
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
@@ -462,7 +465,7 @@ DATA_SECTION
   init_int ph_T_YR //use if want to estimate yearly T
   init_int ph_T_CNST //use if want to estimate time-invariant T
   init_int ph_dummy
- 
+
   init_number wt_surv
   init_number wt_catch
   init_number wt_fish_age
@@ -496,7 +499,6 @@ DATA_SECTION
  //###################################################################################################################################
 
 
-
 //////////////////////////////////////////////////////////////
   init_int debug
   init_number myseed_yield
@@ -508,7 +510,9 @@ DATA_SECTION
   init_number myseed_survey_age
   init_number myseed_catch_age
   init_number myseed_tag
-  
+
+
+
   //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
@@ -694,10 +698,12 @@ PARAMETER_SECTION
  5darray true_survey_fleet_age_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
  4darray true_survey_region_abundance(1,nps,1,nyr,1,nr,1,nag)
  4darray true_survey_region_abundance_temp(1,nps,1,nyr,1,nag,1,nr) 
- 3darray true_survey_population_abundance(1,nyr,1,nps,1,nag)
  3darray true_survey_population_abundance_temp(1,nyr,1,nag,1,nps)
+ 3darray true_survey_population_abundance(1,nyr,1,nps,1,nag)
+ 3darray true_survey_total_abundance_temp(1,nyr,1,nag,1,nps)
  matrix true_survey_total_abundance(1,nyr,1,nag)
  // end new tag stuff
+
 
  5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -904,6 +910,11 @@ PARAMETER_SECTION
  vector rec_index_pan(1,nyr)
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
+
+ 4darray selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray selectivity_age_pop(1,nps,1,nag,1,nfl)
+ 4darray survey_selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray survey_selectivity_age_pop(1,nps,1,nag,1,nfl)
 
 //weighted average of age comps
  5darray OBS_survey_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
@@ -1356,7 +1367,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
- R_ave=mfexp(ln_R_ave); ///this is annoying...
+ R_ave=ln_R_ave; ///this is annoying...//a quick fix
  
   for (int p=1;p<=npops;p++)
    {
@@ -1409,7 +1420,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
+                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
 
                  if(recruit_randwalk_switch==1)
                  {
@@ -1471,7 +1482,6 @@ FUNCTION get_vitals
         }
        }
      }
-
 
 //SPR calcs are done with either  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
@@ -1862,6 +1872,7 @@ FUNCTION get_abundance
            }
           }
          } //end age loop
+
  ///////////////////////////////////////////////////////////////////////////////////
  ////////////////NEWTON-RAPHSON for YEAR 1////////////////////////////////////////////////////////////////////////////
  //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2727,6 +2738,7 @@ FUNCTION get_abundance
                 apport_yield_region(j,r,y)=OBS_yield_region(j,y,r)/OBS_yield_population(y,j);
 
           } //end fleets loop
+
              for (int z=1;z<=nfleets_survey(j);z++)    /// survey index  1. Currently set up for more than 1 survey fleet
               {
                if(tsurvey(j,r)>0) //if survey at beggining of year, do calcs without temporal adjustment for mortality
@@ -2745,6 +2757,8 @@ FUNCTION get_abundance
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_age_bio(j,r,y,z));
                   OBS_survey_fleet_bio(j,r,y,z)=true_survey_fleet_bio(j,r,y,z)*mfexp(survey_RN(j,r,y,z)*sigma_survey(j,r,z)-.5*square(sigma_survey(j,r,z)));
                  }
+
+
                 if(natal_homing_switch==1)
                  {
                   true_survey_fleet_bio(j,r,y,z)=sum(true_survey_fleet_bio_overlap_temp(j,r,y,z));
@@ -2762,12 +2776,13 @@ FUNCTION get_abundance
                   
                   
                    // calculate true survey abundance for tagging simulation **dh**
-                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
-                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
-                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
-                  true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
-                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
-                  true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+                 true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                 true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                 true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                 true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                 true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                 true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+
              // end abundance for tagging *dh
 
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
@@ -2776,16 +2791,20 @@ FUNCTION get_abundance
                   OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
                   OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
                   OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
+                
 
                   apport_region_survey_biomass(j,r,y)=OBS_survey_region_bio(j,y,r)/OBS_survey_population_bio(y,j);
-                  
+
+
+         
                 } //tsurvey>0
-               }  //end survey_fleets 
+               }  //end survey_fleets
              }
             }
            }
-          }//end age loop          
+          }//end age loop
         } //end yr 1
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////Recruitment Calcs///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2936,6 +2955,7 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+   
         if(a==1)
          {
            for (int p=1;p<=npops;p++)
@@ -3110,7 +3130,7 @@ FUNCTION get_abundance
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
                 biomass_natal_temp_overlap(p,y,j)=biomass_population_overlap(p,j,y);
                 biomass_natal_overlap(p,y)=sum(biomass_natal_temp_overlap(p,y));
-              
+
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////y>1, A==1 METAPOP TYPE CALCS (MOVEMENT)//////////////////////////////////////////////////////////////////////////////////
@@ -3234,6 +3254,7 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+          
          if(a==2)
           { 
            for (int p=1;p<=npops;p++)
@@ -3299,6 +3320,7 @@ FUNCTION get_abundance
                           }
                         }
                     }
+ 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3408,6 +3430,7 @@ FUNCTION get_abundance
           }
          }//end a==2 if statement
 
+ 
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
        if(a>2 && a<nages)
         {
@@ -3866,16 +3889,18 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
-             // calculate true survey abundance for tagging simulation **dh**
-                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
-                  true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
-                  true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
-                  true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
-                  true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
-                  true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
-                 // end abundance for tagging *dh
+                   // calculate true survey abundance for tagging simulation **dh**
+                 true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                 true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                 true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                 true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                 true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                 true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
 
-     
+             // end abundance for tagging *dh
+
+
+
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -4602,6 +4627,7 @@ FUNCTION get_abundance
                    }
                   }
 
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    //a==1 natal homing
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -4682,6 +4708,7 @@ FUNCTION get_abundance
                 depletion_population(j,y)=biomass_population(j,y)/biomass_population(j,1);
                 depletion_total(y)=biomass_total(y)/biomass_total(1);
             } //end a==1 loop
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5009,9 +5036,17 @@ FUNCTION get_abundance
                   OBS_survey_natal_bio_overlap(y,p)=sum(OBS_survey_population_bio_overlap(p,y));
                   OBS_survey_total_bio_overlap(y)=sum(OBS_survey_natal_bio_overlap(y));
                   
-                  // calculate true survey abundance for tagging simulation **dh**
-                  true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
-                  true_survey_region_abundance(j,y,r)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                   // calculate true survey abundance for tagging simulation **dh**
+                 true_survey_fleet_age_temp(j,r,y,a,z)=true_survey_fleet_age(j,r,y,z,a);
+                 true_survey_region_abundance(j,y,r,a)=sum(true_survey_fleet_age_temp(j,r,y,a));
+                 true_survey_region_abundance_temp(j,y,a,r)=true_survey_region_abundance(j,y,r,a);
+                 true_survey_population_abundance(y,j,a)=sum(true_survey_region_abundance_temp(j,y,a));
+                 true_survey_population_abundance_temp(y,a,j)=true_survey_population_abundance(y,j,a);
+                 true_survey_total_abundance(y,a)=sum(true_survey_population_abundance_temp(y,a));
+
+             // end abundance for tagging *dh
+
+                  
                   true_survey_region_bio(j,y,r)=sum(true_survey_fleet_bio(j,r,y));
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
@@ -5029,8 +5064,6 @@ FUNCTION get_abundance
    } // end age loop
   } //end yr>1 loop
  }  //end y loop
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5312,8 +5345,11 @@ FUNCTION get_tag_recaptures
         {
           survey_selectivity_temp(i,n,xx,1,a)=survey_selectivity(i,n,xx,a,1);
           ntags_total(x)=frac_total_abund_tagged(x)*sum(abundance_total(xx));
-         // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
-          ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+ 
+          //ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_bio(xx,i)/true_survey_total_bio(xx))*(true_survey_region_bio(i,xx,n)/true_survey_population_bio(xx,i))*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+         ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a));//*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+         // ntags(i,n,x,a)=ntags_total(x)*(true_survey_population_abundance(xx,i,a)/sum(true_survey_total_abundance(xx)))*(true_survey_region_abundance(i,xx,n,a)/true_survey_population_abundance(xx,i,a)); //*(survey_selectivity(i,n,xx,a,1)/sum(survey_selectivity_temp(i,n,xx,1)));
+
 
 
  // for the EM .dat
@@ -5327,8 +5363,12 @@ FUNCTION get_tag_recaptures
        }
       }
      }
-
      
+ //cout<<ntags<<endl;
+ //cout<<true_survey_total_abundance<<endl;
+ //(43);
+
+
  //assume tags released in natal population
  for (int i=1;i<=npops;i++)
   {
@@ -5508,8 +5548,6 @@ FUNCTION get_tag_recaptures
         }
        }
 
-
-      
 FUNCTION get_observed_tag_recaptures
  if(do_tag==1)
   {
@@ -5568,19 +5606,19 @@ FUNCTION get_observed_tag_recaptures
              OBS_tag_prop_population_temp(i,x,a,s,n)=SIM_tag_prop(i,n,x,a,s);
              OBS_tag_prop_population_temp2(i,x,a,s)=sum(OBS_tag_prop_population_temp(i,x,a,s));
              OBS_tag_prop_population_final(i,x,a,s)=OBS_tag_prop_population_temp2(i,x,a,s)/(nregions(i)*SIM_ntag);
-             OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
-             OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
+           //  OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
+         //    OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
 
-             if(OM_structure>0 && EM_structure==0){
-                   for (int k=1;k<=max_life_tags+1;k++)
-                      {
-                       OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
-                       OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
-                       OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
+     //        if(OM_structure>0 && EM_structure==0){
+      //            for (int k=1;k<=max_life_tags+1;k++)
+       //               {
+       //                OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
+       //                OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
+        //               OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
                        //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
-                       }
-                      }
-                     }
+       //                }
+        //              }
+                    }
                     }
                    }
                   }
@@ -5608,8 +5646,24 @@ FUNCTION evaluate_the_objective_function
  
 REPORT_SECTION
 
- //Aggregating OBS values for panmictic mismatch
+ //for the mismatch calculate the abundance fraction by region/population
+  for (int y=1;y<=nyrs;y++)
+   {
+   for (int p=1;p<=npops;p++)
+    {
+    for (int r=1;r<=nregions(p);r++)
+      {
+      for (int z=1;z<=nfleets(p);z++)
+        {
+         for(int a=1;a<=nages;a++)
+          {
+        abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
+        abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
+        abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
+        }}}}}
 
+
+ //Aggregating OBS values and vitals for panmictic EM
  if(EM_structure==0 && OM_structure>0){ 
   for (int y=1;y<=nyrs;y++)
    {
@@ -5621,12 +5675,6 @@ REPORT_SECTION
         {
          for(int a=1;a<=nages;a++)
           {
-
-        //calculate the abundance fraction by region/population
-        abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
-        abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
-        abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
-
        //aggregating weight at age
         input_weight_region_temp(p,a,r)=input_weight(p,r,a)*abund_frac_region(p,r);//rearrange to summarize and weight for output
         input_weight_region(p,a)=sum(input_weight_region_temp(p,a));
@@ -5650,6 +5698,12 @@ REPORT_SECTION
         maturity_region(p,a)=sum(maturity_region_temp(p,a));
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a));
+
+        //aggregating selectivity
+        selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        selectivity_age_pop(p,a,z)=sum(selectivity_age_temp(p,a,z));
+        survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        survey_selectivity_age_pop(p,a,z)=sum(survey_selectivity_age_temp(p,a,z));
 
         //aggregating the age comps
 
@@ -5686,10 +5740,11 @@ REPORT_SECTION
         rec_index_BM_population(p,y)=sum(rec_index_temp(p,y));// combined by region
         rec_index_temp2(y,p)=rec_index_BM_population(p,y);
         rec_index_pan(y)=sum(rec_index_temp2(y));//npops; combined by populations
-
+        
       } //end pop loop          
      } //end year loop
   }
+
 
 //Additional model structure parameters
   report<<"#nages"<<endl;
@@ -5722,8 +5777,8 @@ REPORT_SECTION
   report<<tsurvey_EM<<endl;
   report<<"#diagnostics_switch"<<endl;
   report<<diagnostics_switch<<endl;
-  report<<"#larval_move_switch"<<endl;
-  report<<larval_move_switch_EM<<endl;
+  report<<"#fleets_as_areas_switch"<<endl;
+  report<<fleets_as_areas_switch<<endl;
   report<<"#move_switch"<<endl;
   report<<move_switch_EM<<endl;
   report<<"#natal_homing_switch"<<endl;
@@ -5733,7 +5788,7 @@ REPORT_SECTION
   report<<"#select_switch"<<endl;
   report<<select_switch_EM<<endl;
   report<<"#select_switch_survey"<<endl;
-  report<<select_switch_survey<<endl;
+  report<<select_switch_survey_EM<<endl;
   report<<"#maturity_switch_equil"<<endl;
   report<<maturity_switch_equil_EM<<endl;
   report<<"#SSB_type"<<endl;
@@ -5768,6 +5823,10 @@ REPORT_SECTION
   report<<sigma_recruit_EM<<endl;
   report<<"#ph_lmr"<<endl;
   report<<ph_lmr<<endl;
+  report<<"#lb_R_ave"<<endl;
+  report<<lb_R_ave<<endl;
+  report<<"#ub_R_ave"<<endl;
+  report<<ub_R_ave<<endl;
   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
   report<<"#ph_rec_app_CNST"<<endl;
@@ -5796,6 +5855,14 @@ REPORT_SECTION
   report<<lb_sel_beta2<<endl;
   report<<"#ub_sel_beta2"<<endl;
   report<<ub_sel_beta2<<endl;
+  report<<"#lb_sel_beta1_surv"<<endl;
+  report<<lb_sel_beta1_surv<<endl;
+  report<<"#ub_sel_beta1_surv"<<endl;
+  report<<ub_sel_beta1_surv<<endl;
+  report<<"#lb_sel_beta2_surv"<<endl;
+  report<<lb_sel_beta2_surv<<endl;
+  report<<"#ub_sel_beta2_surv"<<endl;
+  report<<ub_sel_beta2_surv<<endl;;
   report<<"#ph_sel_log_surv"<<endl;
   report<<ph_sel_log_surv<<endl;
   report<<"#ph_sel_dubl"<<endl;
@@ -5841,8 +5908,8 @@ REPORT_SECTION
 ////////////////////////////////////////////////////
 
 //Spatial to panmictic EM inputs
-   if(EM_structure==0 && OM_structure>0){ 
-            report<<"#input_weight"<<endl;
+   if(EM_structure==0 && OM_structure>=0){ 
+      report<<"#input_weight"<<endl;
       report<<input_weight_population<<endl;
       report<<"#input_catch_weight"<<endl;
       report<<input_catch_weight_population<<endl;
@@ -5854,6 +5921,9 @@ REPORT_SECTION
       report<<prop_fem_pan<<endl;
       report<<"#OBS_rec_index_BM"<<endl;
       report<<rec_index_pan<<endl;
+
+ //for straight panmictic EM 
+    if(sum(nfleets_EM)==1){
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
       report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
@@ -5892,6 +5962,48 @@ REPORT_SECTION
       report<<OBS_tag_prop_pan_final<<endl;
       }
 
+
+ //for fleets-as-areas approach
+      if(sum(nfleets_EM)>1){
+      //fleet specific outputs for fishery, panmictic for survey
+      report<<"#OBS_survey_fleet"<<endl;
+      report<<OBS_survey_total_bio<<endl;
+      report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
+      report<<OBS_survey_fleet_bio_se_EM<<endl;
+      report<<"#OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop_pan<<endl;
+      report<<"#OBS_survey_prop_N_EM"<<endl;
+      report<<OBS_survey_prop_N_EM<<endl;
+      report<<"#OBS_yield_fleet"<<endl;
+      report<<OBS_yield_fleet<<endl;
+      report<<"#OBS_yield_fleet_se_EM"<<endl;
+      report<<OBS_yield_fleet_se_EM<<endl;
+      report<<"#OBS_catch_prop"<<endl;
+      report<<OBS_catch_prop<<endl;
+      report<<"#OBS_catch_prop_N_EM"<<endl;
+      report<<OBS_catch_prop_N_EM<<endl;
+      
+//tagging information
+      report<<"#nyrs_release"<<endl;
+      report<<nyrs_release<<endl;
+      report<<"#years_of_tag_releases "<<endl;
+      report<<yrs_releases<<endl;
+      report<<"#max_life_tags"<<endl;
+      report<<max_life_tags<<endl;
+      report<<"#report_rate_EM"<<endl;
+      report<<report_rate_EM<<endl;
+      report<<"#ntags"<<endl;
+      report<<ntags_pan<<endl;
+      report<<"#ntags_total"<<endl;
+      report<<ntags_total<<endl;
+      report<<"#tag_N_EM"<<endl;
+      report<<tag_N_EM<<endl;
+      report<<"#input_T_EM"<<endl;
+      report<<input_T_EM<<endl;
+      report<<"#OBS_tag_prop_pan_final"<<endl;
+      report<<OBS_tag_prop_pan_final<<endl;
+      }
+      }
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
      if((EM_structure>0 && OM_structure>0) || (EM_structure==0 && OM_structure==0)){
@@ -5953,9 +6065,15 @@ REPORT_SECTION
 //Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
- // report<<"#init_abund_EM"<<endl;
- // report<<init_abund_EM<<endl;
+  report<<"#input_Rec_Prop_EM"<<endl;
+  report<<input_rec_prop_EM<<endl;
+  report<<"#input_selectivity_EM"<<endl;
+  report<<input_selectivity_EM<<endl;
+  report<<"#input_survey_selectivity_EM"<<endl;
+  report<<input_survey_selectivity_EM<<endl;
 
+ //report<<"#init_abund_EM"<<endl;
+ // report<<init_abund_EM<<endl;
 
 /// TRUE VALUES FROM OM
   report<<"#input_M_TRUE"<<endl;
@@ -6022,20 +6140,43 @@ REPORT_SECTION
   report<<Bratio_population<<endl;
   report<<"#T_year"<<endl;
   report<<T_year<<endl;
+
+//reporting true aggregated selectivity if fleets ==1
+  if(EM_structure==0 && sum(nfleets_EM)==1)
+  {
+  report<<"#selectivity_age"<<endl;
+  report<<selectivity_age_pop<<endl;
+  report<<"#survey_selectivity_age"<<endl;
+  report<<survey_selectivity_age_pop<<endl;}
+  
+  else{
   report<<"#selectivity_age"<<endl;
   report<<selectivity_age<<endl;
   report<<"#survey_selectivity_age"<<endl;
-  report<<survey_selectivity_age<<endl;
-
+  report<<survey_selectivity_age<<endl;}
+  
  //true tag information
   report<<"#TRUE_tag_prop"<<endl;
   report<<tag_prop_final<<endl;
-
   report<<"#T"<<endl;
   report<<T<<endl;
 
+//report the abundance_frac for later calcs if needed
+  report<<"#abund_frac_age_region"<<endl;
+  report<<abund_frac_age_region<<endl;
+  report<<"#abund_frac_year"<<endl;
+  report<<abund_frac_region_year<<endl;
+  report<<"#abund_frac_region"<<endl;
+  report<<abund_frac_region<<endl;
+
+
   report<<"#debug"<<endl;
   report<<debug<<endl;
+
+
+//to get abundance after movement for init abund
+//  report<<"Abund_AM"<<endl;
+//  report<<abundance_at_age_AM<<endl;
 
 
 
