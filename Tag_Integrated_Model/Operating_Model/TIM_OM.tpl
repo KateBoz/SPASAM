@@ -1420,7 +1420,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
+                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
 
                  if(recruit_randwalk_switch==1)
                  {
