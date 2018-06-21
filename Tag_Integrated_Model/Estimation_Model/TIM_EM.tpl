@@ -157,8 +157,8 @@ DATA_SECTION
 //phases and bounds for est parameters
 
   init_int ph_lmr
-  init_int lb_R_ave
-  init_int ub_R_ave
+  init_number lb_R_ave
+  init_number ub_R_ave
   init_int ph_rec
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
@@ -1220,7 +1220,7 @@ FUNCTION get_vitals
 
 //see if this helps
       if(ph_lmr<0){R_ave=R_ave_TRUE;}
-      if(ph_lmr>0){R_ave=mfexp(ln_R_ave+square(sigma_recruit)*0.5);}
+      if(ph_lmr>0){R_ave=mfexp(ln_R_ave);}
 
     for (int j=1;j<=npops;j++)
      {
