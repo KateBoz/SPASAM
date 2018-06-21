@@ -72,7 +72,7 @@ files<-list.files(direct_master)
   
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=4
+i=1
   
 #if running the whole folder
  #for(i in 1:length(files)){
