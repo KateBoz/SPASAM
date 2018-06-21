@@ -428,17 +428,17 @@ DATA_SECTION
 
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
   init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
-  init_vector sigma_recruit_EM(1,np_em) 
+  init_vector sigma_recruit_EM(1,np_em)
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
+
   init_4darray input_selectivity_EM(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
   init_4darray input_survey_selectivity_EM(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
-
   init_int ph_lmr
-  init_int lb_R_ave//lower bound on R_ave
-  init_int ub_R_ave//upper bound on R_ave
+  init_number lb_R_ave//lower bound on R_ave
+  init_number ub_R_ave//upper bound on R_ave
   init_int ph_rec
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
@@ -465,7 +465,7 @@ DATA_SECTION
   init_int ph_T_YR //use if want to estimate yearly T
   init_int ph_T_CNST //use if want to estimate time-invariant T
   init_int ph_dummy
- 
+
   init_number wt_surv
   init_number wt_catch
   init_number wt_fish_age
@@ -510,7 +510,9 @@ DATA_SECTION
   init_number myseed_survey_age
   init_number myseed_catch_age
   init_number myseed_tag
-  
+
+
+
   //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
@@ -1365,7 +1367,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
- R_ave=mfexp(ln_R_ave); ///this is annoying...
+ R_ave=ln_R_ave; ///this is annoying...//a quick fix
  
   for (int p=1;p<=npops;p++)
    {
@@ -1418,7 +1420,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));
+                 rec_devs(j,y)=mfexp(rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
 
                  if(recruit_randwalk_switch==1)
                  {
@@ -6172,7 +6174,7 @@ REPORT_SECTION
   report<<debug<<endl;
 
 
-//to get abundance after movement
+//to get abundance after movement for init abund
 //  report<<"Abund_AM"<<endl;
 //  report<<abundance_at_age_AM<<endl;
 
