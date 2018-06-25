@@ -39,18 +39,25 @@ load_libraries()
 
 
 
-#######################################################################
+###################################
 #Setting up the simulations
 ##################################
+
+
+#name of operating/estimation model .exe
+OM_name<-"MB_OM" #name of the OM you are wanting to run in OM folder
+EM_name<-"MB_EM" ###name of .dat, .tpl., .rep, etc. in EM folder
+
+#WARNING# - if completing a diagnostics make sure that the names are correct in the "TIM diagnositic master.R" code.
 
 
 diag.run<-1
 # ==0 NO Do NOT run the diagnostics plots for a single run
 # ==1 YES run the diagnostics plots for a single run
 
-
 # Set number of simulations to perform
-nsim <-24  
+nsim <-4
+
 
 ######################
 #plot parameters
@@ -63,15 +70,16 @@ vio.col<-"lightskyblue3"
 median.col<-"grey95"
 
 
+
 ###########################################################
 ### setting up the directories
-###############################
+##########################################################
 
-# To run this simulation a folder for each scenario will need to be placed in the master directory. Each folder will need separate folders named 'Operating_Model' and 'EM_model' with the exe files and .DAT for the OM only. The Code will do the rest. Be sure that the TIM_diagnostics.R code is also in the master directory. 
+# To run this simulation a folder for each scenario will need to be placed in the master directory. Each folder will need separate folders named 'Operating_Model' and 'Estimation_model' with the exe files and .DAT for the OM only. The code will do the rest. If running the diagnostics code, be sure that the TIM_diagnostics.R code is also in the master directory. 
 #
 
 # set master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SIM_TEST"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_GIT\\SPASAM\\Managment_Boundaries"
 setwd(direct_master)
 
 #list files in the directory
@@ -79,22 +87,25 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-folder.num=1
+folder.num=5
 
-i=folder.num
+i=folder.num #if running one folder
 
 #if running the several folders use the loop - This will come later
 #for(i in 1:3){
 
 ##############################################################
 
+#one touch operation!
+
+{ #run the hold dang thing...
+
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
 EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+
 
 #Build diagnostics folder
 dir.create(paste0(direct_master,"\\",files[i],"\\Diagnostics",sep=""))
@@ -105,14 +116,14 @@ diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 # SKIP TO PLOTTING SECTION IF SIMS ARE COMPLETED!
 #
 
-{ #run the hold dang thing...
+
 
 ###############################################################
 # RUN TIM DIAGNOSTICS
 ###############################################################
 
 # generates a single run diagnotic of the OM and EM and
-# moves file to the diagnostics folder
+# moves files to the diagnostics folder
 
 if(diag.run==1){
 source("TIM_Diagnostics_master.R") # make sure this code is in the direct_master folder.
@@ -120,6 +131,8 @@ source("TIM_Diagnostics_master.R") # make sure this code is in the direct_master
 invisible(file.rename(from=paste0(EM_direct,"\\Model_Diagnostics.pdf",sep=""),to=paste0(diag_direct,"\\Model_Diagnostics.pdf",sep="")))
 
 invisible(file.rename(from=paste0(EM_direct,"\\Tag_Residuals.pdf",sep=""),to=paste0(diag_direct,"\\Tag_Residuals.pdf",sep="")))
+
+invisible(file.rename(from=paste0(EM_direct,"\\output.txt",sep=""),to=paste0(diag_direct,"\\output.txt",sep="")))
 }
 
 ############################################################
@@ -154,16 +167,16 @@ ls=foreach(j=1:nsim,.options.snow = opts,.combine='rbind',.packages =c('PBSmodel
   dir.create(paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep=""))
   
 #Move folders and .dat files  
-  invisible(file.copy(from=paste0(OM_direct,"\\TIM_OM.exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
-  invisible(file.copy(from=paste0(OM_direct,"\\TIM_OM.dat",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
-  invisible(file.copy(from=paste0(EM_direct,"\\TIM_EM.exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep="")))
+  invisible(file.copy(from=paste0(OM_direct,"\\",OM_name,".exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
+  invisible(file.copy(from=paste0(OM_direct,"\\",OM_name,".dat",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
+  invisible(file.copy(from=paste0(EM_direct,"\\",EM_name,".exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep="")))
   
 
   
 #change seed for OM
 setwd(paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep=""))
       
-SIM.DAT=readLines("TIM_OM.dat",n=-1)
+SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
 SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=j
 SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=100000+j
 SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=200000+nsim
@@ -174,7 +187,7 @@ SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=600000+j
 SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=700000+j
 SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=800000+j
 
-writeLines(SIM.DAT,"TIM_OM.dat")
+writeLines(SIM.DAT,(paste0(OM_name,".dat")))
 
 #run the OM
 invisible(shell(paste0(OM_name," -nox -nohess"),wait=T))
@@ -195,13 +208,13 @@ setwd(paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep=""))
 invisible(shell(paste0(EM_name," -nox -ind"),wait=T))
 
 
-if(file.exists("TIM_EM.cor")==TRUE)
+if(file.exists(paste0(EM_name,".cor"))==TRUE)
    
 {
   temp[1]=1 #set convergence
   
 #Things to save values from .REP  
-  out<-readList("TIM_EM.rep")
+  out<-readList(paste0(EM_name,".rep"))
   temp[2:length(temp)]=c(out$tag_like,out$catch_like,out$survey_like,out$fish_age_like,out$survey_age_like,out$rec_like)
   
  #grad<-readLines("gradient.dat") #need to work on this
@@ -209,34 +222,34 @@ if(file.exists("TIM_EM.cor")==TRUE)
 }
 
 
-if(file.exists("TIM_EM.cor")==FALSE)
+if(file.exists(paste0(EM_name,".cor"))==FALSE)
 {
   
   temp[1]=0 #set convergence
   
   #Things to save values from .REP  
-  out<-readList("TIM_EM.rep")
+  out<-readList(paste0(EM_name,".rep"))
   temp[2:length(temp)]=c(out$tag_like,out$catch_like,out$survey_like,out$fish_age_like,out$survey_age_like,out$rec_like)
 
 }
   
   #then delete the junk
-  invisible(shell("del TIM_EM.exe")) 
+  invisible(shell(paste0("del ",EM_name,".exe"))) 
+  invisible(shell(paste0("del ",EM_name,".b01"))) 
+  invisible(shell(paste0("del ",EM_name,".P01")))
+  invisible(shell(paste0("del ",EM_name,".R01"))) 
+  invisible(shell(paste0("del ",EM_name,".b02"))) 
+  invisible(shell(paste0("del ",EM_name,".P02"))) 
+  invisible(shell(paste0("del ",EM_name,".R02")))
+  invisible(shell(paste0("del ",EM_name,".b03"))) 
+  invisible(shell(paste0("del ",EM_name,".P03"))) 
+  invisible(shell(paste0("del ",EM_name,".R03")))
+  invisible(shell(paste0("del ",EM_name,".bar")))
+  invisible(shell(paste0("del ",EM_name,".eva"))) 
+  invisible(shell(paste0("del ",EM_name,".log"))) 
   invisible(shell("del admodel.cov"))
   invisible(shell("del admodel.dep"))
   invisible(shell("del admodel.hes")) 
-  invisible(shell("del TIM_EM.b01"))
-  invisible(shell("del TIM_EM.P01"))
-  invisible(shell("del TIM_EM.R01"))
-  invisible(shell("del TIM_EM.b02"))
-  invisible(shell("del TIM_EM.P02"))
-  invisible(shell("del TIM_EM.R02"))
-  invisible(shell("del TIM_EM.b03"))
-  invisible(shell("del TIM_EM.P03"))
-  invisible(shell("del TIM_EM.R03"))
-  invisible(shell("del TIM_EM.bar"))
-  invisible(shell("del TIM_EM.eva"))
-  invisible(shell("del TIM_EM.log"))
   invisible(shell("del fmin.log"))
   invisible(shell("del variance"))
  
@@ -277,9 +290,7 @@ files<-list.files(direct_master)
 #i=folder.num # if you are working only one folder or if you are running this section separate from sims
 
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
 EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 
 #pull dimensions for building data frames for plotting
@@ -298,6 +309,9 @@ ages<-seq(1:out$nages)
 #for metapop
 if(npops>1){
   nreg=sum(nreg)}
+
+
+
 
 ########################################################################
 # Building Run in parallel to save the values we want to keep
@@ -386,6 +400,8 @@ saveRDS(vg, file="Sim_run.RData")
 
 }
 
+
+###############################################################################
 ################################################################################
 # Load Sim results for plotting
 #################################################################################
@@ -402,9 +418,7 @@ saveRDS(vg, file="Sim_run.RData")
 #i=1
 
 #OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-#OM_name<-"TIM_OM" #name of the OM you are wanting to run
 #EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
-#EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 #diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 
 #pull dimensions for building data frames for plotting
@@ -423,8 +437,8 @@ saveRDS(vg, file="Sim_run.RData")
 #for metapop
 #if(npops>1){
 #  nreg=sum(nreg)}
-################################################################
-
+#########################################################################################
+#########################################################################################
   
 
 ###############################################################
@@ -525,7 +539,6 @@ ggplot(Sim.Stats, aes(x=Sim.Stats[j])) +
 #######################################
 
 #soon
-
 
 
 
@@ -824,7 +837,7 @@ text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure:
 
 text2<-paste0("\nTotal # of Sims: ",nsim)
 
-text3<-paste0("Proporton of Sims Converged: ", sum(Sim.Stats$Converged)," of ", nsim, " (",conv,")")
+text3<-paste0("Proportion of Sims Converged: ", sum(Sim.Stats$Converged)," of ", nsim, " (",conv,")")
 
 time<-paste0("Report Date:  ", Sys.time())
 
