@@ -705,13 +705,13 @@
    #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 0
 
-#select_switch
+#select_switch_EM
   #==0 input selectivity
   #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
 1
 
-#select_switch_survey
+#select_switch_survey_EM
   #==0 input selectivity
   #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
   #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
