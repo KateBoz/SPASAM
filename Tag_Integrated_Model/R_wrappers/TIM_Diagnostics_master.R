@@ -24,6 +24,8 @@ load_libraries<-function() {
   library(matrixStats) 
   library(gridExtra)
   library(grid)
+  library(PBSadmb)
+  library(gtable)
   }
 load_libraries()
 
@@ -78,11 +80,12 @@ direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area"
 #list files in the directory
 files<-list.files(direct_master)
 
-
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 i=1
   
+
+
 #if running the whole master folder
  #for(i in 1:length(files)){
 
@@ -143,6 +146,11 @@ make.plots<-function(direct=EM_direct){ #run diagnostics plotting
 #Read in model .rep
 out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
 
+#use the pbsadmb package to get the cor and std files in
+cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+std<-readRep(EM_name, suffix=".std", global=FALSE)
+
+
 
 #pull info about the model
 na<-out$nages
@@ -176,9 +184,9 @@ diag_theme<-
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
+######################################################################################
 
-
-############################
+######################################################################################
 #Likelihoods in histagram
 
 #vector of values 
@@ -196,8 +204,6 @@ like.p <-ggplot(likes, aes(names, likes))+
   diag_theme+
   theme(axis.text.x=element_text(angle=40,hjust=0.5,vjust=0.5),plot.margin = unit(c(0.5, 0.5, 2, 0.5),"lines"))
   
-
-
 
 ##############################
 #### RECRUITMENT PLOTS #######
@@ -1343,9 +1349,10 @@ if(file.exists(paste0(EM_name,".cor"))==FALSE)
 {cor.text<-paste("Model did NOT Converge")}
 
 #max gradient
-grad.val<-"Max gradient will eventually go here"
 
-
+grad<-readLines("TIM_EM.par")[1]
+pos = regexpr('Max', grad)
+grad.val<-substr(grad,pos,nchar(grad)-8)
 
 tgrob.mod <- textGrob(paste(cor.text," ",grad.val,sep = "\n"),just = "centre")
 
@@ -1582,7 +1589,6 @@ grid.arrange(ncol = 1,
              #top="Recruitment",
              rec2, R.dev.resid)
 
-
 grid.arrange(ncol = 1,
              #top="Recruitment ",
              rec.prop, R.apport.resid)
@@ -1632,9 +1638,74 @@ grid.arrange(ncol = 1,
     top ="Fits to Data continued",
     survey.comp.plot, fishery.comp.plot)
 
-#grid.arrange(ncol = 1,
-#    top ="Tag Proportion Residuals",
-#    tags.resid.plot)
+###############################################
+#add table of values and correlations at the end
+###############################################
+
+#take the values off the log scale
+#std[,3:4]<-exp(std[,3:4])
+std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 11),rows = NULL)
+
+std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                            t = 2, b = nrow(std_params), l = 1, r = ncol(std_params)) 
+std_params <-gtable_add_grob(std_params,
+                     grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                     t = 1, l = 1, r = ncol(std_params))
+                             
+h.st <- grobHeight(std_params)
+title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
+                       vjust=0, gp=gpar(fontsize=12))
+
+gt_std <- gTree(children=gList(std_params, title_std))
+
+grid.newpage()
+grid.draw(gt_std)
+
+
+##############################################################
+
+#make grob
+g<-tableGrob(cor,theme = ttheme_minimal(base_size = 11,
+                                             core=list(
+                                              fg_params=list(fontface=1)), 
+                                              colhead=list(fg_params=list(col="black", fontface=4L)),
+                                              rowhead=list(fg_params=list(col="black", fontface=4L))))
+
+
+col.cor<-which(abs(cor)>=0.5,arr.ind = T)
+col.cor.diag<-which(cor==1,arr.ind = T)
+
+
+#function to find the cells
+find_cells <- function(table, row, col, name="core-fg"){
+  l <- table$layout
+  unlist(Map(function(r, c) which(((l$t-1) == r) & ((l$l-1) == c) & (l$name == name)), row, col))
+}
+
+modify_cells <- function(g, ids, gp=gpar()){
+  for(id in ids) g$grobs[id][[1]][["gp"]] <- gp
+  return(g)
+}
+
+ids <- find_cells(g, col.cor[,1], col.cor[,2], "core-fg")
+
+g <- modify_cells(g, ids, gpar(fontsize=12, fontface="bold",col="red"))
+
+
+ids<- find_cells(g, col.cor.diag[,1], col.cor.diag[,2], "core-fg")
+g <- modify_cells(g, ids, gpar(fontsize=10, fontface="bold",col="grey40"))
+
+
+h.cor <- grobHeight(g)
+
+title_cor <- textGrob("Correlation Coefficients", y=unit(0.5,"npc") + 1.25*h.cor, 
+                      vjust=0, gp=gpar(fontsize=12,fontface=2))
+
+gt_cor <- gTree(children=gList(g, title_cor))
+
+
+grid.newpage()
+grid.draw(gt_cor)
 
 dev.off()
   
