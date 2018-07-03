@@ -26,6 +26,7 @@ load_libraries<-function() {
   library(grid)
   library(PBSadmb)
   library(gtable)
+  library(corrplot)
   }
 load_libraries()
 
@@ -47,6 +48,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 # Select Line width
 line.wd=0.8
 
+#select threshold correlation level for corrlation plot
+cor.level = 0.7 # can change this in the make.plots function below
 
 
 ##############################################
@@ -1352,7 +1355,7 @@ if(file.exists(paste0(EM_name,".cor"))==FALSE)
 
 grad<-readLines("TIM_EM.par")[1]
 pos = regexpr('Max', grad)
-grad.val<-substr(grad,pos,nchar(grad)-8)
+grad.val<-substr(grad,pos,nchar(grad))
 
 tgrob.mod <- textGrob(paste(cor.text," ",grad.val,sep = "\n"),just = "centre")
 
@@ -1638,13 +1641,52 @@ grid.arrange(ncol = 1,
     top ="Fits to Data continued",
     survey.comp.plot, fishery.comp.plot)
 
-###############################################
-#add table of values and correlations at the end
-###############################################
+dev.off()
+
+################################################
+#Plot corrlation Matrix
+################################################
+
+#cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+cor.mat<-as.matrix(cor)
+
+#removing diag
+cor.mat[cor.mat==1]<-0
+#removing low correlations
+cor.mat[abs(cor.mat)<cor.level]<-0
+
+rm<-which(colSums(cor.mat)==0)
+
+#remove the parameter combinations with weak correlations.
+cor2<-as.matrix(cor[-rm,-rm])
+
+#create a corplot
+pdf("Correlation_Matrix.pdf", paper = "a4", width = 8, height = 11)
+
+corrplot(cor2, type = "upper", order = "original", 
+         tl.col = "black", tl.srt = 45,tl.cex = 0.5,diag = F)
+#save as PDF
+dev.off()
+
+#####################
+# Plot Tag residuals
+######################
+
+pdf("Tag_Residuals.pdf",paper='a4r',width=11,height=8) 
+for(k in 1:nreg){
+  print(tags.plot(k))}
+
+dev.off()
+
+#############################################
+# Build table of Standard Errors
+#############################################
 
 #take the values off the log scale
 #std[,3:4]<-exp(std[,3:4])
-std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 11),rows = NULL)
+
+
+std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 10),rows = NULL)
 
 std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
                             t = 2, b = nrow(std_params), l = 1, r = ncol(std_params)) 
@@ -1652,73 +1694,38 @@ std_params <-gtable_add_grob(std_params,
                      grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
                      t = 1, l = 1, r = ncol(std_params))
                              
-h.st <- grobHeight(std_params)
-title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
-                       vjust=0, gp=gpar(fontsize=12))
-
-gt_std <- gTree(children=gList(std_params, title_std))
-
-grid.newpage()
-grid.draw(gt_std)
+#h.st <- grobHeight(std_params)
+#title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
+#                       vjust=0, gp=gpar(fontsize=12))
+#gt_std <- gTree(children=gList(std_params, title_std))
 
 
-##############################################################
+#print over many pages
+fullheight <- convertHeight(sum(std_params$heights), "cm", valueOnly = TRUE)
+margin <- unit(0.61,"in")
+margin_cm <- convertHeight(margin, "cm", valueOnly = TRUE)
+a4height <- 29.7 - margin_cm
+nrows <- nrow(std_params)
+npages <- ceiling(fullheight / a4height)
 
-#make grob
-g<-tableGrob(cor,theme = ttheme_minimal(base_size = 11,
-                                             core=list(
-                                              fg_params=list(fontface=1)), 
-                                              colhead=list(fg_params=list(col="black", fontface=4L)),
-                                              rowhead=list(fg_params=list(col="black", fontface=4L))))
-
-
-col.cor<-which(abs(cor)>=0.5,arr.ind = T)
-col.cor.diag<-which(cor==1,arr.ind = T)
-
-
-#function to find the cells
-find_cells <- function(table, row, col, name="core-fg"){
-  l <- table$layout
-  unlist(Map(function(r, c) which(((l$t-1) == r) & ((l$l-1) == c) & (l$name == name)), row, col))
-}
-
-modify_cells <- function(g, ids, gp=gpar()){
-  for(id in ids) g$grobs[id][[1]][["gp"]] <- gp
-  return(g)
-}
-
-ids <- find_cells(g, col.cor[,1], col.cor[,2], "core-fg")
-
-g <- modify_cells(g, ids, gpar(fontsize=12, fontface="bold",col="red"))
+heights <- convertHeight(std_params$heights, "cm", valueOnly = TRUE) 
+rows <- cut(cumsum(heights), include.lowest = FALSE,
+            breaks = c(0, cumsum(rep(a4height, npages))))
+groups <- split(seq_len(nrows), rows)
+gl <- lapply(groups, function(id) std_params[id,])
 
 
-ids<- find_cells(g, col.cor.diag[,1], col.cor.diag[,2], "core-fg")
-g <- modify_cells(g, ids, gpar(fontsize=10, fontface="bold",col="grey40"))
+pdf("Standard_Error_table.pdf", paper = "a4", width = 0, height = 0)
+ml<-marrangeGrob(grobs=gl, ncol=1, nrow=1, top="Standard Errors (log scale)")
 
-
-h.cor <- grobHeight(g)
-
-title_cor <- textGrob("Correlation Coefficients", y=unit(0.5,"npc") + 1.25*h.cor, 
-                      vjust=0, gp=gpar(fontsize=12,fontface=2))
-
-gt_cor <- gTree(children=gList(g, title_cor))
-
-
-grid.newpage()
-grid.draw(gt_cor)
-
-dev.off()
-  
-pdf("Tag_Residuals.pdf",paper='a4r',width=11,height=8) 
-for(k in 1:nreg){
-  print(tags.plot(k))}
-
+grid.draw(ml)
 dev.off()
 
-#print(rec2)
 
+####################################
+#save all the outputs to a text file
+#####################################
 
-#save the outputs to a text file
 sink(file = "output.txt",
      append = F, type = "output")
 
