@@ -49,7 +49,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 line.wd=0.8
 
 #select threshold correlation level for corrlation plot
-cor.level = 0.7 # can change this in the make.plots function below
+cor.level = 0.07# can change this in the make.plots function below
 
 
 ##############################################
@@ -87,8 +87,6 @@ files<-list.files(direct_master)
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 i=1
   
-
-
 #if running the whole master folder
  #for(i in 1:length(files)){
 
@@ -108,12 +106,12 @@ i=1
 
 # One touch operation...run the whole code. Comment out this and very last bracket to run sections manually
 
+
 #{  
-  
 
 #running the OM and EM together
- { 
-
+run.model<-function(){
+  
 #run the OM
 setwd(OM_direct)
 invisible(shell(paste0(OM_name," -nohess"),wait=T))
@@ -127,15 +125,17 @@ file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
-
-time.elapsed<- system.time( # keeping track of time for run
+system.time( # keeping track of time for run
 
 invisible(shell(paste0(EM_name),wait=T)))
 
 } #end running the OM/EM together
 
+time.elapsed<-run.model()
 
-  
+#use this function to run the model
+#make.plots()
+
 #########################################################
 #########################################################
 ##### Ploting Code        ###############################
@@ -1660,11 +1660,20 @@ rm<-which(colSums(cor.mat)==0)
 #remove the parameter combinations with weak correlations.
 cor2<-as.matrix(cor[-rm,-rm])
 
+
 #create a corplot
 pdf("Correlation_Matrix.pdf", paper = "a4", width = 8, height = 11)
 
+if(nrow(cor2)==0){
+  corrplot(cor.mat, type = "upper", order = "original", 
+                            tl.col = "black", tl.srt = 45,tl.cex = 0.5,diag = F)
+  }
+
+if(nrow(cor2)>0){
 corrplot(cor2, type = "upper", order = "original", 
          tl.col = "black", tl.srt = 45,tl.cex = 0.5,diag = F)
+}
+
 #save as PDF
 dev.off()
 
@@ -1856,7 +1865,20 @@ make.plots()
 
 #} #end running the whole code
 
-
 #} #end loops if doing many runs
+
+
+################################################################################
+################################################################################
+#to make things simple and fast just run these pieces of code consecutively when editing
+
+time.elapsed<-run.model()
+make.plots()
+
+
+
+
+
+
   
 
