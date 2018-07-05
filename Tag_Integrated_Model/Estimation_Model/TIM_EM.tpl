@@ -589,7 +589,7 @@ PARAMETER_SECTION
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
   init_bounded_vector ln_R_ave(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
-  vector R_ave(1,parpops) // switch to log scale
+  vector R_ave(1,parpops) // switch from log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
   vector alpha(1,nps) //derived quantity
@@ -797,16 +797,16 @@ PARAMETER_SECTION
 
 //INITIALIZATION_SECTION  //set initial values
  //  steep .814;
- //  ln_q 0;
- //  ln_R_ave 3;
+ //  ln_q 2;
+ //  ln_R_ave 5;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
- //  ln_rec_devs_RN 0;
+  // ln_rec_devs_RN 1.1;
  //  ln_rec_prop_CNST -1.1;
- //  ln_abund_devs 0;
+  // ln_abund_devs 0.1;
 
 PROCEDURE_SECTION
  
@@ -1219,13 +1219,14 @@ FUNCTION get_vitals
       }
 
 //see if this helps
-      if(ph_lmr<0){R_ave=R_ave_TRUE;}
-      if(ph_lmr>0){R_ave=mfexp(ln_R_ave);}
+    //  if(ph_lmr<0){R_ave=R_ave_TRUE;}
+    //  if(ph_lmr>0){R_ave=mfexp(ln_R_ave);}
 
     for (int j=1;j<=npops;j++)
      {
-      //if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
-      //if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
+      if(ph_lmr<0){R_ave(j)=R_ave_TRUE(j);}
+      //if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
+      if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j));}
     
       for (int r=1;r<=nregions(j);r++)   
        {       
@@ -1428,8 +1429,7 @@ FUNCTION get_vitals
           abund_devs(j,a)=mfexp(ln_abund_devs(j,a)); //age based abund devs by population
          }
        }
-
-
+ 
    if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
     {
    if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
@@ -1546,8 +1546,8 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
-               // rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
+                //rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
+               rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
               //rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
                  
                   if(ph_rec<0)
@@ -1617,6 +1617,23 @@ FUNCTION get_abundance
 
        if(y==1)
          {
+        for (int a=1;a<=nages;a++)
+          {
+           for (int p=1;p<=npops;p++)
+            {
+             for (int j=1;j<=npops;j++)
+              {             
+               for (int r=1;r<=nregions(j);r++)
+                {
+                 ///init_abundance calcs
+                  if(ph_abund_devs>0){
+                  init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);}
+                  
+                  if(ph_abund_devs<0)
+                   { init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);}
+                   }}}}
+
+ 
          for (int a=1;a<=nages;a++)
           {
            for (int p=1;p<=npops;p++)
@@ -1627,11 +1644,6 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
-                   init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
-                  if(ph_abund_devs<0)
-                   {
-                     init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
-                   }
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
@@ -1665,6 +1677,14 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+
+ //     cout<<R_ave<<endl;
+ //     cout<<frac_natal<<endl;
+ //     cout<<abund_devs<<endl;
+ //     cout<<rec_devs<<endl;
+ //     cout<<init_abund<<endl;
+ //     exit(99);
 
          for (int a=1;a<=nages;a++)
           {
