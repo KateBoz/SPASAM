@@ -1367,6 +1367,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
+ //R_ave=ln_R_ave; ///this is annoying...//a quick fix
  R_ave=ln_R_ave; ///this is annoying...//a quick fix
  
   for (int p=1;p<=npops;p++)
