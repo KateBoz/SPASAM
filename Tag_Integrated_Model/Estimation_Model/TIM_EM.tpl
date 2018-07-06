@@ -795,18 +795,18 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
-//INITIALIZATION_SECTION  //set initial values
+INITIALIZATION_SECTION  //set initial values
  //  steep .814;
- //  ln_q 2;
- //  ln_R_ave 5;
+ //   ln_q 2;
+ //  ln_R_ave 6;
  //  log_sel_beta1 0;
  //  log_sel_beta2 2;
  //  log_sel_beta1surv 0;
  //  log_sel_beta2surv 2;
  //  ln_F -.7
-  // ln_rec_devs_RN 1.1;
+ // ln_rec_devs_RN 0.1;
  //  ln_rec_prop_CNST -1.1;
-  // ln_abund_devs 0.1;
+ // ln_abund_devs 0.1;
 
 PROCEDURE_SECTION
  
@@ -820,7 +820,6 @@ PROCEDURE_SECTION
    get_CAA_prop();
    get_tag_recaptures();
    evaluate_the_objective_function();
-
 
 
 ///////BUILD MOVEMENT MATRIX////////
@@ -871,7 +870,7 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);            
+              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);
         }
        } 
       }
@@ -1771,6 +1770,7 @@ FUNCTION get_abundance
     
                 abundance_move_temp=0;
                 bio_move_temp=0;
+
 
                 for (int k=1;k<=npops;k++)
                  {
