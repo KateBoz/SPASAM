@@ -49,7 +49,7 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 line.wd=0.8
 
 #select threshold correlation level for corrlation plot
-cor.level = 0.07# can change this in the make.plots function below
+cor.level = 0.4# can change this in the make.plots function below
 
 
 ##############################################
@@ -78,14 +78,14 @@ EM_name<-"TIM_EM"
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\3_TIM_Multi_Area"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\TIM_Editing"
 
 #list files in the directory
 files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=1
+i=3
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -125,6 +125,20 @@ file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
+
+#remove exsisting cor and std files
+cor.name<-paste0(EM_name,".cor")
+std.name<-paste0(EM_name,".std")
+
+if (file.exists(cor.name)) {
+  file.remove(cor.name)
+}
+
+if (file.exists(std.name)) {
+  file.remove(std.name)
+}
+
+#run the model
 system.time( # keeping track of time for run
 
 invisible(shell(paste0(EM_name),wait=T)))
@@ -150,7 +164,13 @@ make.plots<-function(direct=EM_direct){ #run diagnostics plotting
 out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
 
 #use the pbsadmb package to get the cor and std files in
-cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+
+cor.name<-paste0(EM_name,".cor")
+
+if (file.exists(cor.name)) {
+  cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+}
+
 std<-readRep(EM_name, suffix=".std", global=FALSE)
 
 
@@ -278,8 +298,11 @@ if(npops>1 && npops_OM>1){
 
 Rec_Dev_Est=as.vector(t(out$rec_devs))
 Rec_Dev_True=as.vector(t(out$rec_devs_TRUE[,2:ncol(out$rec_devs_TRUE)]))
+#Rec_Dev_True=as.vector(t(out$rec_devs_TRUE))
 
 rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
+
+#rec.devs<-data.frame(Year=rep(years,nreg),Reg=rep(1:nreg,each=(nyrs)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
 
 
 rec.devs.plot<-melt(rec.devs,id=c("Reg","Year"))
@@ -1647,7 +1670,9 @@ dev.off()
 #Plot corrlation Matrix
 ################################################
 
-#cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+#if cor file exists
+if (file.exists(cor.name)) {
+
 cor.mat<-as.matrix(cor)
 
 #removing diag
@@ -1676,6 +1701,8 @@ corrplot(cor2, type = "upper", order = "original",
 
 #save as PDF
 dev.off()
+}
+
 
 #####################
 # Plot Tag residuals
@@ -1872,9 +1899,11 @@ make.plots()
 ################################################################################
 #to make things simple and fast just run these pieces of code consecutively when editing
 
+
+{
 time.elapsed<-run.model()
 make.plots()
-
+}
 
 
 
