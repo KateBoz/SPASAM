@@ -85,7 +85,7 @@ files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=3
+i=2
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -120,8 +120,6 @@ invisible(shell(paste0(OM_name," -nohess"),wait=T))
 from<-paste0(OM_direct,"\\",OM_name,".rep")
 to<-paste0(EM_direct,"\\",EM_name,".dat")
 
-file.remove(to) #remove old version if present
-file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
@@ -137,6 +135,17 @@ if (file.exists(cor.name)) {
 if (file.exists(std.name)) {
   file.remove(std.name)
 }
+
+
+#remove .dat
+if (file.exists(to)) {
+  file.remove(to)
+}
+
+
+#copy .dat over from OM
+file.copy(from = from,  to = to)
+
 
 #run the model
 system.time( # keeping track of time for run
@@ -1899,15 +1908,17 @@ make.plots()
 ################################################################################
 #to make things simple and fast just run these pieces of code consecutively when editing
 
-
 {
 time.elapsed<-run.model()
 make.plots()
 }
 
 
+out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
 
-
+out$alt_T_year1
+out$T_year_TRUE
+setwd(OM_direct)
 
   
 
