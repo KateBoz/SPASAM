@@ -159,6 +159,10 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
 
+  init_number init_abund_switch
+  //==0 input init abundance
+  //==1 decay from R_ave
+
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
   //==0 for equal by area or average
@@ -271,8 +275,9 @@ DATA_SECTION
 
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_matrix equil_ssb_apport(1,np,1,nreg)
-  
-  init_4darray init_abund(1,np,1,np,1,nreg,1,na)
+
+  init_3darray frac_natal(1,np,1,np,1,nreg)
+  init_4darray input_init_abund(1,np,1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_3darray sigma_survey(1,np,1,nreg,1,nfs)
   init_4darray sigma_survey_overlap(1,np,1,np,1,nreg,1,nfs)
@@ -440,11 +445,15 @@ DATA_SECTION
   init_number lb_R_ave//lower bound on R_ave
   init_number ub_R_ave//upper bound on R_ave
   init_int ph_rec
+  init_int lb_rec_devs
+  init_int ub_rec_devs
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
   init_int ph_abund_devs
   init_int ph_reg_init // use when multiple regions, non natal homing to est distribution across regions
   init_int ph_non_natal_init // use when natal homing to estimate distribution across pops, regs
+  init_int lb_abund_devs
+  init_int ub_abund_devs
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -593,6 +602,7 @@ PARAMETER_SECTION
  4darray M(1,nps,1,nr,1,nyr,1,nag)
  matrix rec_devs(1,nps,1,nyr)
  matrix rec_devs_randwalk(1,nps,1,nyr)
+ 4darray init_abund(1,nps,1,nps,1,nr,1,nag)
  4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
@@ -1367,7 +1377,6 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
- //R_ave=ln_R_ave; ///this is annoying...//a quick fix
  R_ave=ln_R_ave; ///this is annoying...//a quick fix
  
   for (int p=1;p<=npops;p++)
@@ -1528,7 +1537,7 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
            {
            if(y==1)
              {
-              env_rec(y)=init_abund(p,j,r,1);
+              env_rec(y)=input_init_abund(p,j,r,1);
              }           
            if(y>1)
             {
@@ -1571,6 +1580,8 @@ FUNCTION get_DD_move_parameters
         }
 
 FUNCTION get_abundance
+
+
        for (int y=1;y<=nyrs;y++)
         {
 
@@ -1594,6 +1605,16 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
+
+                  if(init_abund_switch==1)
+                  {
+                  init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                  }
+                  
+                  if(init_abund_switch==0) {
+                  init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
+                  }
+
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
                     biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
@@ -5644,7 +5665,6 @@ FUNCTION evaluate_the_objective_function
                }
               }
 
- 
 REPORT_SECTION
 
  //for the mismatch calculate the abundance fraction by region/population
@@ -5830,6 +5850,10 @@ REPORT_SECTION
   report<<ub_R_ave<<endl;
   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
+  report<<"#lb_rec_devs"<<endl;
+  report<<lb_rec_devs<<endl;
+  report<<"#ub_rec_devs"<<endl;
+  report<<ub_rec_devs<<endl;
   report<<"#ph_rec_app_CNST"<<endl;
   report<<ph_rec_app_CNST<<endl;
   report<<"#ph_rec_app_YR"<<endl;
@@ -5840,6 +5864,10 @@ REPORT_SECTION
   report<<ph_reg_init<<endl;
   report<<"#ph_non_natal_init"<<endl;
   report<<ph_non_natal_init<<endl;
+  report<<"#lb_abund_devs"<<endl;
+  report<<lb_abund_devs<<endl;
+  report<<"#ub_abund_devs"<<endl;
+  report<<ub_abund_devs<<endl;
   report<<"#ph_F"<<endl;
   report<<ph_F<<endl;
   report<<"#ph_steep"<<endl;
