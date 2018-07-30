@@ -160,11 +160,15 @@ DATA_SECTION
   init_number lb_R_ave
   init_number ub_R_ave
   init_int ph_rec
+  init_int lb_rec_devs
+  init_int ub_rec_devs
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
   init_int ph_abund_devs
   init_int ph_reg_init
   init_int ph_non_natal_init
+  init_int lb_abund_devs
+  init_int ub_abund_devs
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -432,7 +436,7 @@ LOCAL_CALCS
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-              offset(1) -= OBS_survey_prop_N(j,r,y,z) * ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001));
+              offset(1) -= ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001));
               }
             }
            }
@@ -448,7 +452,7 @@ LOCAL_CALCS
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-                offset(2) -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
+                offset(2) -= ((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
                }
             }
            }
@@ -478,8 +482,8 @@ PARAMETER_SECTION
    !! int T_lgth=sum(nr);
    !! int T_lgth_YR=sum(nr)*nyr;
  ///#####################################################################################################
-     init_bounded_matrix ln_T_YR(1,T_lgth_YR,1,T_lgth-1,-10,3,phase_T_YR);  
-     init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,-10,3,phase_T_CNST);
+     init_bounded_matrix ln_T_YR(1,T_lgth_YR,1,T_lgth-1,-6,5,phase_T_YR);  
+     init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,-9,10,phase_T_CNST);
      matrix G(1,T_lgth,1,T_lgth);
      vector G_temp(1,T_lgth);
 
@@ -513,14 +517,14 @@ PARAMETER_SECTION
   4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
   4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
   
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-5,5,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,-6,5,ph_q)
  
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
 //F parameters
    !! int F_lgth=sum(nr)*nyr;
 
-  init_bounded_matrix ln_F(1,F_lgth,1,fishfleet,-7,2,ph_F) //the actual parameters  
+  init_bounded_matrix ln_F(1,F_lgth,1,fishfleet,-5,5,ph_F) //the actual parameters  
   init_bounded_matrix F_rho(1,parpops,1,fishfleet,0,2,ph_F_rho) //random walk params*
   5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
   4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
@@ -565,7 +569,7 @@ PARAMETER_SECTION
 //  vector G_app_temp(1,nps);
 
  //#########################################################################################################################
-  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,nr-1,-5,5,ph_rec_app_CNST)//check this too!
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,parreg-1,-5,5,ph_rec_app_CNST)//check this too!
   init_bounded_matrix ln_rec_prop_YR(1,nps,1,nyr-1,-5,5,ph_rec_app_YR) //needs work
 
   matrix G_app(1,nps,1,nr);//check this
@@ -573,12 +577,11 @@ PARAMETER_SECTION
  //#########################################################################################################################
    !! int dev_lgth=nps*(nyr-1);
   // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-   init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,-10,10,ph_rec)
-  
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,-10,10,ph_abund_devs) //for initial abundance
+  init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,lb_rec_devs,ub_rec_devs,ph_rec)
+  init_bounded_matrix ln_abund_devs(1,nps,1,nag,lb_abund_devs,ub_abund_devs,ph_abund_devs) //for initial abundance
 
-  init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-10,10,ph_non_natal_init)
-  init_bounded_matrix ln_reg(1,nps,1,nr-1,-10,10,ph_reg_init)
+  init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-9,10,ph_non_natal_init)
+  init_bounded_matrix ln_reg(1,nps,1,parreg-1,-9,10,ph_reg_init)
   matrix G_nat(1,nps,1,T_lgth);
   vector G_nat_temp(1,nps);
   matrix G_reg(1,nps,1,nr);
@@ -589,7 +592,9 @@ PARAMETER_SECTION
   matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
   init_bounded_vector ln_R_ave(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
-  vector R_ave(1,parpops) // switch from log scale
+  vector R_ave(1,parpops) // switch to log scale
+ // init_bounded_vector ln_R_ave_start(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
+ // vector R_ave_start(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
   init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
   vector alpha(1,nps) //derived quantity
@@ -786,6 +791,7 @@ PARAMETER_SECTION
   number catch_like 
   number survey_like
   number Tpen_like
+  number abund_dev_pen
  // init_bounded_number  theta(1,100,ph_theta);   // for negbinomial -lnL
 
  init_number dummy(ph_dummy)
@@ -795,18 +801,18 @@ PARAMETER_SECTION
   !! cout << "parameters set" << endl;
 
 
-INITIALIZATION_SECTION  //set initial values
- //  steep .814;
- //   ln_q 2;
- //  ln_R_ave 6;
- //  log_sel_beta1 0;
- //  log_sel_beta2 2;
- //  log_sel_beta1surv 0;
- //  log_sel_beta2surv 2;
- //  ln_F -.7
- // ln_rec_devs_RN 0.1;
- //  ln_rec_prop_CNST -1.1;
- // ln_abund_devs 0.1;
+//INITIALIZATION_SECTION  //set initial values
+//   steep .814;
+//   ln_q 8;
+//   ln_R_ave 10;
+//   log_sel_beta1 0;
+//   log_sel_beta2 2;
+//   log_sel_beta1surv 0;
+//   log_sel_beta2surv 2;
+//   ln_F -.7
+//   ln_rec_devs_RN 0;
+//   ln_rec_prop_CNST -1.1;
+//   ln_abund_devs 0;
 
 PROCEDURE_SECTION
  
@@ -820,6 +826,7 @@ PROCEDURE_SECTION
    get_CAA_prop();
    get_tag_recaptures();
    evaluate_the_objective_function();
+
 
 
 ///////BUILD MOVEMENT MATRIX////////
@@ -839,13 +846,13 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              if(j==k & r==n)
+              if(j==k && r==n)
               {
-               T(j,r,y,a,k,n)=1;
+               T(j,r,y,a,k,n)=1.0;
               }
               if(j!=k || r!=n)
               {
-               T(j,r,y,a,k,n)=0;
+               T(j,r,y,a,k,n)=0.0;
               }
             }
            } 
@@ -870,7 +877,7 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);
+              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);            
         }
        } 
       }
@@ -1029,7 +1036,6 @@ FUNCTION get_movement
           }
          }
         }
-
 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
@@ -1218,14 +1224,20 @@ FUNCTION get_vitals
       }
 
 //see if this helps
-    //  if(ph_lmr<0){R_ave=R_ave_TRUE;}
-    //  if(ph_lmr>0){R_ave=mfexp(ln_R_ave);}
-
+    
     for (int j=1;j<=npops;j++)
      {
-      if(ph_lmr<0){R_ave(j)=R_ave_TRUE(j);}
-      //if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
-      if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j));}
+      if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j)+.5*square(sigma_recruit(j)));}
+      //if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j));}
+     }
+     
+    if(ph_lmr<0){R_ave=R_ave_TRUE;}
+   // R_ave_start=mfexp(ln_R_ave_start);
+    
+    for (int j=1;j<=npops;j++)
+     {
+      //if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
+      //if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
     
       for (int r=1;r<=nregions(j);r++)   
        {       
@@ -1428,7 +1440,8 @@ FUNCTION get_vitals
           abund_devs(j,a)=mfexp(ln_abund_devs(j,a)); //age based abund devs by population
          }
        }
- 
+
+
    if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
     {
    if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
@@ -1545,8 +1558,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                //rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
-               rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)*sigma_recruit(j)-.5*square(sigma_recruit(j)));// this is what was in the OM
+                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
               //rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
                  
                   if(ph_rec<0)
@@ -1613,26 +1625,8 @@ FUNCTION get_abundance
 ///////////////////// Y==1 Overlap Calcs ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
        if(y==1)
          {
-        for (int a=1;a<=nages;a++)
-          {
-           for (int p=1;p<=npops;p++)
-            {
-             for (int j=1;j<=npops;j++)
-              {             
-               for (int r=1;r<=nregions(j);r++)
-                {
-                 ///init_abundance calcs
-                  if(ph_abund_devs>0){
-                  init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);}
-                  
-                  if(ph_abund_devs<0)
-                   { init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);}
-                   }}}}
-
- 
          for (int a=1;a<=nages;a++)
           {
            for (int p=1;p<=npops;p++)
@@ -1642,7 +1636,24 @@ FUNCTION get_abundance
                for (int r=1;r<=nregions(j);r++)
                 {
                  for (int z=1;z<=nfleets(j);z++)
-                  {
+                 {
+                  //if(a==1)
+                  //{
+                 // init_abund(p,j,r,a)=R_ave(p)*frac_natal(p,j,r);
+                 // }
+                 // if(a>1)
+                // {
+                  if(ph_abund_devs>0)
+                   {
+                   init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                    }
+                  if(ph_abund_devs<0)
+                   {
+                     //abund_devs(p,a)=1;
+                     //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                     init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                     //init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
+                   }
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
@@ -1677,14 +1688,6 @@ FUNCTION get_abundance
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
 
-
- //     cout<<R_ave<<endl;
- //     cout<<frac_natal<<endl;
- //     cout<<abund_devs<<endl;
- //     cout<<rec_devs<<endl;
- //     cout<<init_abund<<endl;
- //     exit(99);
-
          for (int a=1;a<=nages;a++)
           {
            for (int p=1;p<=npops;p++)
@@ -1704,7 +1707,7 @@ FUNCTION get_abundance
                    {              
                     if(move_switch!=6 || move_switch!=7 || a==1)  //if movement is not type=6 or a==1 (and movement type 6)
                      {
-                       abundance_move_overlap_temp(k,n)=init_abund(p,k,n,a)*T(p,n,y,a,j,r); //with overlap always use natal population movement rates  (i.e., use p inpopsead of k)
+                       abundance_move_overlap_temp(k,n)=init_abund(p,k,n,a)*T(p,n,y,a,j,r); //with overlap always use natal population movement rates  (i.e., use p instead of k)
                      }
                     if(move_switch==6 && a>1)
                      {
@@ -1770,7 +1773,6 @@ FUNCTION get_abundance
     
                 abundance_move_temp=0;
                 bio_move_temp=0;
-
 
                 for (int k=1;k<=npops;k++)
                  {
@@ -3590,7 +3592,6 @@ FUNCTION get_tag_recaptures
          }
         }
  }
-
 FUNCTION evaluate_the_objective_function
    //f=dummy; //in case all the estimated parameters are turned off
    f=0.0;
@@ -3622,22 +3623,24 @@ FUNCTION evaluate_the_objective_function
 
  if(active(ln_T_CNST))
   {
-     for (int j=1;j<=nregions(1);j++)
+     for (int j=1;j<=sum(nregions);j++)
       {
-      for (int i=1;i<=nregions(1)-1;i++) 
+      for (int i=1;i<=sum(nregions)-1;i++) 
        {
           if(ln_T_CNST(j,i)<Tpen)
            {
-           Tpen_like+=(Tpen-ln_T_CNST(j,i))*(Tpen-ln_T_CNST(j,i));
+           Tpen_like+=10*(Tpen-ln_T_CNST(j,i))*(Tpen-ln_T_CNST(j,i));
           }
           if(ln_T_CNST(j,i)>Tpen2)
            {
-           Tpen_like+=(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
+           Tpen_like+=10*(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
           }
          }
         }
-      }
       
+     // EOUT(Tpen_like);
+     // EOUT(ln_T_CNST);
+     }
    f+=Tpen_like;   
  }
 
@@ -3663,13 +3666,13 @@ FUNCTION evaluate_the_objective_function
              for (int z=1;z<=nfleets_survey(j);z++)
               {
               if(diagnostics_switch==1){
-              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
-              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
+              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001)))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
+              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001)));
                }
                
               if(diagnostics_switch==0){
-              survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) )/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z)))); //OBS_survey_fleet_bio(j,r,y,z))));
-              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * ((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001));
+              survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) ))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
+              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_survey_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001)));
               }
 
               }
@@ -3677,7 +3680,7 @@ FUNCTION evaluate_the_objective_function
            }
           }
         
-            survey_age_like -=offset(1);
+         //   survey_age_like -=offset(1);
      // catch likelihood and multinomial fishery ages
    for (int j=1;j<=npops;j++)
      {
@@ -3689,30 +3692,47 @@ FUNCTION evaluate_the_objective_function
               {
 
               if(diagnostics_switch==1){
-               catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
-               fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
+               catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001)) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z))); //OBS_yield_fleet(j,r,y,z))));
+               fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*(((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001))-((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)));
                 }
               if(diagnostics_switch==0){
-              catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z)))); //OBS_yield_fleet(j,r,y,z))));
-              fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001));
+              catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) ))/ (2.*square(OBS_yield_fleet_se(j,r,y,z))); //OBS_yield_fleet(j,r,y,z))));
+              fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*(((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)));
               }
              }
             }
            }
           }
-       fish_age_like -=offset(2);
- if(active(ln_rec_devs_RN))
-  {
-   for(int j=1;j<=npops;j++)
-    {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
-     for(int y=1;y<=nyrs-1;y++)
-      {
-       rec_like +=log(sigma_recruit(j))+(square(log(total_recruits(j,y)+.00001)-log(SR(j,y)+.00001)))/(2*square(sigma_recruit(j)));
-      }
-    }
-  }
 
- 
+  abund_dev_pen.initialize();
+
+     //  fish_age_like -=offset(2);
+  //      for(int j=1;j<=npops;j++)
+  //  {
+ if(active(ln_rec_devs_RN))
+          for(int j=1;j<=npops;j++) {
+     rec_like+=dnorm(ln_rec_devs_RN(j),0,sigma_recruit(j));
+      }
+
+
+ //may be better way to penalize....
+
+  //  }
+  
+ if(abund_pen_switch==1)
+ {
+  if (active(ln_abund_devs))
+  {
+ //f+=100* norm2(ln_abund_devs);
+ if(active(ln_rec_devs_RN))
+          for(int j=1;j<=npops;j++) {
+ abund_dev_pen+=100000* norm2(ln_abund_devs(j));
+ } 
+    }}
+       if(active(ln_F))
+  {
+ if (current_phase()<3) f+= 10000*(norm2(mfexp(ln_F)));
+ }
 
  //if(active(ln_rec_devs_RN))
 // {
@@ -3789,13 +3809,7 @@ FUNCTION evaluate_the_objective_function
   // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
 
   /// Early penalty to keep F under wraps
- if (current_phase()<last_phase()) f+= 1000*(norm2(mfexp(ln_F)));
 
- //may be better way to penalize....
- if(abund_pen_switch==1)
- {
-  if (active(ln_abund_devs)) f+= norm2(ln_abund_devs); 
- } 
 // Sum objective function
    f           += survey_like*wt_srv;
    f           += catch_like*wt_catch;
@@ -3803,7 +3817,8 @@ FUNCTION evaluate_the_objective_function
    f           += survey_age_like*wt_srv_age;
    f           += rec_like*wt_rec;
    f           += tag_like*wt_tag;
-  
+   f           += abund_dev_pen;
+
 REPORT_SECTION
     //likelihoods
   report<<"$likelihood components"<<endl;
@@ -3821,6 +3836,10 @@ REPORT_SECTION
   report<<catch_like<<endl;
   report<<"$rec_like"<<endl;
   report<<rec_like<<endl;
+    report<<"$Tpen_like"<<endl;
+  report<<Tpen_like<<endl;
+      report<<"$abund_dev_pen"<<endl;
+  report<<abund_dev_pen<<endl;
 
 
 //EM structure
@@ -4112,5 +4131,6 @@ REPORT_SECTION
 
 RUNTIME_SECTION
  convergence_criteria .001,.0001, 1.0e-4, 1.0e-4
-  //maximum_function_evaluations 10000
- maximum_function_evaluations 4000  
+    maximum_function_evaluations 10000
+// convergence_criteria .001
+//    maximum_function_evaluations 4000
