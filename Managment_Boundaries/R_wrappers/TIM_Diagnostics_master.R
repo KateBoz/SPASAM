@@ -6,7 +6,7 @@
 # Manually make changes in the OM .dat and run both OM and EM together
 
 #remove junk from workspace
-#rm(list=(ls()))
+rm(list=(ls()))
 
 
 #load libraries
@@ -24,6 +24,9 @@ load_libraries<-function() {
   library(matrixStats) 
   library(gridExtra)
   library(grid)
+  library(PBSadmb)
+  library(gtable)
+  library(corrplot)
   }
 load_libraries()
 
@@ -45,6 +48,8 @@ mycols=colorRampPalette(c("blue", "cyan","black"))
 # Select Line width
 line.wd=0.8
 
+#select threshold correlation level for corrlation plot
+cor.level = 0.4# can change this in the make.plots function below
 
 
 ##############################################
@@ -62,26 +67,29 @@ resid.switch=1
 #################################################################################
   
 #name OPERATING MODEL of the .exe
-OM_name<-OM_name #name of the OM you are wanting to run
-#OM_name<-"MB_TIM" #name of the OM you are wanting to run
+#OM_name<-OM_name #name of the OM you are wanting to run
+OM_name<-"MB_OM" 
+#OM_name<-"TIM_OM" 
 
 #name ESTIMATION MODEL of the .exe
-EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
-#EM_name<-"MB_TIM" ###name of .dat, .tpl., .rep, etc.
+#EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
+EM_name<-"MB_EM" 
+#EM_name<-"TIM_EM" 
 
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM_GIT\\SPASAM\\Managment_Boundaries"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Managment_Boundaries"
+#direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch"
+
 
 #list files in the directory
 files<-list.files(direct_master)
 
-
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=5
+i=1
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -102,12 +110,12 @@ i=5
 
 # One touch operation...run the whole code. Comment out this and very last bracket to run sections manually
 
-{  
-  
+
+#{  
 
 #running the OM and EM together
- { 
-
+run.model<-function(){
+  
 #run the OM
 setwd(OM_direct)
 invisible(shell(paste0(OM_name," -nohess"),wait=T))
@@ -116,20 +124,45 @@ invisible(shell(paste0(OM_name," -nohess"),wait=T))
 from<-paste0(OM_direct,"\\",OM_name,".rep")
 to<-paste0(EM_direct,"\\",EM_name,".dat")
 
-file.remove(to) #remove old version if present
-file.copy(from = from,  to = to)
 
 #run the EM
 setwd(EM_direct)
 
-time.elapsed<- system.time( # keeping track of time for run
+#remove exsisting cor and std files
+cor.name<-paste0(EM_name,".cor")
+std.name<-paste0(EM_name,".std")
+
+if (file.exists(cor.name)) {
+  file.remove(cor.name)
+}
+
+if (file.exists(std.name)) {
+  file.remove(std.name)
+}
+
+
+#remove .dat
+if (file.exists(to)) {
+  file.remove(to)
+}
+
+
+#copy .dat over from OM
+file.copy(from = from,  to = to)
+
+
+#run the model
+system.time( # keeping track of time for run
 
 invisible(shell(paste0(EM_name),wait=T)))
 
 } #end running the OM/EM together
 
+time.elapsed<-run.model()
 
-  
+#use this function to run the model
+#make.plots()
+
 #########################################################
 #########################################################
 ##### Ploting Code        ###############################
@@ -142,6 +175,18 @@ make.plots<-function(direct=EM_direct){ #run diagnostics plotting
   
 #Read in model .rep
 out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
+
+#use the pbsadmb package to get the cor and std files in
+
+cor.name<-paste0(EM_name,".cor")
+
+if (file.exists(cor.name) && out$dummy<0) {
+  cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
+}
+
+
+std<-readRep(EM_name, suffix=".std", global=FALSE)
+
 
 
 #pull info about the model
@@ -176,9 +221,9 @@ diag_theme<-
   theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))
 
+######################################################################################
 
-
-############################
+######################################################################################
 #Likelihoods in histagram
 
 #vector of values 
@@ -196,8 +241,6 @@ like.p <-ggplot(likes, aes(names, likes))+
   diag_theme+
   theme(axis.text.x=element_text(angle=40,hjust=0.5,vjust=0.5),plot.margin = unit(c(0.5, 0.5, 2, 0.5),"lines"))
   
-
-
 
 ##############################
 #### RECRUITMENT PLOTS #######
@@ -269,8 +312,11 @@ if(npops>1 && npops_OM>1){
 
 Rec_Dev_Est=as.vector(t(out$rec_devs))
 Rec_Dev_True=as.vector(t(out$rec_devs_TRUE[,2:ncol(out$rec_devs_TRUE)]))
+#Rec_Dev_True=as.vector(t(out$rec_devs_TRUE))
 
 rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
+
+#rec.devs<-data.frame(Year=rep(years,nreg),Reg=rep(1:nreg,each=(nyrs)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
 
 
 rec.devs.plot<-melt(rec.devs,id=c("Reg","Year"))
@@ -1318,8 +1364,8 @@ OM_error_table[8,2:(1+nreg_OM)]<-OM_dat[nsurvey_om:(nsurvey_om+(nreg_OM-1))]
 OM_table<-tableGrob(OM_error_table)
 h <- grobHeight(OM_table)
 w <- grobWidth(OM_table)
-title <- textGrob("OM Error Params", y=unit(0.5,"npc") + 1.0*h, 
-                  vjust=0, gp=gpar(fontsize=12))
+title <- textGrob("OM Error Parameters", y=unit(0.5,"npc") + 1.0*h, 
+                  vjust=0, gp=gpar(fontsize=11))
 
 gt <- gTree(children=gList(OM_table, title))
 
@@ -1343,15 +1389,17 @@ if(file.exists(paste0(EM_name,".cor"))==FALSE)
 {cor.text<-paste("Model did NOT Converge")}
 
 #max gradient
-grad.val<-"Max gradient will eventually go here"
 
+grad<-readLines(paste0(EM_name,".par"))[1]
+pos = regexpr('Max', grad)
+grad.val<-substr(grad,pos,nchar(grad))
 
-
-tgrob.mod <- textGrob(paste(cor.text,grad.val,sep = "\n"),just = "centre")
+tgrob.mod <- textGrob(paste(cor.text," ",grad.val,sep = "\n"),just = "centre")
 
 ####################################################
 ##Table of True and Estimated values for parameters
 ####################################################
+
 {
 #Estimated parameter values
 # not set up for domed selectivity...can add that later
@@ -1364,17 +1412,59 @@ EM_est_table<-cbind(EM_est_table,temp_est)
 #params
 EM_est_table[1,2:ncol(EM_est_table)]<-round(out$q_survey,2)
 EM_est_table[2,2:ncol(EM_est_table)]<-round(out$R_ave,2)
-EM_est_table[3,2:ncol(EM_est_table)]<-round(out$sel_beta1,2)
-EM_est_table[4,2:ncol(EM_est_table)]<-round(out$sel_beta2,2)
-EM_est_table[5,2:ncol(EM_est_table)]<-round(out$sel_beta3,2)
-EM_est_table[6,2:ncol(EM_est_table)]<-round(out$sel_beta4,2)
+
+
+# adding in selectivity values based on specification
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==0)
+{
+  EM_est_table[3,2:ncol(EM_est_table)]<-NA
+  EM_est_table[4,2:ncol(EM_est_table)]<-NA
+  EM_est_table[5,2:ncol(EM_est_table)]<-NA
+  EM_est_table[6,2:ncol(EM_est_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==0)
+{
+  EM_est_table[7,2:ncol(EM_est_table)]<-NA
+  EM_est_table[8,2:ncol(EM_est_table)]<-NA
+  EM_est_table[9,2:ncol(EM_est_table)]<-NA
+  EM_est_table[10,2:ncol(EM_est_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==1)
+{
+  EM_est_table[3,2:ncol(EM_est_table)]<-round(out$sel_beta1,2)
+  EM_est_table[4,2:ncol(EM_est_table)]<-round(out$sel_beta2,2)
+  EM_est_table[5,2:ncol(EM_est_table)]<-NA
+  EM_est_table[6,2:ncol(EM_est_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==1)
+{
+EM_est_table[7,2:ncol(EM_est_table)]<-round(out$sel_beta1_survey,2)
+EM_est_table[8,2:ncol(EM_est_table)]<-round(out$sel_beta2_survey,2)
+EM_est_table[9,2:ncol(EM_est_table)]<-NA
+EM_est_table[10,2:ncol(EM_est_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==2)
+{
+  EM_est_table[3,2:ncol(EM_est_table)]<-round(out$sel_beta1,2)
+  EM_est_table[4,2:ncol(EM_est_table)]<-round(out$sel_beta2,2)
+  EM_est_table[5,2:ncol(EM_est_table)]<-round(out$sel_beta3,2)
+  EM_est_table[6,2:ncol(EM_est_table)]<-round(out$sel_beta4,2)
+}
+
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==2)
+{
 EM_est_table[7,2:ncol(EM_est_table)]<-round(out$sel_beta1_survey,2)
 EM_est_table[8,2:ncol(EM_est_table)]<-round(out$sel_beta2_survey,2)
 EM_est_table[9,2:ncol(EM_est_table)]<-round(out$sel_beta3_survey,2)
 EM_est_table[10,2:ncol(EM_est_table)]<-round(out$sel_beta4_survey,2)
+}
 
-
-est_params<-tableGrob(EM_est_table)
+est_params<-tableGrob(EM_est_table,theme = ttheme_default(base_size = 11))
 h <- grobHeight(est_params)
 w <- grobWidth(est_params)
 title_est <- textGrob("Estimated Parameter Values", y=unit(0.5,"npc") + 1.0*h, 
@@ -1383,7 +1473,10 @@ title_est <- textGrob("Estimated Parameter Values", y=unit(0.5,"npc") + 1.0*h,
 gt_est <- gTree(children=gList(est_params, title_est))
 
 
+##################################
 #True Values
+#################################
+
 OM_true_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fishery","beta 3 fishery","beta 4 fishery","beta 1 survey","beta 2 survey","beta 3 survey","beta 4 survey"))
 
 #set up matrix to fill in the values
@@ -1392,24 +1485,69 @@ names(temp_est)<-1:nreg
 OM_true_table<-cbind(OM_true_table,temp_est)
 OM_true_table[1,2:ncol(OM_true_table)]<-round(out$q_survey_TRUE,2)
 OM_true_table[2,2:ncol(OM_true_table)]<-round(out$R_ave_TRUE,2)
-OM_true_table[3,2:ncol(OM_true_table)]<-round(out$sel_beta1_TRUE,2)
-OM_true_table[4,2:ncol(OM_true_table)]<-round(out$sel_beta2_TRUE,2)
-OM_true_table[5,2:ncol(OM_true_table)]<-round(out$sel_beta3_TRUE,2)
-OM_true_table[6,2:ncol(OM_true_table)]<-round(out$sel_beta4_TRUE,2)
-OM_true_table[7,2:ncol(OM_true_table)]<-round(out$sel_beta1_survey_TRUE,2)
-OM_true_table[8,2:ncol(OM_true_table)]<-round(out$sel_beta2_survey_TRUE,2)
-OM_true_table[9,2:ncol(OM_true_table)]<-round(out$sel_beta3_survey_TRUE,2)
-OM_true_table[10,2:ncol(OM_true_table)]<-round(out$sel_beta4_survey_TRUE,2)
 
-true_params<-tableGrob(OM_true_table)
+
+# adding in selectivity values based on specification
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==0)
+{
+  OM_true_table[3,2:ncol(OM_true_table)]<-NA
+  OM_true_table[4,2:ncol(OM_true_table)]<-NA
+  OM_true_table[5,2:ncol(OM_true_table)]<-NA
+  OM_true_table[6,2:ncol(OM_true_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==0)
+{
+  OM_true_table[7,2:ncol(OM_true_table)]<-NA
+  OM_true_table[8,2:ncol(OM_true_table)]<-NA
+  OM_true_table[9,2:ncol(OM_true_table)]<-NA
+  OM_true_table[10,2:ncol(OM_true_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==1)
+{
+  OM_true_table[3,2:ncol(OM_true_table)]<-round(out$sel_beta1_TRUE,2)
+  OM_true_table[4,2:ncol(OM_true_table)]<-round(out$sel_beta2_TRUE,2)
+  OM_true_table[5,2:ncol(OM_true_table)]<-NA
+  OM_true_table[6,2:ncol(OM_true_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==1)
+{
+  OM_true_table[7,2:ncol(OM_true_table)]<-round(out$sel_beta1_survey_TRUE,2)
+  OM_true_table[8,2:ncol(OM_true_table)]<-round(out$sel_beta2_survey_TRUE,2)
+  OM_true_table[9,2:ncol(OM_true_table)]<-NA
+  OM_true_table[10,2:ncol(OM_true_table)]<-NA
+}
+
+if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==2)
+{
+  OM_true_table[3,2:ncol(OM_true_table)]<-round(out$sel_beta1_TRUE,2)
+  OM_true_table[4,2:ncol(OM_true_table)]<-round(out$sel_beta2_TRUE,2)
+  OM_true_table[5,2:ncol(OM_true_table)]<-round(out$sel_beta3_TRUE,2)
+  OM_true_table[6,2:ncol(OM_true_table)]<-round(out$sel_beta4_TRUE,2)
+}
+
+
+if(OM_dat[grep("select_switch_survey_EM",OM_dat, fixed = T)+4]==2)
+{
+  OM_true_table[7,2:ncol(OM_true_table)]<-round(out$sel_beta1_survey_TRUE,2)
+  OM_true_table[8,2:ncol(OM_true_table)]<-round(out$sel_beta2_survey_TRUE,2)
+  OM_true_table[9,2:ncol(OM_true_table)]<-round(out$sel_beta3_survey_TRUE,2)
+  OM_true_table[10,2:ncol(OM_true_table)]<-round(out$sel_beta4_survey_TRUE,2)
+}
+
+true_params<-tableGrob(OM_true_table,theme = ttheme_default(base_size = 11))
 h <- grobHeight(true_params)
 w <- grobWidth(true_params)
 title_true <- textGrob("True Parameter Values", y=unit(0.5,"npc") + 1.0*h, 
                       vjust=0, gp=gpar(fontsize=12))
 
+
 gt_true <- gTree(children=gList(true_params, title_true))
 
 }
+
 
 ##########################################
 # SAVE THE OUTPUTS 
@@ -1491,7 +1629,6 @@ grid.arrange(ncol = 1,
              #top="Recruitment",
              rec2, R.dev.resid)
 
-
 grid.arrange(ncol = 1,
              #top="Recruitment ",
              rec.prop, R.apport.resid)
@@ -1541,22 +1678,104 @@ grid.arrange(ncol = 1,
     top ="Fits to Data continued",
     survey.comp.plot, fishery.comp.plot)
 
-#grid.arrange(ncol = 1,
-#    top ="Tag Proportion Residuals",
-#    tags.resid.plot)
-
 dev.off()
-  
+
+################################################
+#Plot corrlation Matrix
+################################################
+
+#if cor file exists
+if (file.exists(cor.name)) {
+
+cor.mat<-as.matrix(cor)
+
+#removing diag
+cor.mat[cor.mat==1]<-0
+#removing low correlations
+cor.mat[abs(cor.mat)<cor.level]<-0
+
+rm<-which(colSums(cor.mat)==0)
+
+#remove the parameter combinations with weak correlations.
+cor2<-as.matrix(cor[-rm,-rm])
+
+
+#create a corplot
+pdf("Correlation_Matrix.pdf", paper = "a4", width = 8, height = 11)
+
+if(nrow(cor2)==0){
+  corrplot(cor.mat, type = "upper", order = "original", 
+                            tl.col = "black", tl.srt = 45,tl.cex = 0.5,diag = F)
+  }
+
+if(nrow(cor2)>0){
+corrplot(cor2, type = "upper", order = "original", 
+         tl.col = "black", tl.srt = 45,tl.cex = 0.5,diag = F)
+}
+
+#save as PDF
+dev.off()
+}
+
+
+#####################
+# Plot Tag residuals
+######################
+
 pdf("Tag_Residuals.pdf",paper='a4r',width=11,height=8) 
 for(k in 1:nreg){
   print(tags.plot(k))}
 
 dev.off()
 
-#print(rec2)
+#############################################
+# Build table of Standard Errors
+#############################################
+
+#take the values off the log scale
+#std[,3:4]<-exp(std[,3:4])
 
 
-#save the outputs to a text file
+std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 10),rows = NULL)
+
+std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                            t = 2, b = nrow(std_params), l = 1, r = ncol(std_params)) 
+std_params <-gtable_add_grob(std_params,
+                     grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                     t = 1, l = 1, r = ncol(std_params))
+                             
+#h.st <- grobHeight(std_params)
+#title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
+#                       vjust=0, gp=gpar(fontsize=12))
+#gt_std <- gTree(children=gList(std_params, title_std))
+
+
+#print over many pages
+fullheight <- convertHeight(sum(std_params$heights), "cm", valueOnly = TRUE)
+margin <- unit(0.61,"in")
+margin_cm <- convertHeight(margin, "cm", valueOnly = TRUE)
+a4height <- 29.7 - margin_cm
+nrows <- nrow(std_params)
+npages <- ceiling(fullheight / a4height)
+
+heights <- convertHeight(std_params$heights, "cm", valueOnly = TRUE) 
+rows <- cut(cumsum(heights), include.lowest = FALSE,
+            breaks = c(0, cumsum(rep(a4height, npages))))
+groups <- split(seq_len(nrows), rows)
+gl <- lapply(groups, function(id) std_params[id,])
+
+
+pdf("Standard_Error_table.pdf", paper = "a4", width = 0, height = 0)
+ml<-marrangeGrob(grobs=gl, ncol=1, nrow=1, top="Standard Errors (log scale)")
+
+grid.draw(ml)
+dev.off()
+
+
+####################################
+#save all the outputs to a text file
+#####################################
+
 sink(file = "output.txt",
      append = F, type = "output")
 
@@ -1685,9 +1904,24 @@ sink()
 
 make.plots()
 
-} #end running the whole code
-
+#} #end running the whole code
 
 #} #end loops if doing many runs
+
+
+################################################################################
+################################################################################
+#to make things simple and fast just run these pieces of code consecutively when editing
+
+{
+time.elapsed<-run.model()
+make.plots()
+}
+
+#for checking individual things
+out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
+
+setwd(OM_direct)
+
   
 
