@@ -159,6 +159,10 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
 
+  init_number init_abund_switch
+  //==0 input init abundance
+  //==1 decay from R_ave
+
  //determine how to estimate R0 when there are multiple regions within a population that have different vital rates
   init_number maturity_switch_equil
   //==0 for equal by area or average
@@ -271,8 +275,9 @@ DATA_SECTION
 
   init_matrix input_Rec_prop(1,np,1,nreg)
   init_matrix equil_ssb_apport(1,np,1,nreg)
-  
-  init_4darray init_abund(1,np,1,np,1,nreg,1,na)
+
+  init_3darray frac_natal(1,np,1,np,1,nreg)
+  init_4darray input_init_abund(1,np,1,np,1,nreg,1,na)
   init_matrix rec_index_sigma(1,np,1,nreg)
   init_3darray sigma_survey(1,np,1,nreg,1,nfs)
   init_4darray sigma_survey_overlap(1,np,1,np,1,nreg,1,nfs)
@@ -301,7 +306,6 @@ DATA_SECTION
   init_number NR_iterationp
   init_number NR_dev
 
-
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -324,8 +328,7 @@ DATA_SECTION
   init_number EM_structure //
   // ==0 the RM is panmictic
   // ==1 the EM is metamictic
-  // ==2 the EM is metapop
-  
+  // ==2 the EM is metapop  
   init_number npops_EM
   !! int np_em=npops_EM;
   
@@ -342,6 +345,10 @@ DATA_SECTION
   init_number diagnostics_switch
   //#==0 allow OBS data to be used for estimation
   //#==1 allow TRUE data from without error to be used for estimation
+
+  init_number fleets_as_areas_switch // bypasses some challlenging portions of the code  - temporary
+  //==0 not fleets as areas
+  //==1 fleets as areas approach for EM
 
   init_number move_switch_EM
   ///// Sets the type of adult movement pattern (sets age class>1 movements)
@@ -360,6 +367,11 @@ DATA_SECTION
    //==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpopsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 
   init_number select_switch_EM
+  //==0 input selectivity
+  //==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
+
+  init_number select_switch_survey_EM
   //==0 input selectivity
   //==1 logistic selectivity based on input sel_beta1 and sel_beta2
   //==2 double logistic selectivity based on input sel_beta1, sel_beta2, sel_beta3 and sel_beta4
@@ -409,6 +421,9 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
 
+  init_number init_abund_switch_EM
+  //==0 input init_abund_EM
+  //==1 decay from R_ave. If phase is negative, input_init_abund is used.
 
   init_vector tspawn_EM(1,np_em) //timing of spawn for EM needs to match npops_EM
   init_vector return_probability_EM(1,np_em)
@@ -419,21 +434,27 @@ DATA_SECTION
 
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
   init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
-  init_vector sigma_recruit_EM(1,np_em) 
+  init_vector sigma_recruit_EM(1,np_em)
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
+
+  init_4darray input_selectivity_EM(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
+  init_4darray input_survey_selectivity_EM(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
-
   init_int ph_lmr
-  init_int lb_R_ave//lower bound on R_ave
-  init_int ub_R_ave//upper bound on R_ave
+  init_number lb_R_ave//lower bound on R_ave
+  init_number ub_R_ave//upper bound on R_ave
   init_int ph_rec
+  init_int lb_rec_devs
+  init_int ub_rec_devs
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
   init_int ph_abund_devs
   init_int ph_reg_init // use when multiple regions, non natal homing to est distribution across regions
   init_int ph_non_natal_init // use when natal homing to estimate distribution across pops, regs
+  init_int lb_abund_devs
+  init_int ub_abund_devs
   init_int ph_F
   init_int ph_steep
   init_int ph_M
@@ -450,11 +471,13 @@ DATA_SECTION
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
   init_int ph_q
+  init_int lb_q
+  init_int ub_q
   init_int ph_F_rho // if we want random walk F
   init_int ph_T_YR //use if want to estimate yearly T
   init_int ph_T_CNST //use if want to estimate time-invariant T
   init_int ph_dummy
- 
+
   init_number wt_surv
   init_number wt_catch
   init_number wt_fish_age
@@ -499,7 +522,9 @@ DATA_SECTION
   init_number myseed_survey_age
   init_number myseed_catch_age
   init_number myseed_tag
-  
+
+
+
   //fill in a vector of years
   vector years(1,nyrs)
   !!years.fill_seqadd(double(1),1.0);
@@ -580,6 +605,7 @@ PARAMETER_SECTION
  4darray M(1,nps,1,nr,1,nyr,1,nag)
  matrix rec_devs(1,nps,1,nyr)
  matrix rec_devs_randwalk(1,nps,1,nyr)
+ 4darray init_abund(1,nps,1,nps,1,nr,1,nag)
  4darray weight_population(1,nps,1,nr,1,nyr,1,nag)
  4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
@@ -897,6 +923,11 @@ PARAMETER_SECTION
  vector rec_index_pan(1,nyr)
  3darray rec_index_temp(1,nps,1,nyr,1,nr)
  matrix rec_index_temp2(1,nyr,1,nps)
+
+ 4darray selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray selectivity_age_pop(1,nps,1,nag,1,nfl)
+ 4darray survey_selectivity_age_temp(1,nps,1,nag,1,nfl,1,nr)
+ 3darray survey_selectivity_age_pop(1,nps,1,nag,1,nfl)
 
 //weighted average of age comps
  5darray OBS_survey_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
@@ -1349,7 +1380,7 @@ FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
   //switch for input recruitment devs by year to recreate a given population trajectory
- R_ave=mfexp(ln_R_ave); ///this is annoying...
+ R_ave=ln_R_ave; ///this is annoying...//a quick fix
  
   for (int p=1;p<=npops;p++)
    {
@@ -1509,7 +1540,7 @@ FUNCTION get_env_Rec // calculate autocorrelated recruitment - input period and 
            {
            if(y==1)
              {
-              env_rec(y)=init_abund(p,j,r,1);
+              env_rec(y)=input_init_abund(p,j,r,1);
              }           
            if(y>1)
             {
@@ -1552,6 +1583,8 @@ FUNCTION get_DD_move_parameters
         }
 
 FUNCTION get_abundance
+
+
        for (int y=1;y<=nyrs;y++)
         {
 
@@ -1575,6 +1608,16 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                   {
+
+                  if(init_abund_switch==1)
+                  {
+                  init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                  }
+                  
+                  if(init_abund_switch==0) {
+                  init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
+                  }
+
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
                     biomass_BM_age_overlap(p,j,r,y,a)=weight_population(p,r,y,a)*abundance_at_age_BM_overlap_region(p,j,y,a,r);
@@ -3449,6 +3492,8 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+
        if(a>2 && a<nages)
         {
            for (int p=1;p<=npops;p++)
@@ -3659,6 +3704,7 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+          
        if(a==nages) //account for fish already in plus group
         {
            for (int p=1;p<=npops;p++)
@@ -5625,7 +5671,6 @@ FUNCTION evaluate_the_objective_function
                }
               }
 
- 
 REPORT_SECTION
 
  //for the mismatch calculate the abundance fraction by region/population
@@ -5680,6 +5725,12 @@ REPORT_SECTION
         maturity_region(p,a)=sum(maturity_region_temp(p,a));
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a));
+
+        //aggregating selectivity
+        selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        selectivity_age_pop(p,a,z)=sum(selectivity_age_temp(p,a,z));
+        survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+        survey_selectivity_age_pop(p,a,z)=sum(survey_selectivity_age_temp(p,a,z));
 
         //aggregating the age comps
 
@@ -5753,6 +5804,8 @@ REPORT_SECTION
   report<<tsurvey_EM<<endl;
   report<<"#diagnostics_switch"<<endl;
   report<<diagnostics_switch<<endl;
+  report<<"#fleets_as_areas_switch"<<endl;
+  report<<fleets_as_areas_switch<<endl;
   report<<"#move_switch"<<endl;
   report<<move_switch_EM<<endl;
   report<<"#natal_homing_switch"<<endl;
@@ -5762,7 +5815,7 @@ REPORT_SECTION
   report<<"#select_switch"<<endl;
   report<<select_switch_EM<<endl;
   report<<"#select_switch_survey"<<endl;
-  report<<select_switch_survey<<endl;
+  report<<select_switch_survey_EM<<endl;
   report<<"#maturity_switch_equil"<<endl;
   report<<maturity_switch_equil_EM<<endl;
   report<<"#SSB_type"<<endl;
@@ -5781,6 +5834,8 @@ REPORT_SECTION
   report<<recruit_devs_switch_EM<<endl;
   report<<"#recruit_randwalk_switch"<<endl;
   report<<recruit_randwalk_switch_EM<<endl;
+  report<<"#init_abund_switch"<<endl;
+  report<<init_abund_switch_EM<<endl;
   report<<"#tspawn_EM"<<endl;
   report<<tspawn_EM<<endl;
   report<<"#return_age"<<endl;
@@ -5803,6 +5858,10 @@ REPORT_SECTION
   report<<ub_R_ave<<endl;
   report<<"#ph_rec"<<endl;
   report<<ph_rec<<endl;
+  report<<"#lb_rec_devs"<<endl;
+  report<<lb_rec_devs<<endl;
+  report<<"#ub_rec_devs"<<endl;
+  report<<ub_rec_devs<<endl;
   report<<"#ph_rec_app_CNST"<<endl;
   report<<ph_rec_app_CNST<<endl;
   report<<"#ph_rec_app_YR"<<endl;
@@ -5813,6 +5872,10 @@ REPORT_SECTION
   report<<ph_reg_init<<endl;
   report<<"#ph_non_natal_init"<<endl;
   report<<ph_non_natal_init<<endl;
+  report<<"#lb_abund_devs"<<endl;
+  report<<lb_abund_devs<<endl;
+  report<<"#ub_abund_devs"<<endl;
+  report<<ub_abund_devs<<endl;
   report<<"#ph_F"<<endl;
   report<<ph_F<<endl;
   report<<"#ph_steep"<<endl;
@@ -5845,6 +5908,10 @@ REPORT_SECTION
   report<<ph_sel_dubl_surv<<endl;
   report<<"#ph_q"<<endl;
   report<<ph_q<<endl;
+  report<<"#lb_q"<<endl;
+  report<<lb_q<<endl;
+  report<<"#ub_q"<<endl;
+  report<<ub_q<<endl;
   report<<"#ph_F_rho"<<endl;
   report<<ph_F_rho<<endl;
   report<<"#ph_T_YR"<<endl;
@@ -5895,6 +5962,9 @@ REPORT_SECTION
       report<<prop_fem_pan<<endl;
       report<<"#OBS_rec_index_BM"<<endl;
       report<<rec_index_pan<<endl;
+
+ //for straight panmictic EM 
+    if(sum(nfleets_EM)==1){
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
       report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
@@ -5931,6 +6001,49 @@ REPORT_SECTION
       report<<input_T_EM<<endl;
       report<<"#OBS_tag_prop_pan_final"<<endl;
       report<<OBS_tag_prop_pan_final<<endl;
+      }
+
+
+ //for fleets-as-areas approach
+      if(sum(nfleets_EM)>1){
+      //fleet specific outputs for fishery, panmictic for survey
+      report<<"#OBS_survey_fleet"<<endl;
+      report<<OBS_survey_total_bio<<endl;
+      report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
+      report<<OBS_survey_fleet_bio_se_EM<<endl;
+      report<<"#OBS_survey_prop"<<endl;
+      report<<OBS_survey_prop_pan<<endl;
+      report<<"#OBS_survey_prop_N_EM"<<endl;
+      report<<OBS_survey_prop_N_EM<<endl;
+      report<<"#OBS_yield_fleet"<<endl;
+      report<<OBS_yield_fleet<<endl;
+      report<<"#OBS_yield_fleet_se_EM"<<endl;
+      report<<OBS_yield_fleet_se_EM<<endl;
+      report<<"#OBS_catch_prop"<<endl;
+      report<<OBS_catch_prop<<endl;
+      report<<"#OBS_catch_prop_N_EM"<<endl;
+      report<<OBS_catch_prop_N_EM<<endl;
+      
+//tagging information
+      report<<"#nyrs_release"<<endl;
+      report<<nyrs_release<<endl;
+      report<<"#years_of_tag_releases "<<endl;
+      report<<yrs_releases<<endl;
+      report<<"#max_life_tags"<<endl;
+      report<<max_life_tags<<endl;
+      report<<"#report_rate_EM"<<endl;
+      report<<report_rate_EM<<endl;
+      report<<"#ntags"<<endl;
+      report<<ntags_pan<<endl;
+      report<<"#ntags_total"<<endl;
+      report<<ntags_total<<endl;
+      report<<"#tag_N_EM"<<endl;
+      report<<tag_N_EM<<endl;
+      report<<"#input_T_EM"<<endl;
+      report<<input_T_EM<<endl;
+      report<<"#OBS_tag_prop_pan_final"<<endl;
+      report<<OBS_tag_prop_pan_final<<endl;
+      }
       }
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
@@ -5995,9 +6108,13 @@ REPORT_SECTION
   report<<input_M_EM<<endl;
   report<<"#input_Rec_Prop_EM"<<endl;
   report<<input_rec_prop_EM<<endl;
+  report<<"#input_selectivity_EM"<<endl;
+  report<<input_selectivity_EM<<endl;
+  report<<"#input_survey_selectivity_EM"<<endl;
+  report<<input_survey_selectivity_EM<<endl;
+
  //report<<"#init_abund_EM"<<endl;
  // report<<init_abund_EM<<endl;
-
 
 /// TRUE VALUES FROM OM
   report<<"#input_M_TRUE"<<endl;
@@ -6064,26 +6181,45 @@ REPORT_SECTION
   report<<Bratio_population<<endl;
   report<<"#T_year"<<endl;
   report<<T_year<<endl;
+
+//reporting true aggregated selectivity if fleets ==1
+  if(EM_structure==0 && sum(nfleets_EM)==1)
+  {
+  report<<"#selectivity_age"<<endl;
+  report<<selectivity_age_pop<<endl;
+  report<<"#survey_selectivity_age"<<endl;
+  report<<survey_selectivity_age_pop<<endl;}
+  
+  else{
   report<<"#selectivity_age"<<endl;
   report<<selectivity_age<<endl;
   report<<"#survey_selectivity_age"<<endl;
-  report<<survey_selectivity_age<<endl;
-
+  report<<survey_selectivity_age<<endl;}
+  
  //true tag information
   report<<"#TRUE_tag_prop"<<endl;
   report<<tag_prop_final<<endl;
-
   report<<"#T"<<endl;
   report<<T<<endl;
- 
-  //report<<"abund_at_age"<<endl;
-  //report<<abundance_at_age_AM<<endl;
 
- 
+//report the abundance_frac for later calcs if needed
+  report<<"#abund_frac_age_region"<<endl;
+  report<<abund_frac_age_region<<endl;
+  report<<"#abund_frac_year"<<endl;
+  report<<abund_frac_region_year<<endl;
+  report<<"#abund_frac_region"<<endl;
+  report<<abund_frac_region<<endl;
+
+
   report<<"#debug"<<endl;
   report<<debug<<endl;
 
 
+//to get abundance after movement for init abund
+// report<<"#Abund_BM"<<endl;
+// report<<abundance_at_age_BM<<endl;
+// report<<"#Abund_AM"<<endl;
+// report<<abundance_at_age_AM<<endl;
 
  // Some stuff for looking at tag calculations 
   /*
