@@ -88,7 +88,7 @@
   #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
-1
+5
 
 #move_switch
   #==0 no movement
@@ -102,7 +102,7 @@
   #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   #//uses use_input_Bstar switch
-8
+5
 
 #use_input_Bstar
   #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
@@ -155,7 +155,7 @@
 #init_abund_switch
   #==0 input init abund
   #==1 decay from R_ave
-1
+0
 
 #maturity_switch_equil
   #//==0 for equal by area or average
@@ -550,15 +550,15 @@
 1
 
 #init_abund
-7000	6333.861926	5731.115272	5185.727545	4692.240322	4245.714618	3841.681453	3476.097127	3145.302749	2845.987618	2575.156088	2330.097586	2108.359483	1907.722551	1726.178748	1561.911121
+7000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-8000	7238.699344	6549.846025	5926.545765	5362.560368	4852.245278	4390.493089	3972.68243	3594.631713	3252.557278	2943.035529	2662.96867	2409.553695	2180.254344	1972.775712	1785.041281
+8000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-9000	8143.536762	7368.576778	6667.363986	6032.880414	5458.775937	4939.304725	4469.267734	4043.960677	3659.126938	3310.914971	2995.839753	2710.747907	2452.786137	2219.372675	2008.171441
+9000	7200	6480	5554.285714	5049.350649	4590.318772	4131.286895	3098.465171	2323.848878	2091.463991	1673.171192	1464.024793	1330.93163	1209.937846	1075.500307	977.7275521
 
 #_rec_index_sigma
 0.5
@@ -710,7 +710,7 @@
  # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
  # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
  # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
-2
+4
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -789,6 +789,11 @@
 #recruit_randwalk_switch
  # //==0 no random walk recruitment deviations
  # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
+0
+
+#init_abund_switch
+  #==0 input init abund
+  #==1 decay from R_ave
 0
 
 #tspawn_EM(1,np_em)
@@ -879,15 +884,15 @@
 0.8
 
 #init_abund
-7000	6333.861926	5731.115272	5185.727545	4692.240322	4245.714618	3841.681453	3476.097127	3145.302749	2845.987618	2575.156088	2330.097586	2108.359483	1907.722551	1726.178748	1561.911121
+7000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-8000	7238.699344	6549.846025	5926.545765	5362.560368	4852.245278	4390.493089	3972.68243	3594.631713	3252.557278	2943.035529	2662.96867	2409.553695	2180.254344	1972.775712	1785.041281
+8000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-9000	8143.536762	7368.576778	6667.363986	6032.880414	5458.775937	4939.304725	4469.267734	4043.960677	3659.126938	3310.914971	2995.839753	2710.747907	2452.786137	2219.372675	2008.171441
+9000	7200	6480	5554.285714	5049.350649	4590.318772	4131.286895	3098.465171	2323.848878	2091.463991	1673.171192	1464.024793	1330.93163	1209.937846	1075.500307	977.7275521
 
 #input_M_EM(1,np_em,1,na)
 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1
@@ -934,7 +939,7 @@
 #ph_lmr
 2
 #lb_R_ave
-2
+-2
 #up_R_ave
 20
 #ph_rec
@@ -948,9 +953,9 @@
 #ph_rec_app_YR
 -4
 #ph_init_abund
--2
+1
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
--1
+-2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #lb_abund_devs
@@ -958,13 +963,13 @@
 #ub_abund_devs
 15
 #ph_F
-4
+-2
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
-5
+-4
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
@@ -982,19 +987,23 @@
 #ub_sel_beta2  //upper bound on survey selectivity parameters in ln space
 5 
 #ph_sel_log_surv
-5
+-4
 #ph_sel_dubl
 -5
 #ph_sel_dubl_surv
 -5
 #ph_q
 1
+#lb_q
+-10
+#ub_q
+5
 #ph_F_rho
 -1
 #ph_T_YR
-4
+-6
 #ph_T_CNST
--4
+-5
 #ph_dummy
 -1
 
@@ -1010,20 +1019,28 @@
 #wt_srv_age
 1
 #wt_rec
-0.10
+0.01
 #wt_tag
 0
+#wt_F_pen// weight on F penalty
+1
 
 #abund_pen_switch
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
  #//==0 no pen in log space
  #//==1 include pen in log space
-0
+1
+
+#wt_abund_pen// abund penalty wt
+10000
 
 #move_pen_switch
  #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
  #// ==0 no move pen in log space
  #// ==1 include move pen in log space
+1
+
+#wt_move_pen //movement penalty wt
 1
 
 #Tpen
