@@ -306,7 +306,6 @@ DATA_SECTION
   init_number NR_iterationp
   init_number NR_dev
 
-
  //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -329,8 +328,7 @@ DATA_SECTION
   init_number EM_structure //
   // ==0 the RM is panmictic
   // ==1 the EM is metamictic
-  // ==2 the EM is metapop
-  
+  // ==2 the EM is metapop  
   init_number npops_EM
   !! int np_em=npops_EM;
   
@@ -423,6 +421,9 @@ DATA_SECTION
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
 
+  init_number init_abund_switch_EM
+  //==0 input init_abund_EM
+  //==1 decay from R_ave. If phase is negative, input_init_abund is used.
 
   init_vector tspawn_EM(1,np_em) //timing of spawn for EM needs to match npops_EM
   init_vector return_probability_EM(1,np_em)
@@ -470,6 +471,8 @@ DATA_SECTION
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
   init_int ph_q
+  init_int lb_q
+  init_int ub_q
   init_int ph_F_rho // if we want random walk F
   init_int ph_T_YR //use if want to estimate yearly T
   init_int ph_T_CNST //use if want to estimate time-invariant T
@@ -481,8 +484,11 @@ DATA_SECTION
   init_number wt_srv_age 
   init_number wt_rec
   init_number wt_tag
+  init_number wt_F_pen
   init_number abund_pen_switch // include penalty (norm2) on init_abund_devs?  0==no, 1==yes
+  init_number wt_abund_pen
   init_number move_pen_switch //inlcude movement penalty in log space?  0==no, 1==yes
+  init_number wt_move_pen
   init_number Tpen
   init_number Tpen2
 
@@ -3489,6 +3495,8 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+
        if(a>2 && a<nages)
         {
            for (int p=1;p<=npops;p++)
@@ -3699,6 +3707,7 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+          
        if(a==nages) //account for fish already in plus group
         {
            for (int p=1;p<=npops;p++)
@@ -5828,6 +5837,8 @@ REPORT_SECTION
   report<<recruit_devs_switch_EM<<endl;
   report<<"#recruit_randwalk_switch"<<endl;
   report<<recruit_randwalk_switch_EM<<endl;
+  report<<"#init_abund_switch"<<endl;
+  report<<init_abund_switch_EM<<endl;
   report<<"#tspawn_EM"<<endl;
   report<<tspawn_EM<<endl;
   report<<"#return_age"<<endl;
@@ -5900,6 +5911,10 @@ REPORT_SECTION
   report<<ph_sel_dubl_surv<<endl;
   report<<"#ph_q"<<endl;
   report<<ph_q<<endl;
+  report<<"#lb_q"<<endl;
+  report<<lb_q<<endl;
+  report<<"#ub_q"<<endl;
+  report<<ub_q<<endl;
   report<<"#ph_F_rho"<<endl;
   report<<ph_F_rho<<endl;
   report<<"#ph_T_YR"<<endl;
@@ -5920,10 +5935,16 @@ REPORT_SECTION
   report<<wt_rec<<endl;
   report<<"#wt_tag"<<endl;
   report<<wt_tag<<endl;
+  report<<"#wt_F_pen"<<endl;
+  report<<wt_F_pen<<endl;
   report<<"#abund_pen_switch"<<endl;
   report<<abund_pen_switch<<endl;
+  report<<"#wt_abund_pen"<<endl;
+  report<<wt_abund_pen<<endl;
   report<<"#move_pen_switch"<<endl;
   report<<move_pen_switch<<endl;
+  report<<"#wt_move_pen"<<endl;
+  report<<wt_move_pen<<endl;
   report<<"#Tpen"<<endl;
   report<<Tpen<<endl;
   report<<"#Tpen2"<<endl;
@@ -6204,10 +6225,10 @@ REPORT_SECTION
 
 
 //to get abundance after movement for init abund
-//  report<<"Abund_AM"<<endl;
-//  report<<abundance_at_age_AM<<endl;
-
-
+// report<<"#Abund_BM"<<endl;
+// report<<abundance_at_age_BM<<endl;
+// report<<"#Abund_AM"<<endl;
+// report<<abundance_at_age_AM<<endl;
 
  // Some stuff for looking at tag calculations 
   /*
