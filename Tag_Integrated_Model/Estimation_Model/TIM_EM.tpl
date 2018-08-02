@@ -136,12 +136,13 @@ DATA_SECTION
   init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
-
-
-   init_number recruit_randwalk_switch
+  init_number recruit_randwalk_switch
   //==0 no random walk recruitment deviations
   //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
-  
+  init_number init_abund_switch
+  //==0 input init_abund_EM
+  //==1 decay from R_ave
+
   init_vector tspawn(1,np) //time of spawning in proportion of year (0-1)
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
@@ -185,6 +186,8 @@ DATA_SECTION
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
   init_int ph_q
+  init_int lb_q
+  init_int ub_q
   init_int ph_F_rho // if we want random walk F
   init_int phase_T_YR
   init_int phase_T_CNST
@@ -205,8 +208,11 @@ DATA_SECTION
    init_number wt_srv_age 
    init_number wt_rec
    init_number wt_tag
+   init_number wt_F_pen
    init_int abund_pen_switch
+   init_int wt_abund_pen
    init_int move_pen_switch
+   init_int wt_T_pen
    init_number Tpen
    init_number Tpen2
 //###########READ BIO DATA###############################################################################################################################
@@ -418,9 +424,6 @@ DATA_SECTION
 
     vector offset(1,2);                                    // Multinomial "offset"
 
-
- //!!exit(54);
-
 LOCAL_CALCS
   if(fleets_as_areas_switch==!1){ //this is a quick fix to skip this with fleets as areas
 
@@ -436,8 +439,10 @@ LOCAL_CALCS
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
+              if(diagnostics_switch==1){
               offset(1) -= ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001));
               }
+             }
             }
            }
           }
@@ -452,13 +457,14 @@ LOCAL_CALCS
            {
              for (int z=1;z<=nfleets(j);z++)
               {
-                offset(2) -= ((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
+              if(diagnostics_switch==1){
+                offset(2) -=((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
                }
+              }
             }
            }
           }
-
-      }
+        }
 
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
@@ -517,7 +523,7 @@ PARAMETER_SECTION
   4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
   4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
   
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,-6,5,ph_q)
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,lb_q,ub_q,ph_q)
  
   3darray q_survey(1,parpops,1,nr,1,nfls)  //
  //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
@@ -796,10 +802,10 @@ PARAMETER_SECTION
 
  init_number dummy(ph_dummy)
 
+
   objective_function_value f;
   
   !! cout << "parameters set" << endl;
-
 
 //INITIALIZATION_SECTION  //set initial values
 //   steep .814;
@@ -1441,7 +1447,6 @@ FUNCTION get_vitals
          }
        }
 
-
    if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
     {
    if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
@@ -1526,7 +1531,8 @@ FUNCTION get_vitals
             } 
            }
     }
-       if(ph_reg_init<0 && sum(nregions)==npops)
+
+       if(ph_reg_init<0 && sum(nregions)==npops)//for panmictic
         {
          for (int j=1;j<=npops;j++)
           {
@@ -1546,8 +1552,22 @@ FUNCTION get_vitals
             } 
            }
          }
-    }
-  
+
+   if(ph_reg_init<0 && npops==1)//for metamictic population
+        {
+         for (int j=1;j<=npops;j++)
+          {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+                 frac_natal(j,k,n)=1.0/nregions(k);
+             }
+            } 
+           }
+         }
+       }
+ 
     for (int j=1;j<=npops;j++)
      {              
         for (int y=1;y<=nyrs-1;y++)
@@ -1576,6 +1596,7 @@ FUNCTION get_vitals
                 }
                }
               }
+            // }
 
 //SPR calcs are done with eitehr  average maturity/weight across all the regions within a population or assuming an input population fraction at equilibrium
 // while the full SSB calcs use the region specific maturity/weight
@@ -1637,23 +1658,24 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                  {
-                  //if(a==1)
-                  //{
-                 // init_abund(p,j,r,a)=R_ave(p)*frac_natal(p,j,r);
-                 // }
-                 // if(a>1)
-                // {
+                if(init_abund_switch==0){
                   if(ph_abund_devs>0)
                    {
-                   init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                   //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                   //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
+                   init_abund(p,j,r,a)=abund_devs(p,a)*frac_natal(p,j,r);
+                   }
+                   if(ph_abund_devs<0){
+                    init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
                     }
-                  if(ph_abund_devs<0)
-                   {
-                     //abund_devs(p,a)=1;
+                   }
+                   
+               if(init_abund_switch==1){
+                   if(ph_abund_devs<0){
                      //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      //init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
-                   }
+                   }}
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
@@ -2435,6 +2457,7 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+          
          if(a==2)
           { 
            for (int p=1;p<=npops;p++)
@@ -2518,7 +2541,7 @@ FUNCTION get_abundance
                  {
                   for (int n=1;n<=nregions(k);n++)
                    {
-                      abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1))*(1-tspawn(k)))*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1))*(1-tspawn(k)))*T(k,n,y,a,j,r);
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
@@ -2588,6 +2611,8 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+
        if(a>2 && a<nages)
         {
            for (int p=1;p<=npops;p++)
@@ -2599,7 +2624,7 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j);z++)
                   {
 
-                abundance_move_overlap_temp=0;
+                 abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
                  {
@@ -2607,7 +2632,7 @@ FUNCTION get_abundance
                    {
                     if(move_switch!=6  || move_switch!=7 || a==1)
                      {
-                      abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,r,y-1,a-1)+F(k,n,y-1,a-1)))*T(p,n,y,a,j,r); //with overlap always use natal population movement rates
+                      abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*T(p,n,y,a,j,r); //with overlap always use natal population movement rates
                      }
                     if(move_switch==6 && a>1)
                      {
@@ -2617,7 +2642,7 @@ FUNCTION get_abundance
                       }
                       if(a==return_age && p==j && j!=k)
                       {
-                       abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,r,y-1,a-1)+F(k,n,y-1,a-1)))*return_probability(p); //with overlap always use natal population movement rates
+                       abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*return_probability(p); //with overlap always use natal population movement rates
                       }
                      }
                    }
@@ -2657,7 +2682,8 @@ FUNCTION get_abundance
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
                 biomass_natal_temp_overlap(p,y,j)=biomass_population_overlap(p,j,y);
                 biomass_natal_overlap(p,y)=sum(biomass_natal_temp_overlap(p,y));
-                
+
+
  //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
@@ -2671,7 +2697,7 @@ FUNCTION get_abundance
                  {
                   for (int n=1;n<=nregions(k);n++)
                    {
-                     abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1))*(1-tspawn(k)))*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=abundance_at_age_AM(k,n,y-1,a-1)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*T(k,n,y,a,j,r);
                      bio_move_temp(k,n)=abundance_move_temp(k,n)*weight_population(k,n,y,a);
                    }
                   }
@@ -2706,7 +2732,7 @@ FUNCTION get_abundance
        }//end a>2 <nages if statement
 
  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-       if(a==nages) //account for fish already in plus group
+   if(a==nages) //account for fish already in plus group
         {
           for (int p=1;p<=npops;p++)
             {
@@ -2741,6 +2767,8 @@ FUNCTION get_abundance
             }
            }
           } //close loops so have full biomass vectors filled in at start of DD movement calcs
+
+
        if(a==nages) //account for fish already in plus group
         {
            for (int p=1;p<=npops;p++)
@@ -2752,7 +2780,7 @@ FUNCTION get_abundance
                  for (int z=1;z<=nfleets(j);z++)
                   {
 
-                abundance_move_overlap_temp=0;
+                   abundance_move_overlap_temp=0;
 
                 for (int k=1;k<=npops;k++)
                  {
@@ -2760,7 +2788,7 @@ FUNCTION get_abundance
                    {
                     if(move_switch!=6  || move_switch!=7  || a==1)
                      {
-                      abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,r,y-1,a-1)+F(k,n,y-1,a-1)))*T(p,n,y,a,j,r)+abundance_at_age_AM_overlap_region(p,k,y-1,a,n)*mfexp(-(M(k,r,y-1,a)+F(k,n,y-1,a)))*T(p,n,y,a,j,r); //with overlap always use natal population movement rates
+                      abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*T(p,n,y,a,j,r)+abundance_at_age_AM_overlap_region(p,k,y-1,a,n)*mfexp(-(M(k,n,y-1,a)+F(k,n,y-1,a)))*T(p,n,y,a,j,r); //with overlap always use natal population movement rates
                      }
                     if(move_switch==6 && a>1)
                      {
@@ -2770,7 +2798,7 @@ FUNCTION get_abundance
                       }
                       if(a==return_age && p==j && j!=k)
                       {
-                       abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,r,y-1,a-1)+F(k,n,y-1,a-1)))*return_probability(p)+abundance_at_age_AM_overlap_region(p,k,y-1,a,n)*mfexp(-(M(k,r,y-1,a)+F(k,n,y-1,a)))*return_probability(p); //with overlap always use natal population movement rates
+                       abundance_move_overlap_temp(k,n)=abundance_at_age_AM_overlap_region(p,k,y-1,a-1,n)*mfexp(-(M(k,n,y-1,a-1)+F(k,n,y-1,a-1)))*return_probability(p)+abundance_at_age_AM_overlap_region(p,k,y-1,a,n)*mfexp(-(M(k,n,y-1,a)+F(k,n,y-1,a)))*return_probability(p); //with overlap always use natal population movement rates
                       }
                      }
                    }
@@ -2810,13 +2838,11 @@ FUNCTION get_abundance
                 biomass_population_overlap(p,j,y)=sum(biomass_population_temp_overlap(p,j,y));
                 biomass_natal_temp_overlap(p,y,j)=biomass_population_overlap(p,j,y);
                 biomass_natal_overlap(p,y)=sum(biomass_natal_temp_overlap(p,y));
-
  //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
    ///////////////NON-NATAL Homing movement calcs and putting natal homing abundance into area abundance///////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////
     
-                  
                    abundance_move_temp=0;
                    bio_move_temp=0;
 
@@ -2856,6 +2882,7 @@ FUNCTION get_abundance
           }
          }
         } //end nages if statement
+        
 
            for (int p=1;p<=npops;p++)
             {
@@ -3594,6 +3621,7 @@ FUNCTION get_tag_recaptures
  }
 FUNCTION evaluate_the_objective_function
    //f=dummy; //in case all the estimated parameters are turned off
+
    f=0.0;
 
 
@@ -3633,7 +3661,7 @@ FUNCTION evaluate_the_objective_function
           }
           if(ln_T_CNST(j,i)>Tpen2)
            {
-           Tpen_like+=10*(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
+           Tpen_like+=(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
           }
          }
         }
@@ -3641,7 +3669,7 @@ FUNCTION evaluate_the_objective_function
      // EOUT(Tpen_like);
      // EOUT(ln_T_CNST);
      }
-   f+=Tpen_like;   
+   f+=Tpen_like*wt_T_pen;   
  }
 
 
@@ -3674,13 +3702,13 @@ FUNCTION evaluate_the_objective_function
               survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) ))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_survey_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001)));
               }
-
-              }
+             }
             }
            }
           }
         
-         //   survey_age_like -=offset(1);
+           //survey_age_like -=offset(1);
+           
      // catch likelihood and multinomial fishery ages
    for (int j=1;j<=npops;j++)
      {
@@ -3726,12 +3754,13 @@ FUNCTION evaluate_the_objective_function
  //f+=100* norm2(ln_abund_devs);
  if(active(ln_rec_devs_RN))
           for(int j=1;j<=npops;j++) {
- abund_dev_pen+=100000* norm2(ln_abund_devs(j));
+ abund_dev_pen+=wt_abund_pen* norm2(ln_abund_devs(j));
  } 
     }}
+
        if(active(ln_F))
   {
- if (current_phase()<3) f+= 10000*(norm2(mfexp(ln_F)));
+ if (current_phase()<3) f+= wt_F_pen*(norm2(mfexp(ln_F)));
  }
 
  //if(active(ln_rec_devs_RN))
@@ -3836,9 +3865,9 @@ REPORT_SECTION
   report<<catch_like<<endl;
   report<<"$rec_like"<<endl;
   report<<rec_like<<endl;
-    report<<"$Tpen_like"<<endl;
+  report<<"$Tpen_like"<<endl;
   report<<Tpen_like<<endl;
-      report<<"$abund_dev_pen"<<endl;
+  report<<"$abund_dev_pen"<<endl;
   report<<abund_dev_pen<<endl;
 
 
@@ -4124,7 +4153,13 @@ REPORT_SECTION
   report<<abund_frac_region_year<<endl;
   report<<"$abund_frac_region_OM"<<endl;
   report<<abund_frac_region<<endl;
+  report<<"$abund_at_age_BM"<<endl;
+  report<<abundance_at_age_BM<<endl;
+  report<<"$abund_at_age_AM"<<endl;
+  report<<abundance_at_age_AM<<endl;
 
+  report<<"$dummy_run"<<endl;
+  report<<ph_dummy<<endl;
 
  save_gradients(gradients);
 
