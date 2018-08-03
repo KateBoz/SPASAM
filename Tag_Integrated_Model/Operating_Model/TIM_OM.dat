@@ -155,7 +155,7 @@
 #init_abund_switch
   #==0 input init abund
   #==1 decay from R_ave
-0
+1
 
 #maturity_switch_equil
   #//==0 for equal by area or average
@@ -794,7 +794,7 @@
 #init_abund_switch
   #==0 input init abund
   #==1 decay from R_ave
-0
+1
 
 #tspawn_EM(1,np_em)
 0
@@ -939,37 +939,37 @@
 #ph_lmr
 2
 #lb_R_ave
--2
+2
 #up_R_ave
 20
 #ph_rec
 3
 #lb_rec_devs
--20
+-10
 #ub_rec_devs
-10
+5
 #ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
 -4
 #ph_rec_app_YR
 -4
 #ph_init_abund
-1
+-1
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
 -2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #lb_abund_devs
--20
+-10
 #ub_abund_devs
 15
 #ph_F
--2
+4
 #ph_steep
 -1
 #ph_M
 -1
 #ph_sel_log
--4
+5
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
 -10 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
@@ -987,7 +987,7 @@
 #ub_sel_beta2  //upper bound on survey selectivity parameters in ln space
 5 
 #ph_sel_log_surv
--4
+6
 #ph_sel_dubl
 -5
 #ph_sel_dubl_surv
@@ -1003,7 +1003,7 @@
 #ph_T_YR
 -6
 #ph_T_CNST
--5
+5
 #ph_dummy
 -1
 
@@ -1029,10 +1029,10 @@
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
  #//==0 no pen in log space
  #//==1 include pen in log space
-1
+0
 
 #wt_abund_pen// abund penalty wt
-10000
+0
 
 #move_pen_switch
  #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
