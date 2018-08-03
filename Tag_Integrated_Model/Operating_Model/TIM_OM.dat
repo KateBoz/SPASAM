@@ -35,7 +35,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-0
+1
 
 # parse_TAC
   #==0 do not alter the input TAC or harvest rate
@@ -88,7 +88,7 @@
   #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
-5
+1
 
 #move_switch
   #==0 no movement
@@ -102,7 +102,7 @@
   #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   #//uses use_input_Bstar switch
-5
+1
 
 #use_input_Bstar
   #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
@@ -384,15 +384,15 @@
 #1	1	1	1	1	1	1	1	1	1	1	1	1	1	1	1
 
 #sel_beta1
-3
-2
-5
+0.8
+0.8
+0.8
 
 
 #sel_beta2
-2
-3
-4
+3.0
+3.0
+3.0
 
 #sel_beta3
 -0.6
@@ -405,15 +405,15 @@
 20
 
 #sel_beta1_survey
-2
-5
-3
+0.8
+0.8
+0.8
 
 
 #sel_beta2_survey
-4
-5
-2
+2.0
+2.0
+2.0
 
 #sel_beta3_survey
 -0.6
@@ -550,11 +550,11 @@
 1
 
 #init_abund
-7000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
+8000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-8000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
+5000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
@@ -814,7 +814,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-0
+1
 
 #do_tag_mult
   #==0 assume neg binomial distribution for tagging data
@@ -884,11 +884,11 @@
 0.8
 
 #init_abund
-7000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
+8000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-8000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
+5000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
 0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
@@ -971,23 +971,23 @@
 #ph_sel_log
 5
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
--10 
+-5 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
-5
+2
 #lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
--10 
+-5
 #ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
-5
+2
 #lb_sel_beta1  //lower bound on survey selectivity parameters in ln space
--10 
+-5
 #ub_sel_beta1  //upper bound on survey selectivity parameters in ln space
-5
+2
 #lb_sel_beta2  //lower bound on survey selectivity parameters in ln space
--10 
+-5 
 #ub_sel_beta2  //upper bound on survey selectivity parameters in ln space
-5 
+2
 #ph_sel_log_surv
-6
+5
 #ph_sel_dubl
 -5
 #ph_sel_dubl_surv
@@ -1003,7 +1003,7 @@
 #ph_T_YR
 -6
 #ph_T_CNST
-5
+6
 #ph_dummy
 -1
 
@@ -1019,9 +1019,9 @@
 #wt_srv_age
 1
 #wt_rec
-0.01
+1
 #wt_tag
-0
+1
 #wt_F_pen// weight on F penalty
 1
 
