@@ -155,7 +155,7 @@ invisible(file.rename(from=paste0(EM_direct,"\\output.txt",sep=""),to=paste0(dia
 # run the simulations section
 
   
-#Set up convergence record to holds likelihood components and eventually gradient 
+#Set up convergence record to holds likelihood components and gradient 
 Sim.Stats<-data.frame(SimN=seq(1:nsim), Converged=rep(NA,nsim),Max_Gradient=rep(NA,nsim),Obj_fun=rep(NA,nsim), Tag_like=rep(NA,nsim), Catch_like=rep(NA,nsim), Survey_like=rep(NA,nsim), Fish_age_like=rep(NA,nsim), survey_age_like = rep(NA,nsim), Rec_like=rep(NA,nsim))
 
 
@@ -191,15 +191,15 @@ ls=foreach(j=1:nsim,.options.snow = opts,.combine='rbind',.packages =c('PBSmodel
 setwd(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
       
 SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
-SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=40+j
-SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=100+j
-SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=200+j
-SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=300+j
-SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=400+j
-SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=500+j
-SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=600+j
-SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=700+j
-SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=800+j
+SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=411+j
+SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=1110+j
+SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=2211+j
+SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=3180+j
+SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=4199+j
+SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
+SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
+SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=7157+j
+SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=10009+j
 
 writeLines(SIM.DAT,paste0(OM_name,".dat"))
 
@@ -215,7 +215,7 @@ file.copy(from = from,  to = to)
 setwd(paste0(runs_dir,"\\Run",j,"\\Estimation_Model",sep=""))
 
 #Delete OM folder to save space
-unlink(paste(runs_dir,"\\Run",j,"\\Operating_Model",sep=""),recursive = T)
+#unlink(paste(runs_dir,"\\Run",j,"\\Operating_Model",sep=""),recursive = T)
 
 
 ################################
@@ -301,7 +301,7 @@ write.csv(file="Sim_Stats.csv",Sim.Stats)
 ##############################################################
 ##############################################################
 
-{ # run the value grab
+# run the value grab
 
 # create a data frame for the run to hold true and estimated values from OM/EM
 
@@ -318,7 +318,6 @@ EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="")
 EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
 
 diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
-
 
 
 Sim_Stats<-read.csv(paste0(diag_direct,'\\Sim_Stats.csv'))
@@ -381,7 +380,11 @@ rec_est_temp<-data.table(Rec_Est= c(t(out$recruits_BM)))
 
 #Save Rec deviations
 rec_devs_sim_temp<-data.table(Rec_Devs_Sim = c(t(out$rec_devs_TRUE)))
-rec_devs_est_temp<-data.table(Rec_Devs_Est= c(t(out$rec_devs_TRUE)))
+rec_devs_est_temp<-data.table(Rec_Devs_Est= c(t(out$rec_devs)))
+
+#save Init_abund
+init_abund_sim_temp<-data.table(Init_Abund_Sim = c(t(out$Init_Abund_TRUE)))
+init_abund_est_temp<-data.table(Init_Abund_Est= c(t(out$Init_Abund)))
 
 #Save SSB
 ssb_sim_temp<-data.table(SSB_Sim = c(t(out$SSB_region_TRUE)))
@@ -400,8 +403,8 @@ yield_sim_temp<-data.table(Catch_Sim = c(t(out$OBS_yield_fleet)))
 yield_est_temp<-data.table(Catch_Est = c(t(out$yield_fleet)))
 
 #Save F
-fmax_sim_temp<-data.table(Fmax_Sim=c(t(rowMaxs(out$F))))
-fmax_est_temp<-data.table(Fmax_Est=c(t(rowMaxs(out$F_TRUE))))
+fmax_sim_temp<-data.table(Fmax_Sim=c(t(rowMaxs(out$F_TRUE))))
+fmax_est_temp<-data.table(Fmax_Est=c(t(rowMaxs(out$F))))
 
 #Save q
 q_sim_temp<-data.table(q_Sim=c(t(out$q_survey_TRUE)))
@@ -474,6 +477,8 @@ catch_est_temp<-data.table(do.call("rbind",pull.catch.est))
               rec_est=rec_est_temp,
               rec_devs_sim=rec_devs_sim_temp,
               rec_devs_est=rec_devs_est_temp,
+              init_abund_sim=init_abund_sim_temp,
+              init_abund_est=init_abund_est_temp,
               ssb_sim=ssb_sim_temp,
               ssb_est=ssb_est_temp,
               bio_sim=bio_sim_temp,
@@ -526,14 +531,14 @@ closeAllConnections()
 setwd(diag_direct)
 saveRDS(vg, file="Sim_data.RData")
 
-}
+
 
 ################################################################################
 # Load Sim results for plotting
 #################################################################################
 #reload directory information for plotting
  
-{ #start here if you have already completed the SIMS and saved the data
+#start here if you have already completed the SIMS and saved the data
 
 ####################################
 # ONLY NEED THIS IF NOT RUNNING SIMS
@@ -617,7 +622,11 @@ rec_df_est<-matrix(NA,nyrs*nreg,nsim)
 
 #Recruitment deviations
 rec_devs_df_sim<-matrix(NA,nyrs*nreg,nsim)
-rec_devs_df_est<-matrix(NA,nyrs*nreg,nsim)
+rec_devs_df_est<-matrix(NA,(nyrs-1)*nreg,nsim)
+
+#Init Abundance
+init_abund_df_sim<-matrix(NA,nreg*nreg*na,nsim)
+init_abund_df_est<-matrix(NA,nreg*nreg*na,nsim)
 
 #SSB
 ssb_df_sim<-matrix(NA,nyrs*nreg,nsim)
@@ -682,6 +691,8 @@ rec_df_sim[,i]<-unlist(Sim_Results["rec_sim",i])
 rec_df_est[,i]<-unlist(Sim_Results["rec_est",i])
 rec_devs_df_sim[,i]=unlist(Sim_Results["rec_devs_sim",i])
 rec_devs_df_est[,i]=unlist(Sim_Results["rec_devs_est",i])
+init_abund_df_sim[,i]=unlist(Sim_Results["init_abund_sim",i])
+init_abund_df_est[,i]=unlist(Sim_Results["init_abund_est",i])
 ssb_df_sim[,i]<-unlist(Sim_Results["ssb_sim",i])
 ssb_df_est[,i]<-unlist(Sim_Results["ssb_est",i])
 bio_df_sim[,i]<-unlist(Sim_Results["bio_sim",i])
@@ -701,7 +712,6 @@ select_age_survey_df_sim[,i]<-unlist(Sim_Results["select_age_survey_sim",i])
 select_age_survey_df_est[,i]<-unlist(Sim_Results["select_age_survey_est",i])
 }
 
-}
 #######################################
 # Building a ggplot theme
 ######################################
@@ -745,22 +755,72 @@ ggplot(Sim_Stats, aes(x=Sim_Stats[j])) +
 ######################################
 
 #R_ave
-Rave_est<-data.frame(melt(t(R_ave_df_est)))
-names(Rave_est)<-c("Nsim","Reg","R_ave")
-R_medians<-tapply(as.numeric(Rave_est$R_ave),Rave_est$Reg,median)
+q_est<-data.frame(melt(t(q_df_est)))
+q_est<-cbind(q_est,data.frame(melt(t(q_df_sim))[3]))
+names(q_est)<-c("Nsim","Reg","q_est","q_sim")
+q_est$q_bias<-((q_est$q_sim-q_est$q_est)/q_est$q_sim)*100
 
-# keeping only the first col
-Rave_sim<-data.frame(melt(t(R_ave_df_sim[,1])))
-names(Rave_sim)<-c("Nsim","Reg","R_ave")
+#calc medians
+
+#calculate the sum across areas 
+q.long<-melt(q_est, id=c("Reg","Nsim"))
+q.long$Reg<-as.character(q.long$Reg)
+
+median_q<-data.frame(q.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+
+
 
 #plot
-R.ave.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave, group=Reg)) +
+q.plot.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_est, group=Reg)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
-  stat_summary(fun.y = median,
-               geom = "point") +
-  geom_point(fill=median.col, shape=21,size=2.0) + 
-  geom_point(data = Rave_sim, aes(x=Reg,y=R_ave), fill="black", shape=16,size=0.5) + 
+  geom_point(data=subset(median_q,variable=="q_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=4.0) + 
+  geom_point(data=subset(median_q,variable=="q_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=2.0) + 
+  ggtitle("Survey Catchability")+
+  ylab("Survey Catchability")+
+  xlab("Area")+
+  #ylim(-5,5)+
+  my_theme
+
+
+q.bias.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_bias, group=Reg)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_point(data=subset(median_q,variable=="q_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=4.0) + 
+  #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Survey Catchability Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  ylim(-100,100)+
+  my_theme
+
+write.csv(median_q,"q_medians.csv")
+
+
+
+#R_ave
+Rave_est<-data.frame(melt(t(R_ave_df_est)))
+Rave_est<-cbind(Rave_est,data.frame(melt(t(R_ave_df_sim))[3]))
+names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
+Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+
+#calc medians
+
+#calculate the sum across areas 
+rave.long<-melt(Rave_est, id=c("Reg","Nsim"))
+rave.long$Reg<-as.character(rave.long$Reg)
+
+median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+
+
+
+#plot
+rave.plot.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_est, group=Reg)) +
+  #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data=subset(median_R_ave,variable=="R_ave_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
+  geom_point(data=subset(median_R_ave,variable=="R_ave_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=1.0) + 
   ggtitle("Mean Recruitment")+
   ylab("Mean Recruitment")+
   xlab("Area")+
@@ -768,26 +828,68 @@ R.ave.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave, group=Reg)) +
   my_theme
 
 
+
+rave.bias.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_bias, group=Reg)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_point(data=subset(median_R_ave,variable=="R_ave_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
+  #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Mean Recruitment Bias")+
+  ylab("Relative % Difference")+
+  xlab("Area")+
+  ylim(-100,100)+
+  my_theme
+
+write.csv(median_R_ave,"Rave_medians.csv")
+
+#selectivity coeffs here eventually
+
+######################################################################
 #R_apport
-R_apport_est<-data.frame(melt(R_apport_df_est))
-names(R_apport_est)<-c("Year","Nsim","R_apport")
-R_apport_est$Reg<-rep(1:nreg,each=nyrs)
-R_apport_est$Dat<-"EST"
+R_apport_est<-data.frame(Year=rep(1:nyrs,nreg),Reg=rep(1:nreg,each=nyrs))
+R_apport_est<-cbind(R_apport_est,data.frame(R_apport_df_est))
+R_apport_est_melt<-melt(R_apport_est,id=c("Year","Reg"))
 
-R_apport_sim<-data.frame(melt(R_apport_df_sim))
-names(R_apport_sim)<-c("Year","Nsim","R_apport")
-R_apport_sim$Reg<-rep(1:nreg,each=nyrs)
-R_apport_sim$Dat<-"SIM"
+R_apport_sim<-data.frame(Year=rep(1:nyrs,nreg),Reg=rep(1:nreg,each=nyrs))
+R_apport_sim<-cbind(R_apport_sim,data.frame(R_apport_df_sim))
+R_apport_sim_melt<-melt(R_apport_sim,id=c("Year","Reg"))
 
-R_apport<-rbind(R_apport_sim,R_apport_est)
-
-
-
-#q
-q_est<-data.frame(melt(t(q_df_est)))
-names(q_est)<-c("Nsim","Reg","q_est")
+names(R_apport_est_melt)<-c("Year","Reg","Nsim","R_apport_est")
+R_apport_est_melt$R_apport_sim<-R_apport_sim_melt[,4]
+R_apport_est_melt$R_apport_bias<-((R_apport_est_melt$R_apport_sim-R_apport_est_melt$R_apport_est)/R_apport_est_melt$R_apport_sim)*100
 
 
+r.apport.long<-melt(R_apport_est_melt, id=c("Year","Reg","Nsim"))
+r.apport.long$Reg<-as.character(r.apport.long$Reg)
+
+median_R_apport<-data.frame(r.apport.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+
+
+r.apport.plot.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_est, group=Reg)) +
+  #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data=subset(median_R_apport,variable=="R_apport_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
+  geom_point(data=subset(median_R_apport,variable=="R_apport_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=2.0) + 
+  ggtitle("Recruitment Apportionment")+
+  ylab("Recruitment Apportionment")+
+  xlab("Area")+
+  ylim(0,1)+
+  my_theme
+
+r.apport.bias.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_bias, group=Reg)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_point(data=subset(median_R_apport,variable=="R_apport_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
+  #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Recruitment Apportionment Bias")+
+  ylab("Relative % Difference")+
+  xlab("Area")+
+  ylim(-100,100)+
+  my_theme
+
+write.csv(median_R_apport,"R_apport_medians.csv")
 
 #####################################
 # Recruitment plot
@@ -826,7 +928,7 @@ rec.meds <- rec.est %>% group_by(Reg) %>%
 
 
 #generate Rec Plot
-rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=value)) +
+rec.plot.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=value)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
   geom_point(data = rec.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
@@ -842,7 +944,7 @@ rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=value)) +
 
 
 #generate Rec bias plot
-rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
+rec.bias.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
   geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
@@ -863,9 +965,15 @@ write.csv(rec.est.med,"Rec_Bias.csv")
 # Rec deviations
 
 #build data.frame
-rec.dev.data<-data.frame(Dat=c(rep("SIM",nrow(rec_devs_df_sim)),rep("EST",nrow(rec_devs_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+rec.dev.data.sim<-data.frame(Dat=rep("SIM",nrow(rec_devs_df_sim)),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+rec.dev.data.sim<-cbind(rec.dev.data.sim,rec_devs_df_sim)
+rec.dev.sim.temp<-subset(rec.dev.data.sim,!Years==1)
 
-rec.dev.data<-cbind(rec.dev.data,rbind(rec_devs_df_sim,rec_devs_df_est))
+rec.dev.data<-data.frame(Dat=rep("EST",nrow(rec_devs_df_est)),Years=rep((2:nyrs),nreg*2),Reg=rep(1:nreg,each=nyrs-1))
+rec.dev.data<-cbind(rec.dev.data,rec_devs_df_est)
+rec.dev.data<-rbind(rec.dev.data,rec.dev.sim.temp)
+
+
 rec.dev.long<-melt(rec.dev.data, id=c("Dat","Years","Reg"))
 rec.dev.long$Reg<-as.character(rec.dev.data$Reg)
 
@@ -895,13 +1003,13 @@ rec.dev.meds <- rec.dev.est %>% group_by(Reg) %>%
 
 
 #generate Rec Plot
-rec.dev.plot.gg<-ggplot(rec.dev.meds, aes(x=as.factor(Years), y=value)) +
+rec.dev.plot.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=value)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
-  geom_point(data = rec.dev.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
-  geom_line(data = rec.dev.est.med, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
-  geom_point(data = rec.dev.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
-  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = rec.dev.est.med, aes(x=Years-1,y=med.sim),lty=1,lwd=0.5) + 
+  geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.sim), fill="black", shape=16,size=0.5) + 
+  scale_x_discrete(breaks=seq(2,nyrs+1,4))+
   ggtitle("Recruitment Deviations")+
   ylab("Recruitment Deviation")+
   xlab("Year")+
@@ -911,12 +1019,12 @@ rec.dev.plot.gg<-ggplot(rec.dev.meds, aes(x=as.factor(Years), y=value)) +
 
 
 #generate Rec bias plot
-rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
+rec.dev.bias.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
-  geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
-  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
-  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  geom_line(data = rec.dev.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
+  geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(2,nyrs+1,4))+
   ggtitle("Recruitment Deviation Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
@@ -926,7 +1034,64 @@ rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
 
 
 #save rec bias calcs
-write.csv(rec.est.med,"Rec_Dev_Bias.csv")
+write.csv(rec.dev.est.med,"Rec_Dev_Bias.csv")
+
+
+
+############################################
+# Initial abundance
+
+
+init.abund.data<-data.frame(Dat=c(rep("SIM",nrow(init_abund_df_est)),rep("EST",nrow(init_abund_df_est))),Age=rep(1:na,(nreg*nreg)*2),Reg=rep(1:nreg,each=na*nreg))
+
+init.abund.data<-cbind(init.abund.data,rbind(init_abund_df_sim,init_abund_df_est))
+init.abund.melt<-melt(init.abund.data, id=c("Dat","Age","Reg"))
+
+
+#sum across region
+#calculate the sum across areas 
+total.init.abund<-data.frame(init.abund.melt %>% group_by(Dat, Age, Reg,variable) %>% summarise(value=sum(value)))
+
+init.abund.est<-subset(total.init.abund,Dat=="EST")
+init.sim<-subset(total.init.abund,Dat=="SIM")
+init.abund.est$value.true<-init.sim$value
+init.abund.est$bias<-((init.abund.est$value.true-init.abund.est$value)/init.abund.est$value.true)*100
+
+
+init.abund.meds<-data.frame(init.abund.est %>% group_by(Age, Reg) %>% summarise(median.est=median(value),median.sim=median(value.true),median.bias=median(bias),min.bias=min(bias),max.bias=max(bias)))
+
+
+init.abund.plot.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=value)) +
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = init.abund.meds, aes(x=Age,y=median.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = init.abund.meds, aes(x=Age,y=median.sim),lty=1, lwd=0.5) + 
+  geom_point(data = init.abund.meds, aes(x=Age,y=median.sim), fill="black", shape=16,size=0.5) + 
+  scale_x_discrete(breaks=seq(0,na,1))+
+  ggtitle("Initial Abundance")+
+  ylab("Initial Abundance")+
+  xlab("Age")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#bias
+init.abund.bias.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = init.abund.meds, aes(x=Age,y=median.bias),lty=1,lwd=0.5) + 
+  geom_point(data = init.abund.meds, aes(x=as.factor(Age),y=median.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(2,nyrs+1,4))+
+  ggtitle("Initial Abundance Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  ylim(-100,100)+
+  my_theme
+
+
+write.csv(init.abund.meds,"Initial_abund_medians.csv")
+
 
 #####################################
 # SSB plot
@@ -964,7 +1129,7 @@ ssb.meds <- ssb.est %>% group_by(Reg) %>%
 
 
 #generate ssb Plot
-ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
+ssb.plot.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
   geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
@@ -979,7 +1144,7 @@ ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
 
 
 #generate Rec bias plot
-ssb.bias.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=bias)) +
+ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
   geom_line(data = ssb.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
@@ -1033,7 +1198,7 @@ bio.meds <- bio.est %>% group_by(Reg) %>%
 
 
 #generate bio Plot
-bio.plot.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=value)) +
+bio.plot.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
   geom_point(data = bio.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = bio.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
@@ -1048,7 +1213,7 @@ bio.plot.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=value)) +
 
 
 #generate Rec bias plot
-bio.bias.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=bias)) +
+bio.bias.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
   geom_line(data = bio.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
@@ -1105,7 +1270,7 @@ fmax.meds <- fmax.est %>% group_by(Reg) %>%
 
 
 #generate fmax Plot
-fmax.plot.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=value)) +
+fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
   geom_point(data = fmax.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
@@ -1371,10 +1536,24 @@ grid.arrange(ncol=1,nrow=4,
 
 
 #add rec plots
+grid.arrange(ncol = 2,
+             top="Input Parameters",
+             q.plot.gg,rave.plot.gg,
+             q.bias.gg,rave.bias.gg)
+
+
+grid.arrange(ncol = 1,
+             top="Recruitment Apportionment",
+             r.apport.plot.gg, r.apport.bias.gg)
+
+
 grid.arrange(ncol = 1,
              top="Recruitment Estimation",
              rec.plot.gg, rec.bias.gg)
 
+grid.arrange(ncol = 1,
+             top="Initial Abundance",
+             init.abund.plot.gg, init.abund.bias.gg)
 
 #add ssb plots
 grid.arrange(ncol = 1,
@@ -1425,12 +1604,13 @@ grid.arrange(ncol = 2,nrow=4,
 
 dev.off()
 
-} #end PDF code
+
+}#end PDF code
 
 
 
 
-} #end of full run - fingers crossed
+}#end of full run - fingers crossed
 
 
 
