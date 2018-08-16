@@ -3,6 +3,9 @@
 # Created by: Katelyn Bosley
 ###################################################
 
+# This code will run a simulation experiment for the SPASAM model
+# 
+
 
 #remove junk from workspace
 rm(list=(ls()))
@@ -39,39 +42,41 @@ load_libraries()
 
 
 
-#######################################################################
+###################################
 #Setting up the simulations
 ##################################
 
+
+#1) Do you want to run the diagnostics code before running the sims?
 
 diag.run<-1
 # ==0 NO Do NOT run the diagnostics plots for a single run
 # ==1 YES run the diagnostics plots for a single run
 
 
-# Set number of simulations to perform
-nsim <-24  
+#2) Set number of simulations to perform
+nsim <-8
 
 ######################
 #plot parameters
 #####################
 
-# Select color for violins
+#3) Select color for violins
 vio.col<-"lightskyblue3"
 
-#select color for median points
+#4) select color for median points
 median.col<-"grey95"
 
 
-###########################################################
+#########################################
 ### setting up the directories
-###############################
+#########################################
 
-# To run this simulation a folder for each scenario will need to be placed in the master directory. Each folder will need separate folders named 'Operating_Model' and 'EM_model' with the exe files and .DAT for the OM only. The Code will do the rest. Be sure that the TIM_diagnostics.R code is also in the master directory. 
+# To run this simulation a folder for each scenario will need to be placed in the master directory. Each folder will need separate folders named 'Operating_Model' and 'EM_model' with the exe files and .DAT for the OM only. The Code will do the rest. Be sure that the TIM_diagnostics.R code is also in the master directory if diag_switch==1 
 #
 
-# set master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SIM_TEST"
+#5) set master file with holding the runs 
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\SIMS_EDIT"
 setwd(direct_master)
 
 #list files in the directory
@@ -79,15 +84,16 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-folder.num=1
+folder.num=2
 
 i=folder.num
 
 #if running the several folders use the loop - This will come later
 #for(i in 1:3){
 
-##############################################################
+{
 
+##############################################################
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
@@ -96,41 +102,62 @@ OM_name<-"TIM_OM" #name of the OM you are wanting to run
 EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 
-#Build diagnostics folder
+#Build diagnostics/results folder
 dir.create(paste0(direct_master,"\\",files[i],"\\Diagnostics",sep=""))
 diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 
+#Build directories and folders to keep results from run
 
-#
-# SKIP TO PLOTTING SECTION IF SIMS ARE COMPLETED!
-#
+#Runs directory for individual runs
+dir.create(paste0(diag_direct,"\\Runs",sep=""))
+runs_dir<-paste0(diag_direct,"\\Runs",sep="")
 
-{ #run the hold dang thing...
+#save good results
+dir.create(paste0(diag_direct,"\\Results_converged",sep=""))
+results_good<-paste0(diag_direct,"\\Results_converged",sep="")
+
+#save bad results
+dir.create(paste0(diag_direct,"\\Results_NOT_conv",sep=""))
+results_bad<-paste0(diag_direct,"\\Results_NOT_conv",sep="")
+
+#save the primary output files needed to correct file
+#need .rep, .std
+
+##################################################
+# SKIP TO PLOTTING SECTION IF SIMS ARE COMPLETED!#
+
+
+#Simulations...
+
 
 ###############################################################
 # RUN TIM DIAGNOSTICS
 ###############################################################
 
 # generates a single run diagnotic of the OM and EM and
-# moves file to the diagnostics folder
+# moves files from diagnostic run to the diagnostics folder
 
 if(diag.run==1){
-source("TIM_Diagnostics_master.R") # make sure this code is in the direct_master folder.
+source("TIM_Diagnostics_SIM.R") # make sure this code is in the direct_master folder.
 
 invisible(file.rename(from=paste0(EM_direct,"\\Model_Diagnostics.pdf",sep=""),to=paste0(diag_direct,"\\Model_Diagnostics.pdf",sep="")))
-
 invisible(file.rename(from=paste0(EM_direct,"\\Tag_Residuals.pdf",sep=""),to=paste0(diag_direct,"\\Tag_Residuals.pdf",sep="")))
+invisible(file.rename(from=paste0(EM_direct,"\\Correlation_Matrix.pdf",sep=""),to=paste0(diag_direct,"\\Correlation_Matrix.pdf",sep="")))
+invisible(file.rename(from=paste0(EM_direct,"\\Standard_Error_table.pdf",sep=""),to=paste0(diag_direct,"\\Standard_Error_table.pdf",sep="")))
+invisible(file.rename(from=paste0(EM_direct,"\\output.txt",sep=""),to=paste0(diag_direct,"\\diag_output.txt",sep="")))
 }
+
 
 ############################################################
 ############## Run simulations #############################
 ############################################################
 
-{ # run the simulations section
+# run the simulations section
 
+  
 #Set up convergence record to holds likelihood components and eventually gradient 
+Sim.Stats<-data.frame(SimN=seq(1:nsim), Converged=rep(NA,nsim),Max_Gradient=rep(NA,nsim),Obj_fun=rep(NA,nsim), Tag_like=rep(NA,nsim), Catch_like=rep(NA,nsim), Survey_like=rep(NA,nsim), Fish_age_like=rep(NA,nsim), survey_age_like = rep(NA,nsim), Rec_like=rep(NA,nsim))
 
-Sim.Stats<-data.frame(SimN=seq(1:nsim), Converged=rep(NA,nsim), Tag_like=rep(NA,nsim), Catch_like=rep(NA,nsim), Survey_like=rep(NA,nsim), Fish_age_like=rep(NA,nsim), survey_age_like = rep(NA,nsim), Rec_like=rep(NA,nsim))
 
 #set up parallel 
 no_cores <- detectCores()
@@ -149,121 +176,129 @@ ls=foreach(j=1:nsim,.options.snow = opts,.combine='rbind',.packages =c('PBSmodel
   
  temp<-as.vector(rep(NA,(ncol(Sim.Stats)-1)))
   
-  dir.create(paste0(diag_direct,"\\Run",j,sep=""))
-  dir.create(paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep=""))
-  dir.create(paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep=""))
+  dir.create(paste0(runs_dir,"\\Run",j,sep=""))
+  dir.create(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
+  dir.create(paste0(runs_dir,"\\Run",j,"\\Estimation_Model",sep=""))
   
 #Move folders and .dat files  
-  invisible(file.copy(from=paste0(OM_direct,"\\TIM_OM.exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
-  invisible(file.copy(from=paste0(OM_direct,"\\TIM_OM.dat",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep="")))
-  invisible(file.copy(from=paste0(EM_direct,"\\TIM_EM.exe",sep=""),to=paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep="")))
+  invisible(file.copy(from=paste0(OM_direct,"\\",OM_name,".exe",sep=""),to=paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep="")))
+  invisible(file.copy(from=paste0(OM_direct,"\\",OM_name,".dat",sep=""),to=paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep="")))
+  invisible(file.copy(from=paste0(EM_direct,"\\", EM_name,".exe",sep=""),to=paste0(runs_dir,"\\Run",j,"\\Estimation_Model",sep="")))
   
 
   
 #change seed for OM
-setwd(paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep=""))
+setwd(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
       
-SIM.DAT=readLines("TIM_OM.dat",n=-1)
-SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=j
-SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=100000+j
-SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=200000+nsim
-SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=300000+j
-SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=400000+j
-SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=500000+j
-SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=600000+j
-SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=700000+j
-SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=800000+j
+SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
+SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=40+j
+SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=100+j
+SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=200+j
+SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=300+j
+SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=400+j
+SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=500+j
+SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=600+j
+SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=700+j
+SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=800+j
 
-writeLines(SIM.DAT,"TIM_OM.dat")
+writeLines(SIM.DAT,paste0(OM_name,".dat"))
 
 #run the OM
 invisible(shell(paste0(OM_name," -nox -nohess"),wait=T))
 
 # move the .rep from the OM_direct and change name. 
-from<-paste0(paste0(diag_direct,"\\Run",j,"\\Operating_Model\\",OM_name,".rep",sep=""))
-to<-paste0(paste0(diag_direct,"\\Run",j,"\\Estimation_Model\\",EM_name,".dat",sep=""))
+from<-paste0(paste0(runs_dir,"\\Run",j,"\\Operating_Model\\",OM_name,".rep",sep=""))
+to<-paste0(paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".dat",sep=""))
 file.copy(from = from,  to = to)
 
+#set WD to estimation model folder
+setwd(paste0(runs_dir,"\\Run",j,"\\Estimation_Model",sep=""))
+
 #Delete OM folder to save space
-unlink(paste0(diag_direct,"\\Run",j,"\\Operating_Model",sep=""),recursive = T)
+unlink(paste(runs_dir,"\\Run",j,"\\Operating_Model",sep=""),recursive = T)
 
 
 ################################
 #run the EM
 
-setwd(paste0(diag_direct,"\\Run",j,"\\Estimation_Model",sep=""))
 invisible(shell(paste0(EM_name," -nox -ind"),wait=T))
 
 
+# if run converged...save results and move to results_good folder
 if(file.exists("TIM_EM.cor")==TRUE)
    
 {
-  temp[1]=1 #set convergence
+  #set convergence
+  temp[1]=1 
+
+ #save report  
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".rep",sep=""),  
+            to = paste0(results_good,"\\Run",j,".rep",sep=""))
+  #save std
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".std",sep=""),  
+            to = paste0(results_good,"\\Run",j,".std",sep=""))
+  #save cor
+#  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".cor",sep=""),  
+#            to = paste0(results_good,"\\Run",j,".cor",sep=""))
+
+  }
+  
+# if not converged..save results to results_bad
+if(file.exists("TIM_EM.cor")==FALSE)
+{
+  #set convergence
+  temp[1]=0 
+
+  #save report  
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".rep",sep=""),  
+            to = paste0(results_bad,"\\Run",j,".rep",sep=""))
+  #save std
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".std",sep=""),  
+            to = paste0(results_bad,"\\Run",j,".std",sep=""))
+  }
+  
+  
+#save max gradient
+  grad<-read.table("gradient.dat",header=T) #need to work on this
+  temp[2]=max(grad$Gradient)
   
 #Things to save values from .REP  
   out<-readList("TIM_EM.rep")
-  temp[2:length(temp)]=c(out$tag_like,out$catch_like,out$survey_like,out$fish_age_like,out$survey_age_like,out$rec_like)
-  
- #grad<-readLines("gradient.dat") #need to work on this
-  
-}
+  temp[3:length(temp)]=c(out$f,out$tag_like,out$catch_like,out$survey_like,out$fish_age_like,out$survey_age_like,out$rec_like)
 
-
-if(file.exists("TIM_EM.cor")==FALSE)
-{
-  
-  temp[1]=0 #set convergence
-  
-  #Things to save values from .REP  
-  out<-readList("TIM_EM.rep")
-  temp[2:length(temp)]=c(out$tag_like,out$catch_like,out$survey_like,out$fish_age_like,out$survey_age_like,out$rec_like)
-
-}
-  
-  #then delete the junk
-  invisible(shell("del TIM_EM.exe")) 
-  invisible(shell("del admodel.cov"))
-  invisible(shell("del admodel.dep"))
-  invisible(shell("del admodel.hes")) 
-  invisible(shell("del TIM_EM.b01"))
-  invisible(shell("del TIM_EM.P01"))
-  invisible(shell("del TIM_EM.R01"))
-  invisible(shell("del TIM_EM.b02"))
-  invisible(shell("del TIM_EM.P02"))
-  invisible(shell("del TIM_EM.R02"))
-  invisible(shell("del TIM_EM.b03"))
-  invisible(shell("del TIM_EM.P03"))
-  invisible(shell("del TIM_EM.R03"))
-  invisible(shell("del TIM_EM.bar"))
-  invisible(shell("del TIM_EM.eva"))
-  invisible(shell("del TIM_EM.log"))
-  invisible(shell("del fmin.log"))
-  invisible(shell("del variance"))
- 
 return(temp)
-
+  
 }
 
+
+# end parallel job
 close(pb)
 stopCluster(cl) #end the cluster for parallel processing
 closeAllConnections() 
+
+#delete run folder
+setwd(diag_direct)
+unlink(paste(runs_dir),recursive = T)
+
 
 
 #Save Sim Statistics from runs  - We can add more stuff here eventually
 Sim.Stats[,2:ncol(Sim.Stats)]<-ls[,1:ncol(ls)]
 Sim.Stats$Total_like=rowSums(Sim.Stats)
  
-#ending
-unlink(getwd())
-setwd(diag_direct)
-
 #save convergence file
 write.csv(file="Sim_Stats.csv",Sim.Stats)
 
-} # end of simulations and value save
+ # end of simulations and value save
+
+
+
+
 
 ##############################################################
-#Grabbing Values from EM runs
+##############################################################
+#Grabbing Values from converged report files
+##############################################################
 ##############################################################
 
 { # run the value grab
@@ -277,14 +312,23 @@ files<-list.files(direct_master)
 #i=folder.num # if you are working only one folder or if you are running this section separate from sims
 
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-OM_name<-"TIM_OM" #name of the OM you are wanting to run
+OM_name<-OM_name #name of the OM you are wanting to run
+
 EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
-EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
+EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
+
 diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
 
-#pull dimensions for building data frames for plotting
 
-#get dimensions for scenario
+
+Sim_Stats<-read.csv(paste0(diag_direct,'\\Sim_Stats.csv'))
+
+#create a vector for converged runs to calculate bias and create plots
+conv.runs<-which(Sim_Stats$Converged==1)
+
+
+
+#pull dimensions for building data frames for plotting
 out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
 
 #pull info about the model
@@ -314,23 +358,31 @@ pb <- txtProgressBar(max = nsim, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
 
-vg=foreach(k=1:nsim,.options.snow = opts,.combine='cbind',.packages = c('PBSmodelling','data.table','matrixStats')) %dopar% {
 
-#read in rep
-out<-readList(paste0(diag_direct,"\\Run",k,"\\Estimation_Model\\",EM_name,".rep",sep=""))
+#k=1
+
+vg=foreach(k=conv.runs,.options.snow = opts,.combine='cbind',.packages = c('PBSmodelling','data.table','matrixStats')) %dopar% {
   
+ 
+#read in rep
+out<-readList(paste0(results_good,"\\Run",k,".rep",sep=""))
+
 #Save R_ave
-meanR_sim_temp<-out$R_ave_TRUE
-meanR_est_temp<-out$R_ave
+meanR_sim_temp<-data.table(meanR_sim = c(t(out$R_ave_TRUE)))
+meanR_est_temp<-data.table(meanR_est = c(t(out$R_ave)))
   
 #Save_apport
 apport_sim_temp<-data.table(Apport_Sim = c(t(out$Rec_Prop_TRUE)))
 apport_est_temp<-data.table(Apport_Est = c(t(out$Rec_Prop)))  
 
-#Save Rec
+#Save Rec Total
 rec_sim_temp<-data.table(Rec_Sim = c(t(out$recruits_BM_TRUE)))
 rec_est_temp<-data.table(Rec_Est= c(t(out$recruits_BM)))
-  
+
+#Save Rec deviations
+rec_devs_sim_temp<-data.table(Rec_Devs_Sim = c(t(out$rec_devs_TRUE)))
+rec_devs_est_temp<-data.table(Rec_Devs_Est= c(t(out$rec_devs_TRUE)))
+
 #Save SSB
 ssb_sim_temp<-data.table(SSB_Sim = c(t(out$SSB_region_TRUE)))
 ssb_est_temp<-data.table(SSB_Est = c(t(out$SSB_region)))
@@ -347,13 +399,71 @@ survey_est_temp<-data.table(Survey_Est = c(t(out$survey_fleet_bio)))
 yield_sim_temp<-data.table(Catch_Sim = c(t(out$OBS_yield_fleet)))
 yield_est_temp<-data.table(Catch_Est = c(t(out$yield_fleet)))
 
-
 #Save F
 fmax_sim_temp<-data.table(Fmax_Sim=c(t(rowMaxs(out$F))))
 fmax_est_temp<-data.table(Fmax_Est=c(t(rowMaxs(out$F_TRUE))))
 
+#Save q
+q_sim_temp<-data.table(q_Sim=c(t(out$q_survey_TRUE)))
+q_est_temp<-data.table(q_Est=c(t(out$q_survey)))
 
-#we can add other stuff here 
+#Save selectivity
+
+#fishery 
+sel_beta1_sim_temp<-data.table(sel_beta1_Sim=c(t(out$sel_beta1_TRUE)))
+sel_beta2_sim_temp<-data.table(sel_beta2_Sim=c(t(out$sel_beta2_TRUE)))
+sel_beta3_sim_temp<-data.table(sel_beta3_Sim=c(t(out$sel_beta3_TRUE)))
+sel_beta4_sim_temp<-data.table(sel_beta4_Sim=c(t(out$sel_beta4_TRUE)))
+
+sel_beta1_est_temp<-data.table(sel_beta1_Est=c(t(out$sel_beta1)))
+sel_beta2_est_temp<-data.table(sel_beta2_Est=c(t(out$sel_beta2)))
+sel_beta3_est_temp<-data.table(sel_beta3_Est=c(t(out$sel_beta3)))
+sel_beta4_est_temp<-data.table(sel_beta4_Est=c(t(out$sel_beta4)))
+
+#survey 
+sel_beta1_surv_sim_temp<-data.table(sel_beta1_Sim=c(t(out$sel_beta1_survey_TRUE)))
+sel_beta2_surv_sim_temp<-data.table(sel_beta2_Sim=c(t(out$sel_beta2_survey_TRUE)))
+sel_beta3_surv_sim_temp<-data.table(sel_beta3_Sim=c(t(out$sel_beta3_survey_TRUE)))
+sel_beta4_surv_sim_temp<-data.table(sel_beta4_Sim=c(t(out$sel_beta4_survey_TRUE)))
+
+sel_beta1_surv_est_temp<-data.table(sel_beta1_Est=c(t(out$sel_beta1_survey)))
+sel_beta2_surv_est_temp<-data.table(sel_beta2_Est=c(t(out$sel_beta2_survey)))
+sel_beta3_surv_est_temp<-data.table(sel_beta3_Est=c(t(out$sel_beta3_survey)))
+sel_beta4_surv_est_temp<-data.table(sel_beta4_Est=c(t(out$sel_beta4_survey)))
+
+#selectivity age for plotting
+select_age_sim_temp<-data.table(out$selectivity_age_TRUE)
+select_age_est_temp<-data.table(out$selectivity_age)
+
+select_age_survey_sim_temp<-data.table(out$survey_selectivity_age_TRUE)
+select_age_survey_est_temp<-data.table(out$survey_selectivity_age)
+
+
+#Save Movement
+movement_year_sim_temp<-data.table(movement_year_Sim=c(out$T_year_TRUE))
+
+pull<-unlist(out[grep("alt", names(out), value = TRUE)])
+movement_year_est_temp<-data.table(movement_year_Est=c(t(pull)))
+
+###################
+#Save age comps
+#################
+
+#survey
+pull.surv.sim<-out[grep("OBS_survey_prop", names(out), value = TRUE)]
+pull.surv.est<-out[grep("EST_survey_age_prop", names(out), value = TRUE)]
+
+surv_sim_temp<-data.table(do.call("rbind",pull.surv.sim))
+surv_est_temp<-data.table(do.call("rbind",pull.surv.est))
+
+#fishery
+pull.catch.sim<-out[grep("OBS_catch_prop", names(out), value = TRUE)]
+pull.catch.est<-out[grep("EST_catch_age_fleet_prop", names(out), value = TRUE)]
+
+catch_sim_temp<-data.table(do.call("rbind",pull.catch.sim))
+catch_est_temp<-data.table(do.call("rbind",pull.catch.est))
+
+
 
 #return all the matrices as a list
   return(list(meanR_sim=meanR_sim_temp,
@@ -362,6 +472,8 @@ fmax_est_temp<-data.table(Fmax_Est=c(t(rowMaxs(out$F_TRUE))))
               apport_est=apport_est_temp,
               rec_sim=rec_sim_temp,
               rec_est=rec_est_temp,
+              rec_devs_sim=rec_devs_sim_temp,
+              rec_devs_est=rec_devs_est_temp,
               ssb_sim=ssb_sim_temp,
               ssb_est=ssb_est_temp,
               bio_sim=bio_sim_temp,
@@ -371,7 +483,37 @@ fmax_est_temp<-data.table(Fmax_Est=c(t(rowMaxs(out$F_TRUE))))
               yield_sim=yield_sim_temp,
               yield_est=yield_est_temp,
               fmax_sim=fmax_sim_temp,
-              fmax_est=fmax_est_temp))
+              fmax_est=fmax_est_temp,
+              sel_beta1_sim=sel_beta1_sim_temp,
+              sel_beta2_sim=sel_beta2_sim_temp,
+              sel_beta3_sim=sel_beta3_sim_temp,
+              sel_beta4_sim=sel_beta4_sim_temp,
+              sel_beta1_est=sel_beta1_est_temp,
+              sel_beta2_est=sel_beta2_est_temp,
+              sel_beta3_est=sel_beta3_est_temp,
+              sel_beta4_est=sel_beta4_est_temp,
+              sel_beta1_surv_sim=sel_beta1_surv_sim_temp,
+              sel_beta2_surv_sim=sel_beta2_surv_sim_temp,
+              sel_beta3_surv_sim=sel_beta3_surv_sim_temp,
+              sel_beta4_surv_sim=sel_beta4_surv_sim_temp,
+              sel_beta1_surv_est=sel_beta1_surv_est_temp,
+              sel_beta2_surv_est=sel_beta2_surv_est_temp,
+              sel_beta3_surv_est=sel_beta3_surv_est_temp,
+              sel_beta4_surv_est=sel_beta4_surv_est_temp,
+              select_age_sim=select_age_sim_temp,
+              select_age_est=select_age_est_temp,
+              select_age_survey_sim=select_age_survey_sim_temp,
+              select_age_survey_est=select_age_survey_sim_temp,
+              q_sim=q_sim_temp,
+              q_est=q_est_temp,
+              movement_year_sim=movement_year_sim_temp,
+              movement_year_est=movement_year_est_temp,
+              surv_comp_sim=surv_sim_temp,
+              surv_comp_est=surv_est_temp,
+              catch_comp_sim=catch_sim_temp,
+              catch_comp_est=catch_est_temp
+              
+              ))
               
 } #end parallel
   
@@ -382,7 +524,7 @@ closeAllConnections()
 
 #saves all the results in a list for later plotting
 setwd(diag_direct)
-saveRDS(vg, file="Sim_run.RData")
+saveRDS(vg, file="Sim_data.RData")
 
 }
 
@@ -428,17 +570,54 @@ saveRDS(vg, file="Sim_run.RData")
   
 
 ###############################################################
-# Start plotting
+# Basic Plots
 ###############################################################
   
 #load up the results
 setwd(diag_direct)
-Sim_Results<-readRDS('Sim_run.RData')
-Sim.Stats<-read.csv('Sim_Stats.csv')
+Sim_Results<-readRDS('Sim_data.RData')
+Sim_Stats<-read.csv('Sim_Stats.csv')
+
+
+#saving values
+R_ave_df_sim<-matrix(NA,npops,nsim)
+R_ave_df_est<-matrix(NA,npops,nsim)
+
+R_apport_df_sim<-matrix(NA,nyrs*nreg,nsim)
+R_apport_df_est<-matrix(NA,nyrs*nreg,nsim)
+
+q_df_sim<-matrix(NA,nreg,nsim)
+q_df_est<-matrix(NA,nreg,nsim)
+
+
+#selectivity params
+sel_beta1_df_sim<-matrix(NA,nreg,nsim)
+sel_beta2_df_sim<-matrix(NA,nreg,nsim)
+sel_beta3_df_sim<-matrix(NA,nreg,nsim)
+sel_beta4_df_sim<-matrix(NA,nreg,nsim)
+sel_beta1_df_est<-matrix(NA,nreg,nsim)
+sel_beta2_df_est<-matrix(NA,nreg,nsim)
+sel_beta3_df_est<-matrix(NA,nreg,nsim)
+sel_beta4_df_est<-matrix(NA,nreg,nsim)
+
+
+sel_beta1_surv_df_sim<-matrix(NA,nreg,nsim)
+sel_beta2_surv_df_sim<-matrix(NA,nreg,nsim)
+sel_beta3_surv_df_sim<-matrix(NA,nreg,nsim)
+sel_beta4_surv_df_sim<-matrix(NA,nreg,nsim)
+sel_beta1_surv_df_est<-matrix(NA,nreg,nsim)
+sel_beta2_surv_df_est<-matrix(NA,nreg,nsim)
+sel_beta3_surv_df_est<-matrix(NA,nreg,nsim)
+sel_beta4_surv_df_est<-matrix(NA,nreg,nsim)
+
 
 #Recruitment
 rec_df_sim<-matrix(NA,nyrs*nreg,nsim)
 rec_df_est<-matrix(NA,nyrs*nreg,nsim)
+
+#Recruitment deviations
+rec_devs_df_sim<-matrix(NA,nyrs*nreg,nsim)
+rec_devs_df_est<-matrix(NA,nyrs*nreg,nsim)
 
 #SSB
 ssb_df_sim<-matrix(NA,nyrs*nreg,nsim)
@@ -452,7 +631,7 @@ bio_df_est<-matrix(NA,nyrs*nreg,nsim)
 catch_df_sim<-matrix(NA,nyrs*nreg,nsim)
 catch_df_est<-matrix(NA,nyrs*nreg,nsim)
 
-#survey
+#survey bio
 survey_df_sim<-matrix(NA,nyrs*nreg,nsim)
 survey_df_est<-matrix(NA,nyrs*nreg,nsim)
 
@@ -460,29 +639,69 @@ survey_df_est<-matrix(NA,nyrs*nreg,nsim)
 fmax_df_sim<-matrix(NA,nyrs*nreg,nsim)
 fmax_df_est<-matrix(NA,nyrs*nreg,nsim)
 
+#select at age
+select_age_df_sim<-matrix(NA,na*nreg,nsim)
+select_age_df_est<-matrix(NA,na*nreg,nsim)
+select_age_survey_df_sim<-matrix(NA,na*nreg,nsim)
+select_age_survey_df_est<-matrix(NA,na*nreg,nsim)
+
+#movement
+move_df_sim<-matrix(NA,nyrs*nreg*nreg,nsim)
+move_df_est<-matrix(NA,nyrs*nreg*nreg,nsim)
 
 
-# F and T to come later
+#age comps - eventually?
 
+
+###########################################################
 # populate the matrices for plotting
 for(i in 1:nsim){
-rec_df_sim[,i]<-unlist(Sim_Results[5,i])
-rec_df_est[,i]<-unlist(Sim_Results[6,i])
-ssb_df_sim[,i]<-unlist(Sim_Results[7,i])
-ssb_df_est[,i]<-unlist(Sim_Results[8,i])
-bio_df_sim[,i]<-unlist(Sim_Results[9,i])
-bio_df_est[,i]<-unlist(Sim_Results[10,i])
-catch_df_sim[,i]<-unlist(Sim_Results[11,i])
-catch_df_est[,i]<-unlist(Sim_Results[12,i])
-survey_df_sim[,i]<-unlist(Sim_Results[13,i])
-survey_df_est[,i]<-unlist(Sim_Results[14,i])
-fmax_df_sim[,i]<-unlist(Sim_Results[15,i])
-fmax_df_est[,i]<-unlist(Sim_Results[16,i])
-# add in survey and catch... KB
-
+R_ave_df_sim[,i]<-unlist(Sim_Results["meanR_sim",i])
+R_ave_df_est[,i]<-unlist(Sim_Results["meanR_est",i])
+R_apport_df_sim[,i]<-unlist(Sim_Results["apport_sim",i])
+R_apport_df_est[,i]<-unlist(Sim_Results["apport_est",i])
+q_df_sim[,i]<-unlist(Sim_Results["q_sim",i])
+q_df_est[,i]<-unlist(Sim_Results["q_est",i])
+sel_beta1_df_sim[,i]<-unlist(Sim_Results["sel_beta1_sim",i])
+sel_beta2_df_sim[,i]<-unlist(Sim_Results["sel_beta2_sim",i])
+sel_beta3_df_sim[,i]<-unlist(Sim_Results["sel_beta3_sim",i])
+sel_beta4_df_sim[,i]<-unlist(Sim_Results["sel_beta4_sim",i])
+sel_beta1_df_est[,i]<-unlist(Sim_Results["sel_beta1_est",i])
+sel_beta2_df_est[,i]<-unlist(Sim_Results["sel_beta2_est",i])
+sel_beta3_df_est[,i]<-unlist(Sim_Results["sel_beta3_est",i])
+sel_beta4_df_est[,i]<-unlist(Sim_Results["sel_beta4_est",i])
+sel_beta1_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta1_surv_sim",i])
+sel_beta2_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta2_surv_sim",i])
+sel_beta3_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta3_surv_sim",i])
+sel_beta4_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta4_surv_sim",i])
+sel_beta1_surv_df_est[,i]<-unlist(Sim_Results["sel_beta1_surv_est",i])
+sel_beta2_surv_df_est[,i]<-unlist(Sim_Results["sel_beta2_surv_est",i])
+sel_beta3_surv_df_est[,i]<-unlist(Sim_Results["sel_beta3_surv_est",i])
+sel_beta4_surv_df_est[,i]<-unlist(Sim_Results["sel_beta4_surv_est",i])
+rec_df_sim[,i]<-unlist(Sim_Results["rec_sim",i])
+rec_df_est[,i]<-unlist(Sim_Results["rec_est",i])
+rec_devs_df_sim[,i]=unlist(Sim_Results["rec_devs_sim",i])
+rec_devs_df_est[,i]=unlist(Sim_Results["rec_devs_est",i])
+ssb_df_sim[,i]<-unlist(Sim_Results["ssb_sim",i])
+ssb_df_est[,i]<-unlist(Sim_Results["ssb_est",i])
+bio_df_sim[,i]<-unlist(Sim_Results["bio_sim",i])
+bio_df_est[,i]<-unlist(Sim_Results["bio_est",i])
+catch_df_sim[,i]<-unlist(Sim_Results["yield_sim",i])
+catch_df_est[,i]<-unlist(Sim_Results["yield_est",i])
+survey_df_sim[,i]<-unlist(Sim_Results["survey_sim",i])
+survey_df_est[,i]<-unlist(Sim_Results["survey_est",i])
+fmax_df_sim[,i]<-unlist(Sim_Results["fmax_sim",i])
+fmax_df_est[,i]<-unlist(Sim_Results["fmax_est",i])
+move_df_sim[,i]<-unlist(Sim_Results["movement_year_sim",i])
+move_df_est[,i]<-unlist(Sim_Results["movement_year_est",i])
+select_age_df_sim[,i]<-unlist(Sim_Results["select_age_sim",i])
+select_age_df_est[,i]<-unlist(Sim_Results["select_age_est",i])
+select_age_df_sim[,i]<-unlist(Sim_Results["select_age_sim",i])
+select_age_survey_df_sim[,i]<-unlist(Sim_Results["select_age_survey_sim",i])
+select_age_survey_df_est[,i]<-unlist(Sim_Results["select_age_survey_est",i])
 }
 
-
+}
 #######################################
 # Building a ggplot theme
 ######################################
@@ -499,33 +718,74 @@ my_theme<-
 # Likelihood plots
 #####################################################
 
-#plots panel of likelihoods
+#Plot histograms of the likelihoods
 
-conv<-sum(Sim.Stats$Converged)/nsim
+#calculate the percent convervged
+conv<-sum(Sim_Stats$Converged)/nsim
 
-#starts with col 3
-
-bins<-nsim/2
+#how many bins for the number of simulations
+bins<-round(nsim*0.8,0)
 
 Like.hist<-function(j=5){
-breaks<-(max(Sim.Stats[j])-min(Sim.Stats[j]))/bins
+breaks<-(max(Sim_Stats[j])-min(Sim_Stats[j]))/bins
 
-ggplot(Sim.Stats, aes(x=Sim.Stats[j])) + 
+ggplot(Sim_Stats, aes(x=Sim_Stats[j])) + 
   geom_histogram(binwidth = breaks, col="black", fill="grey80")+
   ylab("Frequency")+
   xlab("Likelihood")+
-  ggtitle(colnames(Sim.Stats[j]))+
+  ggtitle(colnames(Sim_Stats[j]))+
   my_theme
 
 }
 
 
-#######################################
-# Extracting only the "good" converged runs 
-#######################################
 
-#soon
+######################################
+# Building the plots!
+######################################
 
+#R_ave
+Rave_est<-data.frame(melt(t(R_ave_df_est)))
+names(Rave_est)<-c("Nsim","Reg","R_ave")
+R_medians<-tapply(as.numeric(Rave_est$R_ave),Rave_est$Reg,median)
+
+# keeping only the first col
+Rave_sim<-data.frame(melt(t(R_ave_df_sim[,1])))
+names(Rave_sim)<-c("Nsim","Reg","R_ave")
+
+#plot
+R.ave.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave, group=Reg)) +
+  #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  stat_summary(fun.y = median,
+               geom = "point") +
+  geom_point(fill=median.col, shape=21,size=2.0) + 
+  geom_point(data = Rave_sim, aes(x=Reg,y=R_ave), fill="black", shape=16,size=0.5) + 
+  ggtitle("Mean Recruitment")+
+  ylab("Mean Recruitment")+
+  xlab("Area")+
+  #ylim(-5,5)+
+  my_theme
+
+
+#R_apport
+R_apport_est<-data.frame(melt(R_apport_df_est))
+names(R_apport_est)<-c("Year","Nsim","R_apport")
+R_apport_est$Reg<-rep(1:nreg,each=nyrs)
+R_apport_est$Dat<-"EST"
+
+R_apport_sim<-data.frame(melt(R_apport_df_sim))
+names(R_apport_sim)<-c("Year","Nsim","R_apport")
+R_apport_sim$Reg<-rep(1:nreg,each=nyrs)
+R_apport_sim$Dat<-"SIM"
+
+R_apport<-rbind(R_apport_sim,R_apport_est)
+
+
+
+#q
+q_est<-data.frame(melt(t(q_df_est)))
+names(q_est)<-c("Nsim","Reg","q_est")
 
 
 
@@ -562,44 +822,114 @@ rec.est.med <- rec.est %>% group_by(Reg,Years) %>%
 
 #calc vals for plots
 rec.meds <- rec.est %>% group_by(Reg) %>%
-  mutate(med = median(value),med.true=median(val.true))
+  mutate(med.est = median(value),med.true=median(val.true))
 
 
 #generate Rec Plot
-rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=log(value))) +
-  geom_hline(aes(yintercept = log(med), group = Reg), colour = 'darkred', size=0.5,lty=2)+
+rec.plot.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=value)) +
+  #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
-  geom_line(data = rec.est.med, aes(x=Years,y=log(med.sim)),lty=1) + 
-  geom_point(data = rec.est.med, aes(x=Years,y=log(med.sim)), fill=median.col, shape=21,size=1.5) + 
+  geom_point(data = rec.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = rec.est.med, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
+  geom_point(data = rec.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Total Recruitment")+
-  ylab("log(Recruitment)")+
+  ylab("Recruitment")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(-5,5)+
+  #ylim(-5,5)+
   my_theme
 
 
 #generate Rec bias plot
 rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
   geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Recruitment Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(-500,500)+
+  #ylim(-500,500)+
   my_theme
 
 
 #save rec bias calcs
 write.csv(rec.est.med,"Rec_Bias.csv")
 
+#################################################
+# Rec deviations
+
+#build data.frame
+rec.dev.data<-data.frame(Dat=c(rep("SIM",nrow(rec_devs_df_sim)),rep("EST",nrow(rec_devs_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+
+rec.dev.data<-cbind(rec.dev.data,rbind(rec_devs_df_sim,rec_devs_df_est))
+rec.dev.long<-melt(rec.dev.data, id=c("Dat","Years","Reg"))
+rec.dev.long$Reg<-as.character(rec.dev.data$Reg)
+
+#calculate the sum across areas 
+mean.rec.dev<-data.frame(rec.dev.long %>% group_by(Dat, Years, variable) %>% summarise(value=mean(value)))
+
+mean.rec.dev$Reg<-rep("Mean",nrow(mean.rec.dev))
+rec.dev.long<-rbind(mean.rec.dev,rec.dev.long)
+
+
+#separate again for plotting
+rec.dev.est<-rec.dev.long[rec.dev.long$Dat=="EST",]
+rec.dev.sim<-rec.dev.long[rec.dev.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+rec.dev.est$val.true<-rec.dev.sim$value
+rec.dev.est$bias=((rec.dev.est$val.true-rec.dev.est$value)/rec.dev.est$val.true)*100
+
+#calc medians table
+rec.dev.est.med <- rec.dev.est %>% group_by(Reg,Years) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+#calc vals for plots
+rec.dev.meds <- rec.dev.est %>% group_by(Reg) %>%
+  mutate(med.est = median(value),med.true=median(val.true))
+
+
+#generate Rec Plot
+rec.dev.plot.gg<-ggplot(rec.dev.meds, aes(x=as.factor(Years), y=value)) +
+  #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = rec.dev.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = rec.dev.est.med, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
+  geom_point(data = rec.dev.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("Recruitment Deviations")+
+  ylab("Recruitment Deviation")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#generate Rec bias plot
+rec.bias.gg<-ggplot(rec.meds, aes(x=as.factor(Years), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
+  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("Recruitment Deviation Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  facet_grid(Reg~.)+
+  ylim(-100,100)+
+  my_theme
+
+
+#save rec bias calcs
+write.csv(rec.est.med,"Rec_Dev_Bias.csv")
+
 #####################################
 # SSB plot
-
 
 #build data.frame
 ssb.data<-data.frame(Dat=c(rep("SIM",nrow(ssb_df_sim)),rep("EST",nrow(ssb_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
@@ -636,8 +966,9 @@ ssb.meds <- ssb.est %>% group_by(Reg) %>%
 #generate ssb Plot
 ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
-  geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1) + 
-  geom_point(data = ssb.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
+  geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
+  geom_point(data = ssb.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("SSB")+
   ylab("SSB")+
@@ -649,15 +980,16 @@ ssb.plot.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=value)) +
 
 #generate Rec bias plot
 ssb.bias.gg<-ggplot(ssb.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = ssb.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = ssb.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("SSB Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-500,500)+
+  ylim(-100,100)+
   my_theme
 
 
@@ -703,8 +1035,9 @@ bio.meds <- bio.est %>% group_by(Reg) %>%
 #generate bio Plot
 bio.plot.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
-  geom_line(data = bio.est.med, aes(x=Years,y=med.sim),lty=1) + 
-  geom_point(data = bio.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
+  geom_point(data = bio.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_line(data = bio.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
+  geom_point(data = bio.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Biomass")+
   ylab("Biomass")+
@@ -716,15 +1049,16 @@ bio.plot.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=value)) +
 
 #generate Rec bias plot
 bio.bias.gg<-ggplot(bio.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
+  geom_line(data = bio.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = bio.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Biomass Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-500,500)+
+  ylim(-100,100)+
   my_theme
 
 
@@ -736,7 +1070,10 @@ write.csv(bio.est.med,"Biomass_Bias.csv")
 ###F Max
 
 #build data.frame
-fmax.data<-data.frame(Dat=c(rep("SIM",nrow(fmax_df_sim)),rep("EST",nrow(fmax_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
+fmax.data.sim<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+fmax.data.est<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+
+fmax.data<-rbind(fmax.data.sim,fmax.data.est)
 
 fmax.data<-cbind(fmax.data,rbind(fmax_df_sim,fmax_df_est))
 fmax.long<-melt(fmax.data, id=c("Dat","Years","Reg"))
@@ -770,8 +1107,9 @@ fmax.meds <- fmax.est %>% group_by(Reg) %>%
 #generate fmax Plot
 fmax.plot.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=value)) +
   geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = fmax.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=0.5) + 
   geom_line(data = fmax.est.med, aes(x=Years,y=med.sim),lty=1) + 
-  geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Fully Selected F")+
   ylab("F")+
@@ -783,7 +1121,7 @@ fmax.plot.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=value)) +
 
 #generate Rec bias plot
 fmax.bias.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=bias)) +
-  geom_hline(aes(yintercept = 0, group = Reg), colour = 'darkred',size=0.5,lty=2)+
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T)+
   geom_point(data = fmax.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -791,7 +1129,7 @@ fmax.bias.gg<-ggplot(fmax.meds, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-500,500)+
+  ylim(-100,100)+
   my_theme
 
 
@@ -800,6 +1138,195 @@ write.csv(fmax.est.med,"Fmax_Bias.csv")
 
 
 
+# Selectivity at age
+#build data.frame
+f.select.data<-data.frame(Dat=c(rep("SIM",nrow(select_age_df_sim)),rep("EST",nrow(select_age_df_est))),Age=rep(ages,nreg*2),Reg=rep(1:nreg,each=na))
+
+f.select.data<-cbind(f.select.data,rbind(select_age_df_sim,select_age_df_est))
+f.select.long<-melt(f.select.data, id=c("Dat","Age","Reg"))
+f.select.long$Reg<-as.character(f.select.long$Reg)
+
+
+
+#separate again for plotting
+f.select.est<-f.select.long[f.select.long$Dat=="EST",]
+f.select.sim<-f.select.long[f.select.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+f.select.est$val.true<-f.select.sim$value
+f.select.est$bias=((f.select.est$val.true-f.select.sim$value)/f.select.est$val.true)*100
+
+#calc medians table
+f.select.est.med <- f.select.est %>% group_by(Reg,Age) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+#calc vals for plots
+f.select.meds <- f.select.est %>% group_by(Reg) %>%
+  mutate(med = median(value),med.true=median(val.true))
+
+
+#generate fmax Plot
+f.select.plot.gg<-ggplot(f.select.meds, aes(x=as.factor(Age), y=value)) +
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = f.select.est.med, aes(x=Age,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_point(data = f.select.est.med, aes(x=Age,y=med.sim), fill="black", shape=16,size=0.5) + 
+  geom_line(data = f.select.est.med, aes(x=Age,y=med.sim),lty=1) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Fishery Selectivity")+
+  ylab("Selectivity")+
+  xlab("Age")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#generate Rec bias plot
+f.select.bias.gg<-ggplot(f.select.meds, aes(x=as.factor(Age), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = f.select.est.med, aes(x=Age,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Fishery Selectivity Bias")+
+  ylab("Relative % Difference")+
+  xlab("Age")+
+  facet_grid(Reg~.)+
+  ylim(-100,100)+
+  my_theme
+
+
+#save rec bias calcs
+write.csv(f.select.est.med,"F_select_age_bias.csv")
+
+
+
+####################################
+#survey selectivity
+s.select.data<-data.frame(Dat=c(rep("SIM",nrow(select_age_survey_df_sim)),rep("EST",nrow(select_age_survey_df_est))),Age=rep(ages,nreg*2),Reg=rep(1:nreg,each=na))
+
+s.select.data<-cbind(s.select.data,rbind(select_age_survey_df_sim,select_age_survey_df_est))
+s.select.long<-melt(s.select.data, id=c("Dat","Age","Reg"))
+s.select.long$Reg<-as.character(s.select.long$Reg)
+
+
+
+#separate again for plotting
+s.select.est<-s.select.long[s.select.long$Dat=="EST",]
+s.select.sim<-s.select.long[s.select.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+s.select.est$val.true<-s.select.sim$value
+s.select.est$bias=((s.select.est$val.true-s.select.sim$value)/s.select.est$val.true)*100
+
+#calc medians table
+s.select.est.med <- s.select.est %>% group_by(Reg,Age) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+#calc vals for plots
+s.select.meds <- s.select.est %>% group_by(Reg) %>%
+  mutate(med = median(value),med.true=median(val.true))
+
+
+#generate fmax Plot
+s.select.plot.gg<-ggplot(s.select.meds, aes(x=as.factor(Age), y=value)) +
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = s.select.est.med, aes(x=Age,y=med.est), fill=median.col, shape=21,size=2.0) + 
+  geom_point(data = s.select.est.med, aes(x=Age,y=med.sim), fill="black", shape=16,size=0.5) + 
+  geom_line(data = s.select.est.med, aes(x=Age,y=med.sim),lty=1) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Survey Selectivity")+
+  ylab("Selectivity")+
+  xlab("Age")+
+  facet_grid(Reg~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+#generate Rec bias plot
+s.select.bias.gg<-ggplot(f.select.meds, aes(x=as.factor(Age), y=bias)) +
+  geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill=vio.col,trim=T)+
+  geom_point(data = f.select.est.med, aes(x=Age,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Survey Selectivity Bias")+
+  ylab("Relative % Difference")+
+  xlab("Age")+
+  facet_grid(Reg~.)+
+  #ylim(-500,500)+
+  my_theme
+
+
+#save rec bias calcs
+write.csv(s.select.est.med,"Surv_select_age_bias.csv")
+
+
+
+#Movement
+
+movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg),Reg_to=rep(1:nreg,nyrs*nreg))
+
+movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg),Reg_to=rep(1:nreg,nyrs*nreg))                                
+                                
+
+
+movement.data<-rbind(movement.data.sim,movement.data.est)
+movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
+
+move.long<-melt(movement.data, id=c("Dat","Year","Reg_from","Reg_to"))
+move.long$Reg_from<-as.character(move.long$Reg_from)
+move.long$Reg_to<-as.character(move.long$Reg_to)
+
+
+
+#separate again for plotting
+move.est<-move.long[move.long$Dat=="EST",]
+move.sim<-move.long[move.long$Dat=="SIM",]
+
+
+#calculate the percent bias
+move.est$val.true<-move.sim$value
+move.est$bias=((move.est$val.true-move.sim$value)/move.est$val.true)*100
+
+#calc medians table
+move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Year) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+
+
+#calc vals for plots
+move.meds <- move.est %>% group_by(Reg_from,Reg_to) %>%
+  mutate(med = median(value),med.true=median(val.true))
+
+
+move.plot.gg<-ggplot(move.meds, aes(x=as.factor(Year), y=med, col=Reg_to, group=Reg_to)) +
+  geom_violin(fill="white",trim=T,position = position_dodge(width=0.8))+
+  geom_point(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=2.0) + 
+  geom_point(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to),position = position_dodge(width=0.8), col="black", shape=16,size=0.5) + 
+  scale_color_brewer("Move To",palette = "Set1")+
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  ggtitle("Movement")+
+  ylab("Movement Rate")+
+  xlab("Year")+
+  facet_grid(Reg_from~.)+
+  #ylim(-5,5)+
+  my_theme
+
+
+move.bias.gg<-ggplot(move.meds, aes(x=as.factor(Year), y=bias, col=Reg_to, group=Reg_to)) +
+  geom_hline(aes(yintercept = 0, group = Reg_to), colour = 'red',size=0.5,lty=2)+
+  geom_violin(fill="white",trim=T,position = position_dodge(width=0.8))+
+  geom_point(data = move.est.med, aes(x=Year,y=med.bias,group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=1.5) + 
+  scale_x_discrete(breaks=seq(0,nyrs,1))+
+  scale_color_brewer("Move To",palette = "Set1")+
+  ggtitle("Movement Bias")+
+  ylab("Relative % Difference")+
+  xlab("Year")+
+  facet_grid(Reg_from~.)+
+  #ylim(-500,500)+
+  my_theme
+
+
+write.csv(move.est.med,"Move_Bias.csv")
 
 #######################################
 # Create a summary PDF
@@ -824,7 +1351,7 @@ text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure:
 
 text2<-paste0("\nTotal # of Sims: ",nsim)
 
-text3<-paste0("Proporton of Sims Converged: ", sum(Sim.Stats$Converged)," of ", nsim, " (",conv,")")
+text3<-paste0("Proportion of Sims Converged: ", sum(Sim.Stats$Converged)," of ", nsim, " (",conv,")")
 
 time<-paste0("Report Date:  ", Sys.time())
 
@@ -864,6 +1391,17 @@ grid.arrange(ncol = 1,
              top="Fully Selected F",
              fmax.plot.gg, fmax.bias.gg)
 
+grid.arrange(ncol = 1,
+             top="Fishery Selectivity",
+             f.select.plot.gg, f.select.bias.gg)
+
+grid.arrange(ncol = 1,
+             top="Fishery Selectivity",
+             s.select.plot.gg, s.select.bias.gg)
+
+grid.arrange(ncol = 1,
+             top="Movement",
+             move.plot.gg, move.bias.gg)
 
 
 ##############################
@@ -878,7 +1416,10 @@ grid.arrange(ncol = 2,nrow=4,
              ggplotGrob(Like.hist(7)),
              ggplotGrob(Like.hist(8)),             
              ggplotGrob(Like.hist(9)),
-             ggplotGrob(Like.hist(10)))
+             ggplotGrob(Like.hist(10)),
+             #ggplotGrob(Like.hist(11)), #rec penalty
+             ggplotGrob(Like.hist(12))
+             )
 
 
 
@@ -886,9 +1427,21 @@ dev.off()
 
 } #end PDF code
 
-} #end plotting/data section
 
-} # the whole kit and caboodle
+
+
+} #end of full run - fingers crossed
+
+
+
+
+
+
+
+
+
+
+
 ###############################################
 #some notes for things to add
 
