@@ -212,6 +212,7 @@ DATA_SECTION
    init_int move_pen_switch
    init_number Tpen
    init_number Tpen2
+
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -251,8 +252,6 @@ DATA_SECTION
  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)  // standard error on catch
  init_5darray OBS_catch_at_age_fleet_prop(1,np,1,nreg,1,ny,1,nf,1,na) 
  init_4darray OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //sample size
-
-
  
 //Catch Prop
 //tagging data parameters
@@ -291,10 +290,11 @@ DATA_SECTION
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
   
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
-  // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+   //init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
    init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
    init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf)
    init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)
+
 
   
 //##########################################################################################################################################
@@ -325,6 +325,7 @@ DATA_SECTION
   init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
+
 
 //these are fixed to EM dimensions when doing a diagnostics run
   init_5darray catch_at_age_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om,1,na)
