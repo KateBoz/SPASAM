@@ -749,12 +749,9 @@
 
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
 0.01 0.09 0.32 0.44 0.55 0.7 1 1  ##Mobile fleet
-0.01 0.09 0.32 0.44 0.55 0.7 1 1  ##Mobile fleet
 
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
-0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
-
 
 #report_rate(1,ny_rel,1,np_em,1,nreg_em)
   #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
@@ -811,7 +808,7 @@
 #ph_init_abund //init abund phases needs to be negative if the init_abund_switch ==1
 1
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
-2
+-2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #lb_abund_devs
