@@ -84,14 +84,18 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-folder.num=2
+folder.num=3
 
 i=folder.num
 
+
+
+{ #run the whole thing
+
+  
+
 #if running the several folders use the loop - This will come later
 #for(i in 1:3){
-
-{
 
 ##############################################################
 #OM Location
@@ -126,13 +130,14 @@ results_bad<-paste0(diag_direct,"\\Results_NOT_conv",sep="")
 ##################################################
 # SKIP TO PLOTTING SECTION IF SIMS ARE COMPLETED!#
 
-
 #Simulations...
 
-
+#run simulations
+{
 ###############################################################
 # RUN TIM DIAGNOSTICS
 ###############################################################
+
 
 # generates a single run diagnotic of the OM and EM and
 # moves files from diagnostic run to the diagnostics folder
@@ -154,8 +159,6 @@ invisible(file.rename(from=paste0(EM_direct,"\\output.txt",sep=""),to=paste0(dia
 
 # run the simulations section
 
-{
-  
 #Set up convergence record to holds likelihood components and gradient 
 Sim.Stats<-data.frame(SimN=seq(1:nsim), Converged=rep(NA,nsim),Max_Gradient=rep(NA,nsim),Obj_fun=rep(NA,nsim), Tag_like=rep(NA,nsim), Catch_like=rep(NA,nsim), Survey_like=rep(NA,nsim), Fish_age_like=rep(NA,nsim), survey_age_like = rep(NA,nsim), Rec_like=rep(NA,nsim))
 
@@ -287,10 +290,8 @@ Sim.Stats$Total_like=rowSums(Sim.Stats)
 #save convergence file
 write.csv(file="Sim_Stats.csv",Sim.Stats)
 
- # end of simulations and value save
 
-
-}
+}  # end of simulations and value save
 
 
 ##############################################################
@@ -791,7 +792,6 @@ q.plot.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_est, group=Reg)) +
   ggtitle("Survey Catchability")+
   ylab("Survey Catchability")+
   xlab("Area")+
-  #ylim(-5,5)+
   my_theme
   
 
@@ -805,7 +805,7 @@ q.bias.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_bias, group=Reg)) +
   ggtitle("Survey Catchability Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
-  #ylim(-100,100)+
+  ylim(quantile(q_est$q_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_q,"q_medians.csv")
@@ -837,7 +837,6 @@ rave.plot.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_est, group=Reg)) +
   ggtitle("Mean Recruitment")+
   ylab("Mean Recruitment")+
   xlab("Area")+
-  #ylim(-5,5)+
   my_theme
 
 
@@ -851,7 +850,7 @@ rave.bias.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_bias, group=Reg)) +
   ggtitle("Mean Recruitment Bias")+
   ylab("Relative % Difference")+
   xlab("Area")+
-  #ylim(-100,100)+
+  ylim(quantile(Rave_est$R_ave_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_R_ave,"Rave_medians.csv")
@@ -899,7 +898,7 @@ r.apport.bias.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_bia
   ggtitle("Recruitment Apportionment Bias")+
   ylab("Relative % Difference")+
   xlab("Area")+
-  #ylim(-100,100)+
+  ylim(quantile(R_apport_est_melt$R_apport_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_R_apport,"R_apport_medians.csv")
@@ -954,7 +953,6 @@ rec.plot.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=value)) +
   ylab("Recruitment")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-5,5)+
   my_theme
 
 
@@ -963,13 +961,13 @@ rec.bias.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
   geom_violin(fill=vio.col,trim=T, alpha=0.6)+
   geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
-  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
+  geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) +
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("Recruitment Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.,scales="free")+
-  #ylim(-500,500)+
+  ylim(quantile(rec.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1044,7 +1042,7 @@ rec.dev.bias.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.,scales="free")+
-  #ylim(-100,100)+
+  ylim(quantile(rec.dev.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1067,8 +1065,16 @@ init.abund.melt<-melt(init.abund.data, id=c("Dat","Age","Reg"))
 #calculate the sum across areas 
 total.init.abund<-data.frame(init.abund.melt %>% group_by(Dat, Age, Reg,variable) %>% summarise(value=sum(value)))
 
+#add the system
+total.init.abund2<-data.frame(total.init.abund %>% group_by(Dat, Age,variable) %>% summarise(value=sum(value)))
+total.init.abund2$Reg<-"System"
+
+total.init.abund<-rbind(total.init.abund,total.init.abund2)
+
 init.abund.est<-subset(total.init.abund,Dat=="EST")
 init.sim<-subset(total.init.abund,Dat=="SIM")
+
+
 init.abund.est$value.true<-init.sim$value
 init.abund.est$bias<-((init.abund.est$value.true-init.abund.est$value)/init.abund.est$value.true)*100
 
@@ -1101,7 +1107,7 @@ init.abund.bias.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-100,100)+
+  ylim(quantile(init.abund.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1169,7 +1175,7 @@ ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-100,100)+
+  ylim(quantile(ssb.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1238,7 +1244,7 @@ bio.bias.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-100,100)+
+  ylim(quantile(bio.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1273,8 +1279,8 @@ fmax.sim<-fmax.long[fmax.long$Dat=="SIM",]
 
 #calculate the percent bias
 fmax.est$val.true<-fmax.sim$value
-#fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
-fmax.est$bias=((fmax.est$val.true-fmax.est$value))
+fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
+#fmax.est$bias=((fmax.est$val.true-fmax.est$value))
 
 #calc medians table
 fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
@@ -1308,10 +1314,10 @@ fmax.bias.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=bias)) +
   geom_point(data = fmax.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
   ggtitle("F Bias")+
-  ylab("Bias (True-Estimated) ")+
+  ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(-100,100)+
+  ylim(quantile(fmax.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1374,12 +1380,11 @@ f.select.bias.gg<-ggplot(f.select.est, aes(x=as.factor(Age), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Age")+
   facet_grid(Reg~.)+
-  #ylim(-100,100)+
   my_theme
 
 
 #save rec bias calcs
-write.csv(f.select.est.med,"F_select_age_bias.csv")
+write.csv(f.select.est,"F_select_age_bias.csv")
 
 
 
@@ -1470,8 +1475,8 @@ move.sim<-move.long[move.long$Dat=="SIM",]
 
 #calculate the percent bias
 move.est$val.true<-move.sim$value
-#move.est$bias=((move.est$val.true-move.est$value)/move.est$val.true)*100
-move.est$bias=(move.est$val.true-move.est$value)
+move.est$bias=((move.est$val.true-move.est$value)/move.est$val.true)*100
+#move.est$bias=(move.est$val.true-move.est$value)
 
 #calc medians table
 move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Year) %>%
@@ -1509,10 +1514,10 @@ move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group
   scale_fill_brewer("Move To",palette = "Set1")+
   scale_x_discrete(breaks=seq(0,nyrs,1))+
   ggtitle("Movement Bias")+
-  ylab("Bias (True-Estimated)")+
+  ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg_from~.)+
-  #ylim(-500,500)+
+  ylim(quantile(move.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1524,7 +1529,7 @@ write.csv(move.est.med,"Move_Bias.csv")
 # Create a summary PDF
 #######################################
 {
-pdf("Simulation_Summary.pdf",paper="letter",height = 10, width=7)
+pdf("Simulation_Summary.pdf",paper="letter",height = 11, width=8)
 par(mar=c(6,6,6,6))
 
 
