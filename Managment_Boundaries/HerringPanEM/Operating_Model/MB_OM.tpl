@@ -296,6 +296,11 @@ DATA_SECTION
   init_3darray input_TAC(1,np,1,nreg,1,nf)
   init_3darray input_u(1,np,1,nreg,1,nf)
 
+
+//###for management boundary work; proportion of data from a region that gets inappropriately added or left from a panmictic EM;  size is 1 to number of regions
+//###These values would apply to all data: catch, survey, age comps, etc.
+  init_matrix obs_misallocate(1,np,1,nreg)  //JJD
+
 //################################################################################################################
 //################################################################################################################
 //################################################################################################################
@@ -744,6 +749,11 @@ PARAMETER_SECTION
  5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
  4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
+ 4darray catch_at_age_region_temp(1,nps,1,nyr,1,nag,1,nr) //JJD
+ 3darray catch_at_age_pop_temp(1,nyr,1,nag,1,nps) //JJD
+ 4darray catch_frac_age_region(1,nps,1,nr,1,nyr,1,nag) //JJD
+ 4darray catch_frac_age_region_temp2(1,nps,1,nr,1,nag,1,nyr) //JJD
+ 3darray catch_frac_age_region_avg(1,nps,1,nr,1,nag) //JJD
  4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
  3darray yield_region(1,nps,1,nr,1,nyr)
  3darray catch_at_age_population(1,nps,1,nyr,1,nag)
@@ -1886,6 +1896,7 @@ FUNCTION get_abundance
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
                   OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
+                  OBS_survey_region_bio(j,y,r)=obs_misallocate(j,r)*OBS_survey_region_bio(j,y,r);  //JJD
                   OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
                   OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
 
@@ -2702,6 +2713,12 @@ FUNCTION get_abundance
                 yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                 yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                 catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
+                  
+                //JJD
+                catch_at_age_region_temp(j,y,a,r)=catch_at_age_region(j,r,y,a)*obs_misallocate(j,r);
+                catch_at_age_pop_temp(y,a,j)=sum(catch_at_age_region_temp(j,y,a));
+                catch_frac_age_region(j,r,y,a)=(catch_at_age_region(j,r,y,a)*obs_misallocate(j,r))/sum(catch_at_age_pop_temp(y,a));
+                
                 yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                 yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                 catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
@@ -2757,6 +2774,7 @@ FUNCTION get_abundance
                 OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
                 OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
                 OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
+                OBS_yield_region(j,y,r)=obs_misallocate(j,r)*OBS_yield_region(j,y,r);  //JJD
                 OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
                 OBS_yield_total(y)=sum(OBS_yield_population(y));
              //apportion variables
@@ -2814,6 +2832,7 @@ FUNCTION get_abundance
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
                   OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
+                  OBS_survey_region_bio(j,y,r)=obs_misallocate(j,r)*OBS_survey_region_bio(j,y,r);  //JJD
                   OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
                   OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
                 
@@ -3933,6 +3952,7 @@ FUNCTION get_abundance
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
                   OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
+                  OBS_survey_region_bio(j,y,r)=obs_misallocate(j,r)*OBS_survey_region_bio(j,y,r);  //JJD
                   OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
                   OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
 
@@ -4711,6 +4731,12 @@ FUNCTION get_abundance
                    yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                    yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                    catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
+
+                   //JJD
+                catch_at_age_region_temp(j,y,a,r)=catch_at_age_region(j,r,y,a)*obs_misallocate(j,r);
+                catch_at_age_pop_temp(y,a,j)=sum(catch_at_age_region_temp(j,y,a));
+                catch_frac_age_region(j,r,y,a)=(catch_at_age_region(j,r,y,a)*obs_misallocate(j,r))/sum(catch_at_age_pop_temp(y,a));
+                
                    yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                    yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                    catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
@@ -4781,6 +4807,12 @@ FUNCTION get_abundance
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
+
+                //JJD
+                catch_at_age_region_temp(j,y,a,r)=catch_at_age_region(j,r,y,a)*obs_misallocate(j,r);
+                catch_at_age_pop_temp(y,a,j)=sum(catch_at_age_region_temp(j,y,a));
+                catch_frac_age_region(j,r,y,a)=(catch_at_age_region(j,r,y,a)*obs_misallocate(j,r))/sum(catch_at_age_pop_temp(y,a));
+                
                   yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
@@ -4850,6 +4882,12 @@ FUNCTION get_abundance
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
+
+                  //JJD
+                catch_at_age_region_temp(j,y,a,r)=catch_at_age_region(j,r,y,a)*obs_misallocate(j,r);
+                catch_at_age_pop_temp(y,a,j)=sum(catch_at_age_region_temp(j,y,a));
+                catch_frac_age_region(j,r,y,a)=(catch_at_age_region(j,r,y,a)*obs_misallocate(j,r))/sum(catch_at_age_pop_temp(y,a));
+                
                   yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
@@ -4919,6 +4957,12 @@ FUNCTION get_abundance
                   yield_fleet_temp(j,r,y,z,a)=weight_catch(j,r,y,a)*catch_at_age_fleet(j,r,y,a,z);
                   yield_fleet(j,r,y,z)=sum(yield_fleet_temp(j,r,y,z));
                   catch_at_age_region(j,r,y,a)=sum(catch_at_age_fleet(j,r,y,a));
+                  
+                  //JJD
+                catch_at_age_region_temp(j,y,a,r)=catch_at_age_region(j,r,y,a)*obs_misallocate(j,r);
+                catch_at_age_pop_temp(y,a,j)=sum(catch_at_age_region_temp(j,y,a));
+                catch_frac_age_region(j,r,y,a)=(catch_at_age_region(j,r,y,a)*obs_misallocate(j,r))/sum(catch_at_age_pop_temp(y,a));
+                
                   yield_region_temp(j,r,y,a)=weight_catch(j,r,y,a)*catch_at_age_region(j,r,y,a);
                   yield_region(j,r,y)=sum(yield_region_temp(j,r,y));
                   catch_at_age_population_temp(j,y,a,r)=catch_at_age_region(j,r,y,a);
@@ -5025,6 +5069,7 @@ FUNCTION get_abundance
                 OBS_yield_natal_overlap(y,p)=sum(OBS_yield_population_overlap(p,y));
                 OBS_yield_total_overlap(y)=sum(OBS_yield_natal_overlap(y));
                 OBS_yield_region(j,y,r)=sum(OBS_yield_fleet(j,r,y));
+                OBS_yield_region(j,y,r)=obs_misallocate(j,r)*OBS_yield_region(j,y,r);  //JJD
                 OBS_yield_population(y,j)=sum(OBS_yield_region(j,y));
                 OBS_yield_total(y)=sum(OBS_yield_population(y));
              //apportion variables
@@ -5079,6 +5124,7 @@ FUNCTION get_abundance
                   true_survey_population_bio(y,j)=sum(true_survey_region_bio(j,y));
                   true_survey_total_bio(y)=sum(true_survey_population_bio(y));
                   OBS_survey_region_bio(j,y,r)=sum(OBS_survey_fleet_bio(j,r,y));
+                  OBS_survey_region_bio(j,y,r)=obs_misallocate(j,r)*OBS_survey_region_bio(j,y,r);  //JJD
                   OBS_survey_population_bio(y,j)=sum(OBS_survey_region_bio(j,y));
                   OBS_survey_total_bio(y)=sum(OBS_survey_population_bio(y));
 
@@ -5687,9 +5733,13 @@ REPORT_SECTION
         abund_frac_age_region(p,r,y,a)=abundance_at_age_AM(p,r,y,a)/abundance_total(y,a);
         abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
         abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years
+
+        //JJD
+        catch_frac_age_region_temp2(p,r,a,y)=catch_frac_age_region(p,r,y,a);
+        catch_frac_age_region_avg(p,r,a)=sum(catch_frac_age_region_temp2(p,r,a))/nyrs;
         }}}}}
 
-
+ 
  //Aggregating OBS values and vitals for panmictic EM
  if(EM_structure==0 && OM_structure>0){ 
   for (int y=1;y<=nyrs;y++)
@@ -5702,51 +5752,78 @@ REPORT_SECTION
         {
          for(int a=1;a<=nages;a++)
           {
+        //the weighting among regions differs if doing management boundary work (weighted by catch) or not (weight by abundance)
+        //These if statements do the appropriate weighting for each element below.
+        if(sum(obs_misallocate)==nregions(p)){
+          input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*abund_frac_region(p,r);//sum by region
+          input_weight_region_temp(p,a,r)=input_weight(p,r,a)*abund_frac_region(p,r);//rearrange to summarize and weight for output
+          fecundity_region_temp(p,a,r)=fecundity(p,r,a)*abund_frac_region(p,r);//sum by region
+          maturity_region_temp(p,a,r)=maturity(p,r,a)*abund_frac_region(p,r);//sum by region
+          selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+          survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*abund_frac_region(p,r);
+
+          //survey
+          OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
+          OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
+          OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
+
+          //catch
+          OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
+          OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
+          OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
+          }
+        if(sum(obs_misallocate)!=nregions(p)){
+          input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
+          input_weight_region_temp(p,a,r)=input_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//rearrange to summarize and weight for output
+          fecundity_region_temp(p,a,r)=fecundity(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
+          maturity_region_temp(p,a,r)=maturity(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
+          selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*catch_frac_age_region_avg(p,r,a);
+          survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*catch_frac_age_region_avg(p,r,a);
+
+          //survey
+          OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
+          OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
+          OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*catch_frac_age_region(p,r,y,a);
+
+          //catch
+          OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
+          OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
+          OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*catch_frac_age_region(p,r,y,a);
+          } 
+
        //aggregating weight at age
-        input_weight_region_temp(p,a,r)=input_weight(p,r,a)*abund_frac_region(p,r);//rearrange to summarize and weight for output
         input_weight_region(p,a)=sum(input_weight_region_temp(p,a));
         input_weight_population_temp(a,p)=input_weight_region(p,a);
         input_weight_population(a)=sum(input_weight_population_temp(a));
 
         //aggregating catch weight at age
-        input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*abund_frac_region(p,r);//sum by region
         input_catch_weight_region(p,a)=sum(input_catch_weight_region_temp(p,a));
         input_catch_weight_population_temp(a,p)=input_catch_weight_region(p,a);
         input_catch_weight_population(a)=sum(input_catch_weight_population_temp(a));
 
         //aggregating fecundity
-        fecundity_region_temp(p,a,r)=fecundity(p,r,a)*abund_frac_region(p,r);//sum by region
         fecundity_region(p,a)=sum(fecundity_region_temp(p,a));
         fecundity_population_temp(a,p)=fecundity_region(p,a);
         fecundity_population(a)=sum(fecundity_population_temp(a));
 
         //aggregating maturity
-        maturity_region_temp(p,a,r)=maturity(p,r,a)*abund_frac_region(p,r);//sum by region
         maturity_region(p,a)=sum(maturity_region_temp(p,a));
         maturity_population_temp(a,p)=maturity_region(p,a);
         maturity_population(a)=sum(maturity_population_temp(a));
 
         //aggregating selectivity
-        selectivity_age_temp(p,a,z,r)=selectivity_age(p,r,a,z)*abund_frac_region(p,r);
         selectivity_age_pop(p,a,z)=sum(selectivity_age_temp(p,a,z));
-        survey_selectivity_age_temp(p,a,z,r)=survey_selectivity_age(p,r,a,z)*abund_frac_region(p,r);
         survey_selectivity_age_pop(p,a,z)=sum(survey_selectivity_age_temp(p,a,z));
 
         //aggregating the age comps
 
         //survey
-        OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
-        OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
-        OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
         OBS_survey_prop_temp4(p,y,a,r)=OBS_survey_prop_temp3(p,r,y,a);
         OBS_survey_prop_population(p,y,a)=sum(OBS_survey_prop_temp4(p,y,a));
         OBS_survey_prop_pan_temp(y,a,p)= OBS_survey_prop_population(p,y,a);
         OBS_survey_prop_pan(y,a)=sum(OBS_survey_prop_pan_temp(y,a));
 
         //catch
-        OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
-        OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
-        OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
         OBS_catch_prop_temp4(p,y,a,r)= OBS_catch_prop_temp3(p,r,y,a);
         OBS_catch_prop_population(p,y,a)=sum(OBS_catch_prop_temp4(p,y,a));
         OBS_catch_prop_pan_temp(y,a,p)= OBS_catch_prop_population(p,y,a);
@@ -5757,9 +5834,16 @@ REPORT_SECTION
         } //end fleets loop
 
         //proportion female
+        if(sum(obs_misallocate)==nregions(p)){
         prop_fem_temp(p,r)= prop_fem(p,r)*abund_frac_region(p,r); 
         prop_fem_pan=sum(prop_fem_temp);
-        rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*abund_frac_region_year(p,r,y); //rearrange and weight for summing
+        rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*abund_frac_region_year(p,r,y); //rearrange and weight for summig
+        }
+        if(sum(obs_misallocate)!=nregions(p)){
+        prop_fem_temp(p,r)= prop_fem(p,r)*(sum(catch_frac_age_region_avg(p,r))/nages); //use average over ages
+        prop_fem_pan=sum(prop_fem_temp);
+        rec_index_temp(p,y,r)=rec_index_BM(p,r,y)*(sum(catch_frac_age_region_avg(p,r))/nages); //rearrange and weight for summig
+        }
 
        } //end reg loop
 

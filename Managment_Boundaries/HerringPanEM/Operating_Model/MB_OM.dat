@@ -473,7 +473,9 @@
 
 #input_catch_weight
 0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167  #2017 Catch wt
-0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167
+#0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167
+0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
+
 
 #fecundity
 1 1 1 1 1 1 1 1
@@ -561,6 +563,13 @@
 #input_u 
 .0491
 .0491
+
+
+###for management boundary work; proportion of data from a region that gets inappropriately added or left from a panmictic EM;  set up for a value for each region
+###These values would apply to all data: catch, survey, age comps, etc.;  all 1's would be no misreporting or misallocation.
+### init_matrix obs_misallocate(1,np,1,nreg)  //JJD
+0.2
+1
 
 ################################################################################################################
 ################################################################################################################
@@ -790,7 +799,7 @@
 ##### Phases for estimation ####
 ################################
 #ph_lmr
--1
+1
 #lb_R_ave
 5
 #up_R_ave
