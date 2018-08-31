@@ -345,7 +345,6 @@
 1
 
 #R_ave - not on the log scale.  Provide actual numbers of fish
-##2957.929
 3208750
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
 0.2
@@ -412,15 +411,16 @@
 20
 
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
-0.01 0.09 0.32 0.44 0.55 0.7 1 1  ##Mobile fleet
-0.01 0.09 0.32 0.44 0.55 0.7 1 1
+0.01	0.18	0.5	0.8	0.9	1	1	1	##Mobile fleet based on 2018 spatial SS model; top is Gulf of Maine and bottom is GB
+0.01	0.09	0.32	0.44	0.8	0.85	1	1	
+
 
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
 0.03 0.2 0.63 0.92 0.98 1 1 1
 
 
-#q_survey(by population, area and fleet)
+#q_survey(by population, area and fleet) indexes biomass (not abundance)
 0.0000348
 0.0000348
 
@@ -467,14 +467,15 @@
 ######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
 ######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
 #########################################################################################################################################
-#input_weight
-0.02 0.04 0.08 0.1 0.13 0.16 0.17 0.19  #2017 Jan 1 wt
-0.02 0.04 0.08 0.1 0.13 0.16 0.17 0.19
+#input_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
+0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21	#2017Jan1wt
+0.02	0.04	0.08	0.1	0.13	0.16	0.17	0.19				
 
-#input_catch_weight
-0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167  #2017 Catch wt
-#0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167
+
+#input_catch_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
 0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
+0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167  #2017 Catch wt
+
 
 
 #fecundity
@@ -482,7 +483,7 @@
 1 1 1 1 1 1 1 1
 
 #maturity
-0.079	0.322	0.725	0.936	0.988	0.998	1.000	1.000  #2017 mat at age
+0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.000  #2017 mat at age; top row made artifically bigger because they grow faster; made it up
 0.079	0.322	0.725	0.936	0.988	0.998	1.000	1.000
 ##########################################################################################################################################
 #########################################################################################################################################
@@ -506,11 +507,9 @@
 0.5
 
 #init_abund
-#1478.9646	1586.7164	1430.3332	1420.7977	1369.3057	1174.7804	1223.4117	1305.4175
-#1478.9646	1586.7164	1430.3332	1420.7977	1369.3057	1174.7804	1223.4117	1305.4175
-#Take R ave, decrement by M=0.35 and divide in half for each region
-1604375	1130584	796709	561431	395634	278799	196466	138447  
-1604375	1130584	796709	561431	395634	278799	196466	138447
+#Take R ave, decrement by M=0.35 and put 25% in top row (gulf of maine) and 75% in GB; based on 2018 spatial SS model
+802188	565292	398355	280716	197817	139400	98233	69224
+2406563	1695876	1195064	842147	593451	418199	294699	207671
 
 #_rec_index_sigma
 0.8
