@@ -438,8 +438,8 @@ DATA_SECTION
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
 
-  init_4darray input_selectivity_EM(1,np,1,nreg,1,na,1,nf) //fishery selectivity by area/region/age/fleet
-  init_4darray input_survey_selectivity_EM(1,np,1,nreg,1,na,1,nfs)//survey selectivity
+  init_4darray input_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nf_em) //fishery selectivity by area/region/age/fleet
+  init_4darray input_survey_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nfs_em)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
 
   init_int ph_lmr
@@ -6192,18 +6192,19 @@ REPORT_SECTION
   report<<T_year<<endl;
 
 //reporting true aggregated selectivity if fleets ==1
-  if(EM_structure==0 && sum(nfleets_EM)==1)
-  {
-  report<<"#selectivity_age"<<endl;
-  report<<selectivity_age_pop<<endl;
-  report<<"#survey_selectivity_age"<<endl;
-  report<<survey_selectivity_age_pop<<endl;}
+  //if(EM_structure==0 && sum(nfleets_EM)==1)
+  // {
+  //report<<"#selectivity_age"<<endl;
+  //report<<selectivity_age_pop<<endl;
+  //report<<"#survey_selectivity_age"<<endl;
+  //report<<survey_selectivity_age_pop<<endl;}
   
-  else{
+// else{
   report<<"#selectivity_age"<<endl;
   report<<selectivity_age<<endl;
   report<<"#survey_selectivity_age"<<endl;
-  report<<survey_selectivity_age<<endl;}
+  report<<survey_selectivity_age<<endl;
+ // }
   
  //true tag information
   report<<"#TRUE_tag_prop"<<endl;
