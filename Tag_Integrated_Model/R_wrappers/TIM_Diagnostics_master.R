@@ -68,24 +68,28 @@ resid.switch=1
   
 #name OPERATING MODEL of the .exe
 #OM_name<-OM_name #name of the OM you are wanting to run
+#OM_name<-"MB_OM" 
 OM_name<-"TIM_OM" 
 
 #name ESTIMATION MODEL of the .exe
 #EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
+#EM_name<-"MB_EM" 
 EM_name<-"TIM_EM" 
 
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\TIM_Editing"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\SIMS_EDIT\\MisMatch"
+
+
 
 #list files in the directory
 files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=2
+i=5
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -176,9 +180,10 @@ out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep fi
 
 cor.name<-paste0(EM_name,".cor")
 
-if (file.exists(cor.name)) {
+if (file.exists(cor.name) && out$dummy<0) {
   cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
 }
+
 
 std<-readRep(EM_name, suffix=".std", global=FALSE)
 
@@ -1385,7 +1390,7 @@ if(file.exists(paste0(EM_name,".cor"))==FALSE)
 
 #max gradient
 
-grad<-readLines("TIM_EM.par")[1]
+grad<-readLines(paste0(EM_name,".par"))[1]
 pos = regexpr('Max', grad)
 grad.val<-substr(grad,pos,nchar(grad))
 
@@ -1401,12 +1406,22 @@ tgrob.mod <- textGrob(paste(cor.text," ",grad.val,sep = "\n"),just = "centre")
 EM_est_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fishery","beta 3 fishery","beta 4 fishery","beta 1 survey","beta 2 survey","beta 3 survey","beta 4 survey"))
 
 #set up matrix to fill in the values
-temp_est<-matrix(NA,dim(EM_est_table)[1],nreg)
-names(temp_est)<-1:nreg
+temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],nreg))
+names(temp_est)<-as.character(1:nreg)
+
 EM_est_table<-cbind(EM_est_table,temp_est)
 #params
 EM_est_table[1,2:ncol(EM_est_table)]<-round(out$q_survey,2)
-EM_est_table[2,2:ncol(EM_est_table)]<-round(out$R_ave,2)
+
+if(npops==1){
+  EM_est_table[2,2]<-round(out$R_ave,2)
+}
+
+if(npops_OM>1){
+  EM_est_table[2,2:ncol(EM_est_table)]<-round(out$R_ave,2)
+}
+
+
 
 
 # adding in selectivity values based on specification
@@ -1475,12 +1490,18 @@ gt_est <- gTree(children=gList(est_params, title_est))
 OM_true_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fishery","beta 3 fishery","beta 4 fishery","beta 1 survey","beta 2 survey","beta 3 survey","beta 4 survey"))
 
 #set up matrix to fill in the values
-temp_est<-matrix(NA,dim(OM_true_table)[1],nreg)
-names(temp_est)<-1:nreg
-OM_true_table<-cbind(OM_true_table,temp_est)
+temp_om<-data.frame(matrix(NA,dim(OM_true_table)[1],nreg_OM))
+names(temp_om)<-1:nreg_OM
+OM_true_table<-cbind(OM_true_table,temp_om)
 OM_true_table[1,2:ncol(OM_true_table)]<-round(out$q_survey_TRUE,2)
-OM_true_table[2,2:ncol(OM_true_table)]<-round(out$R_ave_TRUE,2)
 
+if(npops_OM==1){
+OM_true_table[2,2]<-round(out$R_ave_TRUE,2)
+}
+
+if(npops_OM>1){
+OM_true_table[2,2:ncol(OM_true_table)]<-round(out$R_ave_TRUE,2)
+}
 
 # adding in selectivity values based on specification
 if(OM_dat[grep("select_switch_EM",OM_dat, fixed = T)+4]==0)
@@ -1913,11 +1934,9 @@ time.elapsed<-run.model()
 make.plots()
 }
 
-
+#for checking individual things
 out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
 
-out$alt_T_year1
-out$T_year_TRUE
 setwd(OM_direct)
 
   
