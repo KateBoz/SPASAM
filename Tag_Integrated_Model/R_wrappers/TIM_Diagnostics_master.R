@@ -89,7 +89,7 @@ files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=5
+i=2
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -365,6 +365,44 @@ rec2<-ggplot(rec.devs.plot,aes(Year,value))+
 }
 
 
+#going from metamictic to metapop
+if(npops>1 && npops_OM==1){
+  
+  Rec_Dev_Est=colSums(out$rec_devs)
+  Rec_Dev_True=out$rec_devs_TRUE[2:length(out$rec_devs_TRUE)]
+  #Rec_Dev_True=as.vector(t(out$rec_devs_TRUE))
+  
+  rec.devs<-data.frame(Year=rep(years[-1],nreg),Reg=rep(1:nreg,each=(nyrs-1)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
+  
+  #rec.devs<-data.frame(Year=rep(years,nreg),Reg=rep(1:nreg,each=(nyrs)),Rec_Dev_Est=Rec_Dev_Est,Rec_Dev_True=Rec_Dev_True)
+  
+  
+  rec.devs.plot<-melt(rec.devs,id=c("Reg","Year"))
+  rec.devs.plot$Reg<-as.factor(rec.devs.plot$Reg)
+  rec_ave<-data.frame(pop=as.character(1:npops),R_ave=out$R_ave, R_ave_TRUE=out$R_ave_TRUE)
+  
+  
+  rec2<-ggplot(rec.devs.plot,aes(Year,value))+
+    geom_line(aes(col = variable,linetype=variable), stat = "identity", lwd=1)+
+    theme_bw()+
+    scale_color_manual(values = c(e.col,t.col),labels = c("Estimated","True"))+
+    scale_linetype_manual(values=c(1,2),labels = c("Estimated","True"))+
+    ylab("Deviations")+
+    #geom_hline(data=rec_ave,aes(yintercept=R_ave), col = e.col)+
+    #geom_hline(data=rec_ave, aes(yintercept = R_ave_TRUE),col=t.col,lty=2)+
+    facet_wrap(~Reg)+
+    diag_theme+
+    theme(legend.position = c(1, 1), legend.justification = c(1,1))+
+    ggtitle("Recruitment Deviations")
+}
+
+
+
+
+
+
+
+
 
 ######################
 #Rec_dev resid plot
@@ -486,16 +524,16 @@ rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
 #initial abundance
   
 #panmictic/metamictic matching  
-if(nreg_OM==nreg){ 
+if(nreg_OM==nreg&& npops==1){ 
     init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est = as.vector(t(out$Init_Abund)), In_ab_True=as.vector(t(out$Init_Abund_TRUE)))
   }
 
 #mismatch spatial to panmictic  
 if(nreg_OM>1 && nreg==1){ 
   init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est=out$Init_Abund,In_ab_True=colSums(out$Init_Abund_TRUE))
-  }
-  
-  
+}
+
+
 #other pop types
   #might need to fine tune this for mismatch
   if(npops>1){
@@ -510,6 +548,8 @@ if(nreg_OM>1 && nreg==1){
       t2[i,]<-colSums(matrix(unlist(t[i]),npops,na))
     }
     
+    
+    if(npops_OM>1){
     i.ab_temp_T<-data.frame(out$Init_Abund_TRUE)
     t_T<-split(i.ab_temp_T,pops_temp)
     
@@ -518,16 +558,16 @@ if(nreg_OM>1 && nreg==1){
     
     for(i in 1:npops){
       t2_T[i,]<-colSums(matrix(unlist(t_T[i]),npops,na))
-    }
+    }}
+
+    if(npops_OM==1){
+      t2_T<-data.frame(out$Init_Abund_TRUE)}
     
     
     #the sums across the populations
     init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na), In_ab_Est = as.vector(t(t2)), In_ab_True=as.vector(t(t2_T))) 
-    
-    init.abund.plot<-melt(init.abund,id=c("Reg","Age"))
-    init.abund.plot$Reg<-as.factor(init.abund.plot$Reg)
-  } #end of data summary for metapop
-  
+  }
+
 #prepare for plot
   init.abund.plot<-melt(init.abund,id=c("Reg","Age"))
   init.abund.plot$Reg<-as.factor(init.abund.plot$Reg)
@@ -805,22 +845,34 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
 ############################################################
 
 #combining true and estimated together
-f.max<-rowMaxs(out$F)
-f.max.t<-rowMaxs(out$F_TRUE)
-
+if(out$nfleets_OM==1 && out$nfleets>1 && out$nregions==1){ # this is a fleets as areas model
+ f.mat.temp<-matrix(unlist(data.frame(out$F)),nyrs*nreg_OM,na, byrow=T)
+ f.max=rowMaxs(f.mat.temp)
+ f.max.t<-rowMaxs(out$F_TRUE)
+ 
+ F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs),F_year=f.max, F_year_T=f.max.t)
+}
+  
 
 if(nreg_OM==nreg){ 
+  f.max<-rowMaxs(out$F)
+  f.max.t<-rowMaxs(out$F_TRUE)
 F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=f.max.t)
 }
 
 
-if(nreg_OM>1 && nreg==1){ 
+if(nreg_OM>1 && nreg==1 && out$nfleets==1){ 
+  f.max<-rowMaxs(out$F)
+  f.max.t<-rowMaxs(out$F_TRUE)
+  
   #aggreagating
   temp1<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg_OM),each=nyrs),F_year_T=f.max.t)
   temp2<-group_by(temp1,Year) %>% summarise(F_year_T = mean(F_year_T))
   
   F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=temp2$F_year_T)
 }
+
+
 
 
 F.plot<-melt(F.year,id=c("Reg","Year"))
@@ -869,7 +921,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 
 
 #matching Panmictic and multi-area
-if(nreg_OM==nreg && npops==1){ 
+if(nreg_OM==nreg && npops==1||npops>1){ 
   T_est<-data.frame(out$T_year)
   T_true<-data.frame(out$T_year_TRUE)
   
@@ -1035,7 +1087,12 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
 # Yield
 
 #need to fix this for fleets as areas 
-Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet ) 
+if(out$nfleets_OM==1 && out$nfleets>1 && out$nregions==1){ 
+Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs), Estimated=as.vector(out$yield_fleet),Observed=as.vector(out$OBS_yield_fleet))}
+                     
+if(out$nfleets==out$nfleets_OM && nreg>1){
+Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet) 
+}
 
 
 Y.year.plot<-melt(Y.year, id=c("Reg","Year"))
@@ -1178,6 +1235,14 @@ survey.comp.plot<-
 
 ######################
 #fishery age comps
+
+fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
+
+#rewrite if fleets as areas
+if(out$nfleets_OM==1 && out$nfleets>1 && out$nregions==1){ 
+fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs))
+}
+
 
 fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs))
 
@@ -1406,8 +1471,14 @@ tgrob.mod <- textGrob(paste(cor.text," ",grad.val,sep = "\n"),just = "centre")
 EM_est_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fishery","beta 3 fishery","beta 4 fishery","beta 1 survey","beta 2 survey","beta 3 survey","beta 4 survey"))
 
 #set up matrix to fill in the values
-temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],nreg))
-names(temp_est)<-as.character(1:nreg)
+
+if(out$nfleets_OM==1 && out$nfleets>1){
+temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],out$nfleets))
+names(temp_est)<-as.character(1:out$nfleets)}
+
+if(out$nfleets_OM==1 && out$nfleets==1 || out$nfleets_OM>1 && out$nfleets>1){
+temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1], nreg))
+names(temp_est)<-as.character(1:nreg)}
 
 EM_est_table<-cbind(EM_est_table,temp_est)
 #params
@@ -1417,7 +1488,7 @@ if(npops==1){
   EM_est_table[2,2]<-round(out$R_ave,2)
 }
 
-if(npops_OM>1){
+if(npops>1){
   EM_est_table[2,2:ncol(EM_est_table)]<-round(out$R_ave,2)
 }
 
@@ -1590,6 +1661,13 @@ if(out$npops_OM>1 && out$npops==1 && out$nregions==1){
   text1<-paste("MODEL STRUCTURE","Match/Mismatch: Mismatch","OM Population Structure: Metapopulation", "EM Population Structure: Panmictic", sep = "\n")
 }
 
+if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions==1 && out$nfleets>1 ){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Mismatch","OM Population Structure: Spatial Heterogeneity", "EM Population Structure: Fleets-as-Areas", sep = "\n")
+}
+
+if(out$npops_OM==1 && out$nregions_OM>1 && out$npops>1 && out$nregions==1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Mismatch","OM Population Structure: Spatial Heterogeneity", "EM Population Structure: Metapopulation", sep = "\n")
+}
 
 
 #is this a diagnostics run?
