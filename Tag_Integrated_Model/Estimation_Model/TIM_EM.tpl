@@ -255,7 +255,6 @@ DATA_SECTION
  init_5darray OBS_catch_at_age_fleet_prop(1,np,1,nreg,1,ny,1,nf,1,na) 
  init_4darray OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //sample size
 
-
  
 //Catch Prop
 //tagging data parameters
@@ -298,8 +297,8 @@ DATA_SECTION
    init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
    init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf)
    init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)
+   init_vector  input_steep(1,np)
 
-  
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -349,8 +348,9 @@ DATA_SECTION
   init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)//
 
   !! int xn=na*ny;
-  init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
-
+  //init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
+  init_5darray T_TRUE(1,np,1,nreg,1,xn,1,np,1,nreg) //change the dims to EM
+  
   init_4darray abund_frac_age_region(1,np_om,1,nreg_om,1,ny,1,na)
   init_3darray abund_frac_region_year(1,np_om,1,nreg_om,1,ny)
   init_matrix abund_frac_region(1,np_om,1,nreg_om)
@@ -822,7 +822,7 @@ PARAMETER_SECTION
 
 PROCEDURE_SECTION
  
-   get_movement(); 
+   get_movement();
    get_selectivity();
    get_F_age();
    get_vitals();
@@ -867,7 +867,9 @@ FUNCTION get_movement
         }
        }
       }
- 
+
+
+
  if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
 // if T fixed set it to input T
   {
@@ -891,6 +893,9 @@ FUNCTION get_movement
     }
    }
   }
+
+ //cout<<T_TRUE<<endl;
+ //exit(99);
 
  if(npops==1 && sum(nregions)==1) //if panmictic then movement is 100%
   {
@@ -1603,7 +1608,7 @@ FUNCTION get_vitals
 FUNCTION get_SPR
 
   if(ph_steep<0){
-       steep=steep_TRUE;
+       steep=input_steep;
        }
        
       for (int k=1;k<=npops;k++)
@@ -1635,7 +1640,6 @@ FUNCTION get_SPR
       }
     }
 
- 
 FUNCTION get_abundance
 
        for (int y=1;y<=nyrs;y++)
@@ -3943,11 +3947,6 @@ REPORT_SECTION
   report<<Rec_Prop<<endl;
   report<<"$recruits_BM"<<endl;
   report<<recruits_BM<<endl;
-  report<<"$F"<<endl;
-  report<<F<<endl;
-  report<<"$F_year"<<endl;
-  report<<F_year<<endl;
-  
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"$biomass_population"<<endl;
@@ -3965,6 +3964,22 @@ REPORT_SECTION
   report<<"$yield_fleet"<<endl;
   report<<yield_fleet<<endl;
 
+
+ if(fleets_as_areas_switch==0)
+   {
+    report<<"$F"<<endl;
+    report<<F<<endl;
+     }
+
+ if(fleets_as_areas_switch==1)
+   {
+    report<<"$F"<<endl;
+    report<<F_fleet<<endl;
+     }
+     
+  report<<"$F_year"<<endl;
+  report<<F_year<<endl;
+  
   report<<"$total_recruit"<<endl;
   report<<total_recruits<<endl;
   report<<"$SR"<<endl;
@@ -4068,6 +4083,9 @@ REPORT_SECTION
   report<<survey_selectivity_age<<endl;
   report<<"$survey_selectivity_age_TRUE"<<endl;
   report<<survey_selectivity_age_TRUE<<endl;
+
+
+
 
 
 
