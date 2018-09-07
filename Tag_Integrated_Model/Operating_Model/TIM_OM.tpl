@@ -435,9 +435,11 @@ DATA_SECTION
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
   init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
   init_vector sigma_recruit_EM(1,np_em)
+  init_vector steep_EM(1,np_em) // to input if not estimating
   init_4darray init_abund_EM(1,np_em,1,np_em,1,nreg_em,1,na)
   init_matrix input_M_EM(1,np_em,1,na)
 
+  
   init_4darray input_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nf_em) //fishery selectivity by area/region/age/fleet
   init_4darray input_survey_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nfs_em)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
@@ -6121,9 +6123,11 @@ REPORT_SECTION
   report<<input_selectivity_EM<<endl;
   report<<"#input_survey_selectivity_EM"<<endl;
   report<<input_survey_selectivity_EM<<endl;
+  report<<"#input_steepness_EM"<<endl;
+  report<<steep_EM<<endl;
 
  //report<<"#init_abund_EM"<<endl;
- // report<<init_abund_EM<<endl;
+ //report<<init_abund_EM<<endl;
 
 /// TRUE VALUES FROM OM
   report<<"#input_M_TRUE"<<endl;
