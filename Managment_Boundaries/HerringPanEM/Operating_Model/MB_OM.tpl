@@ -747,6 +747,10 @@ PARAMETER_SECTION
  5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
  5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray OBS_catch_prop_temp1_mb(1,nps,1,nag,1,nyr,1,nr,1,nfl) //JJD
+ 4darray OBS_catch_prop_temp1a_mb(1,nps,1,nag,1,nyr,1,nr) //JJD
+ 4darray OBS_catch_prop_temp1b_mb(1,nps,1,nr,1,nyr,1,nag) //JJD
+ 3darray OBS_catch_prop_temp1a_pop(1,nag,1,nyr,1,nps) //JJD
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
  4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
  4darray catch_at_age_region_temp(1,nps,1,nyr,1,nag,1,nr) //JJD
@@ -946,6 +950,7 @@ PARAMETER_SECTION
  4darray OBS_survey_prop_temp4(1,nps,1,nyr,1,nag,1,nr)
  3darray OBS_survey_prop_population(1,nps,1,nyr,1,nag)
  3darray OBS_survey_prop_pan_temp(1,nyr,1,nag,1,nps)
+ vector  OBS_survey_prop_pan_temp_b(1,nyr) //JJD
  matrix  OBS_survey_prop_pan(1,nyr,1,nag)
 
  5darray OBS_catch_prop_temp(1,nps,1,nr,1,nyr,1,nag,1,nfls)
@@ -954,6 +959,7 @@ PARAMETER_SECTION
  4darray OBS_catch_prop_temp4(1,nps,1,nyr,1,nag,1,nr)
  3darray OBS_catch_prop_population(1,nps,1,nyr,1,nag)
  3darray OBS_catch_prop_pan_temp(1,nyr,1,nag,1,nps)
+ vector  OBS_catch_prop_pan_temp_b(1,nyr) //JJD
  matrix  OBS_catch_prop_pan(1,nyr,1,nag)
 
 
@@ -5382,18 +5388,22 @@ FUNCTION get_rand_CAA_prop
           if(use_stock_comp_info_catch==0)
            {
             OBS_catch_prop(j,r,z,y,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
+            //JJD - for mgngmt boundary work; take different proportion of obs age comp from each region; for catch-weighted report values
+            OBS_catch_prop_temp1_mb(j,a,y,r,z)=OBS_catch_prop(j,r,z,y,a)*obs_misallocate(j,r);
+            OBS_catch_prop_temp1a_mb(j,a,y,r)=sum(OBS_catch_prop_temp1_mb(j,a,y,r));
+            OBS_catch_prop_temp1a_pop(a,y,j)=sum(OBS_catch_prop_temp1a_mb(j,a,y));
+            OBS_catch_prop_temp1b_mb(j,r,y,a)=OBS_catch_prop_temp1a_mb(j,a,y,r)/sum(OBS_catch_prop_temp1a_pop(a,y));
            }
           if(use_stock_comp_info_catch==1)
            {
             OBS_catch_prop_overlap(p,j,r,z,y,a)=SIM_catch_prop_overlap(p,j,r,z,y,a)/SIM_ncatch_overlap(p,j,r,z);
            }
-         }
-       }
-      }
-     }
-    }
-   }
-
+         }  //a loop
+       } //y loop
+      } //z loop
+     } //r loop
+    } //j loop
+   } //p loop
 
 FUNCTION get_tag_recaptures
   ////////////////////////////////////////////////////////////////////////////
@@ -5736,9 +5746,9 @@ REPORT_SECTION
 
         //JJD
         catch_frac_age_region_temp2(p,r,a,y)=catch_frac_age_region(p,r,y,a);
-        catch_frac_age_region_avg(p,r,a)=sum(catch_frac_age_region_temp2(p,r,a))/nyrs;
+        catch_frac_age_region_avg(p,r,a)=sum(catch_frac_age_region_temp2(p,r,a))/nyrs;      
         }}}}}
-
+        
  
  //Aggregating OBS values and vitals for panmictic EM
  if(EM_structure==0 && OM_structure>0){ 
@@ -5772,6 +5782,7 @@ REPORT_SECTION
           OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
           OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
           }
+          //JJD
         if(sum(obs_misallocate)!=nregions(p)){
           input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
           input_weight_region_temp(p,a,r)=input_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//rearrange to summarize and weight for output
@@ -5783,12 +5794,12 @@ REPORT_SECTION
           //survey
           OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
           OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
-          OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*catch_frac_age_region(p,r,y,a);
+          OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*OBS_catch_prop_temp1b_mb(p,r,y,a);
 
           //catch
           OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
           OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
-          OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*catch_frac_age_region(p,r,y,a);
+          OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*OBS_catch_prop_temp1b_mb(p,r,y,a);
           } 
 
        //aggregating weight at age
@@ -5821,16 +5832,20 @@ REPORT_SECTION
         OBS_survey_prop_temp4(p,y,a,r)=OBS_survey_prop_temp3(p,r,y,a);
         OBS_survey_prop_population(p,y,a)=sum(OBS_survey_prop_temp4(p,y,a));
         OBS_survey_prop_pan_temp(y,a,p)= OBS_survey_prop_population(p,y,a);
-        OBS_survey_prop_pan(y,a)=sum(OBS_survey_prop_pan_temp(y,a));
+        
+        OBS_survey_prop_pan(y,a)=sum(OBS_survey_prop_pan_temp(y,a)); //JJD
+        OBS_survey_prop_pan_temp_b(y)=sum(OBS_survey_prop_pan(y)); //JJD
 
         //catch
         OBS_catch_prop_temp4(p,y,a,r)= OBS_catch_prop_temp3(p,r,y,a);
         OBS_catch_prop_population(p,y,a)=sum(OBS_catch_prop_temp4(p,y,a));
         OBS_catch_prop_pan_temp(y,a,p)= OBS_catch_prop_population(p,y,a);
-        OBS_catch_prop_pan(y,a)=sum(OBS_catch_prop_pan_temp(y,a));
-
-
+        
+        OBS_catch_prop_pan(y,a)=sum(OBS_catch_prop_pan_temp(y,a)); //JJD
+        OBS_catch_prop_pan_temp_b(y)=sum(OBS_catch_prop_pan(y)); //JJD
         } //end age loop
+        OBS_catch_prop_pan(y)=OBS_catch_prop_pan(y)/OBS_catch_prop_pan_temp_b(y); //JJD normalize so sum to 1 each yr
+        OBS_survey_prop_pan(y)=OBS_survey_prop_pan(y)/OBS_survey_prop_pan_temp_b(y); //JJD normalize so sum to 1 each yr
         } //end fleets loop
 
         //proportion female
