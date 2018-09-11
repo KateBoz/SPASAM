@@ -246,7 +246,7 @@ DATA_SECTION
   init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)//survey selectivity
   init_3darray q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
   init_3darray input_F(1,np,1,nreg,1,nf)
-  init_3darray dunce_F(1,np,1,nreg,1,3) //min and max F for dunce cap F alternative
+  init_4darray dunce_F(1,np,1,nreg,1,nf,1,3) //min and max F for dunce cap F alternative
   init_3darray F_rho(1,np,1,nreg,1,nf) //degree of autocorrelation (0-1) if F switch = 8; random walk in F
   init_number input_F_MSY
   init_matrix input_M(1,np,1,na)
@@ -433,6 +433,7 @@ DATA_SECTION
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
+  init_vector input_R_ave(1,np_em)
   init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs)//input recruit apportionment for EM
   init_vector sigma_recruit_EM(1,np_em)
   init_vector steep_EM(1,np_em) // to input if not estimating
@@ -443,6 +444,7 @@ DATA_SECTION
   init_4darray input_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nf_em) //fishery selectivity by area/region/age/fleet
   init_4darray input_survey_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nfs_em)//survey selectivity
   init_3darray report_rate_EM(1,np_em,1,ny_rel,1,nreg_em)
+
 
   init_int ph_lmr
   init_number lb_R_ave//lower bound on R_ave
@@ -500,8 +502,9 @@ DATA_SECTION
   init_4darray OBS_survey_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray OBS_catch_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nf_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray tag_N_EM(1,np_em,1,nreg_em,1,ny_rel,1,na)
+
   //summing tag prop array
-  
+
 //###################################################################################################################################
  //###################################################################################################################################
  //###################################################################################################################################
@@ -527,7 +530,6 @@ DATA_SECTION
   init_number myseed_survey_age
   init_number myseed_catch_age
   init_number myseed_tag
-
 
 
   //fill in a vector of years
@@ -589,10 +591,10 @@ PARAMETER_SECTION
  init_matrix F_est(1,nps,1,nr,phase_F)
 
  //For dunce cap F
- matrix Fstartyr(1,nps,1,nr)
- matrix minF(1,nps,1,nr)
- matrix maxF(1,nps,1,nr)
- matrix stepF(1,nps,1,nr)
+ 3darray Fstartyr(1,nps,1,nr,1,nfl)
+ 3darray minF(1,nps,1,nr,1,nfl)
+ 3darray maxF(1,nps,1,nr,1,nfl)
+ 3darray stepF(1,nps,1,nr,1,nfl)
  vector R_ave(1,nps)
  
  // vitals
@@ -703,7 +705,7 @@ PARAMETER_SECTION
  6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
  4darray true_survey_region_bio_overlap(1,nps,1,nps,1,nyr,1,nr)
@@ -725,7 +727,7 @@ PARAMETER_SECTION
 
  5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
- 5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
+ 5darray OBS_survey_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  4darray true_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
  3darray true_survey_region_bio(1,nps,1,nyr,1,nr)
@@ -746,7 +748,8 @@ PARAMETER_SECTION
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray OBS_catch_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
+ 5darray OBS_catch_prop_FAA(1,nps,1,nfl,1,nyr,1,nr,1,nag)
  4darray yield_fleet(1,nps,1,nr,1,nyr,1,nfl)
  4darray catch_at_age_region(1,nps,1,nr,1,nyr,1,nag)
  4darray catch_at_age_region_prop(1,nps,1,nr,1,nyr,1,nag)
@@ -786,7 +789,7 @@ PARAMETER_SECTION
  6darray catch_at_age_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  6darray catch_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
  6darray SIM_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 6darray OBS_catch_prop_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 6darray OBS_catch_prop_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfl,1,nag)
  5darray catch_at_age_region_overlap(1,nps,1,nps,1,nr,1,nyr,1,nag)
  5darray catch_at_age_region_overlap_prop(1,nps,1,nps,1,nr,1,nyr,1,nag)
  5darray yield_region_fleet_overlap(1,nps,1,nps,1,nr,1,nfl,1,nyr)
@@ -967,6 +970,7 @@ PARAMETER_SECTION
 3darray OBS_tag_prop_pan_temp2(1,nyr_rel,1,nag,1,nt)
 3darray OBS_tag_prop_pan_final_temp(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
 3darray OBS_tag_prop_pan_final(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //Temporary (reorganized) 6d arrary parameters 
@@ -1349,27 +1353,27 @@ FUNCTION get_F_age
               }
              if(F_switch==9)  //Dunce cap F
               {
-               Fstartyr(j,r)=dunce_F(j,r,1);
-               minF(j,r)=dunce_F(j,r,2);
-               maxF(j,r)=dunce_F(j,r,3);
-               stepF(j,r)=(maxF(j,r)-minF(j,r))/((nyrs-Fstartyr(j,r))/2);
-              if(y<Fstartyr(j,r))
+               Fstartyr(j,r,z)=dunce_F(j,r,z,1);
+               minF(j,r,z)=dunce_F(j,r,z,2);
+               maxF(j,r,z)=dunce_F(j,r,z,3);
+               stepF(j,r,z)=(maxF(j,r,z)-minF(j,r,z))/((nyrs-Fstartyr(j,r,z))/2);
+              if(y<Fstartyr(j,r,z))
                {
                 F_year(j,r,y,z)=0;
                }
-               if(y>=Fstartyr(j,r))
+               if(y>=Fstartyr(j,r,z))
                {
-               if(y<((nyrs-Fstartyr(j,r))/2+Fstartyr(j,r)))
+               if(y<((nyrs-Fstartyr(j,r,z))/2+Fstartyr(j,r,z)))
                 {
-                 F_year(j,r,y,z)=minF(j,r)+(y-Fstartyr(j,r))*stepF(j,r)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                 F_year(j,r,y,z)=minF(j,r,z)+(y-Fstartyr(j,r,z))*stepF(j,r,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
                 }
                }
-               if(y>=((nyrs-Fstartyr(j,r))/2+Fstartyr(j,r)))
+               if(y>=((nyrs-Fstartyr(j,r,z))/2+Fstartyr(j,r,z)))
                 {
-                 F_year(j,r,y,z)=maxF(j,r)-((y-Fstartyr(j,r))-((nyrs-Fstartyr(j,r))/2))*stepF(j,r)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
+                 F_year(j,r,y,z)=maxF(j,r,z)-((y-Fstartyr(j,r,z))-((nyrs-Fstartyr(j,r,z))/2))*stepF(j,r,z)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
                   if(F_year(j,r,y,z)<0) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
                   {
-                  F_year(j,r,y,z)=minF(j,r);
+                  F_year(j,r,y,z)=minF(j,r,z);
                   }
                 }
               }
@@ -1381,6 +1385,10 @@ FUNCTION get_F_age
          }
         }
        }
+
+ // cout<<F_fleet<<endl;
+ //exit(99);
+
 FUNCTION get_vitals
 //POSSIBLE ADDITIONS:
   //random walk in apportionment or random to give time-varying
@@ -5238,11 +5246,11 @@ FUNCTION get_rand_survey_CAA_prop
          {
           if(use_stock_comp_info_survey==0)
            {
-            OBS_survey_prop(j,r,z,y,a)=SIM_survey_prop(j,r,z,y,a)/SIM_nsurvey(j,r,z);
+            OBS_survey_prop(j,r,y,z,a)=SIM_survey_prop(j,r,z,y,a)/SIM_nsurvey(j,r,z);
            }
           if(use_stock_comp_info_survey==1)
            {
-            OBS_survey_prop_overlap(p,j,r,z,y,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
+            OBS_survey_prop_overlap(p,j,r,y,z,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
            }
          }
        }
@@ -5340,11 +5348,11 @@ FUNCTION get_rand_CAA_prop
          {
           if(use_stock_comp_info_catch==0)
            {
-            OBS_catch_prop(j,r,z,y,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
+            OBS_catch_prop(j,r,y,z,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
            }
           if(use_stock_comp_info_catch==1)
            {
-            OBS_catch_prop_overlap(p,j,r,z,y,a)=SIM_catch_prop_overlap(p,j,r,z,y,a)/SIM_ncatch_overlap(p,j,r,z);
+            OBS_catch_prop_overlap(p,j,r,y,z,a)=SIM_catch_prop_overlap(p,j,r,z,y,a)/SIM_ncatch_overlap(p,j,r,z);
            }
          }
        }
@@ -5352,6 +5360,9 @@ FUNCTION get_rand_CAA_prop
      }
     }
    }
+
+//OBS_catch_prop(p,r,z,y,a)
+//catch_at_age_fleet_prop(j,r,y,z,a)
 
 
 FUNCTION get_tag_recaptures
@@ -5639,24 +5650,32 @@ FUNCTION get_observed_tag_recaptures
              OBS_tag_prop_population_temp(i,x,a,s,n)=SIM_tag_prop(i,n,x,a,s);
              OBS_tag_prop_population_temp2(i,x,a,s)=sum(OBS_tag_prop_population_temp(i,x,a,s));
              OBS_tag_prop_population_final(i,x,a,s)=OBS_tag_prop_population_temp2(i,x,a,s)/(nregions(i)*SIM_ntag);
-           //  OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
-         //    OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
+             OBS_tag_prop_pan_temp(x,a,s,i)=OBS_tag_prop_population_temp2(i,x,a,s);
+             OBS_tag_prop_pan_temp2(x,a,s)=sum(OBS_tag_prop_pan_temp(x,a,s));
 
-     //        if(OM_structure>0 && EM_structure==0){
-      //            for (int k=1;k<=max_life_tags+1;k++)
-       //               {
-       //                OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
-       //                OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
-        //               OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
+             if(OM_structure>0 && EM_structure==0){
+                  for (int k=1;k<=max_life_tags+1;k++)
+                      {
+                       OBS_tag_prop_pan_final_temp(x,a,k)=OBS_tag_prop_pan_temp2(x,a,k)+OBS_tag_prop_pan_temp2(x,a,k+max_life_tags);
+                       OBS_tag_prop_pan_final_temp(x,a,max_life_tags+1)=OBS_tag_prop_pan_temp2(x,a,max_life_tags*sum(nregions)+1);// this is a nightmare
+                       OBS_tag_prop_pan_final(x,a,k)=OBS_tag_prop_pan_final_temp(x,a,k)/(SIM_ntag*sum(nregions));//this probably wont work with 3 areas
                        //OBS_tag_prop_pan_final(x,a,k)=1; //for place holding only
-       //                }
-        //              }
+                     }
+                     }
                     }
                     }
                    }
                   }
                  }
                 }
+
+//3darray OBS_tag_prop_pan_temp2(1,nyr_rel,1,nag,1,nt)
+//3darray OBS_tag_prop_pan_final_temp(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
+//3darray OBS_tag_prop_pan_final(1,nyr_rel,1,nag,1,max_life_tags+1)//set up a new array for summed proportion
+
+
+
+  //cout<<OBS_tag_prop_pan_final<<endl;
 
 FUNCTION evaluate_the_objective_function
    f=0.0;
@@ -5675,6 +5694,9 @@ FUNCTION evaluate_the_objective_function
                 }
                }
               }
+
+
+
 
 REPORT_SECTION
 
@@ -5740,7 +5762,7 @@ REPORT_SECTION
         //aggregating the age comps
 
         //survey
-        OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,z,y,a);
+        OBS_survey_prop_temp(p,r,y,a,z)=OBS_survey_prop(p,r,y,z,a);
         OBS_survey_prop_temp2(p,r,y,a)=sum(OBS_survey_prop_temp(p,r,y,a));
         OBS_survey_prop_temp3(p,r,y,a)=OBS_survey_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
         OBS_survey_prop_temp4(p,y,a,r)=OBS_survey_prop_temp3(p,r,y,a);
@@ -5749,7 +5771,7 @@ REPORT_SECTION
         OBS_survey_prop_pan(y,a)=sum(OBS_survey_prop_pan_temp(y,a));
 
         //catch
-        OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,z,y,a);
+        OBS_catch_prop_temp(p,r,y,a,z)= OBS_catch_prop(p,r,y,z,a);
         OBS_catch_prop_temp2(p,r,y,a)=sum(OBS_catch_prop_temp(p,r,y,a));
         OBS_catch_prop_temp3(p,r,y,a)= OBS_catch_prop_temp2(p,r,y,a)*abund_frac_age_region(p,r,y,a);
         OBS_catch_prop_temp4(p,y,a,r)= OBS_catch_prop_temp3(p,r,y,a);
@@ -5757,6 +5779,9 @@ REPORT_SECTION
         OBS_catch_prop_pan_temp(y,a,p)= OBS_catch_prop_population(p,y,a);
         OBS_catch_prop_pan(y,a)=sum(OBS_catch_prop_pan_temp(y,a));
 
+        // rearrange for FAA dimensions
+        OBS_catch_prop_FAA(p,z,y,r,a)=OBS_catch_prop(p,r,y,z,a);
+        
 
         } //end age loop
         } //end fleets loop
@@ -5775,7 +5800,7 @@ REPORT_SECTION
         
       } //end pop loop          
      } //end year loop
-  }
+   }
 
 
 //Additional model structure parameters
@@ -5960,7 +5985,7 @@ REPORT_SECTION
 ////////////////////////////////////////////////////
 
 //Spatial to panmictic EM inputs
-   if(EM_structure==0 && OM_structure>=0){ 
+   if(EM_structure==0 && OM_structure>0){
       report<<"#input_weight"<<endl;
       report<<input_weight_population<<endl;
       report<<"#input_catch_weight"<<endl;
@@ -5975,7 +6000,7 @@ REPORT_SECTION
       report<<rec_index_pan<<endl;
 
  //for straight panmictic EM 
-    if(sum(nfleets_EM)==1){
+    if(fleets_as_areas_switch==0){
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
       report<<"#OBS_survey_fleet_bio_se_EM"<<endl;
@@ -6016,7 +6041,7 @@ REPORT_SECTION
 
 
  //for fleets-as-areas approach
-      if(sum(nfleets_EM)>1){
+      if(fleets_as_areas_switch==1){
       //fleet specific outputs for fishery, panmictic for survey
       report<<"#OBS_survey_fleet"<<endl;
       report<<OBS_survey_total_bio<<endl;
@@ -6031,14 +6056,14 @@ REPORT_SECTION
       report<<"#OBS_yield_fleet_se_EM"<<endl;
       report<<OBS_yield_fleet_se_EM<<endl;
       report<<"#OBS_catch_prop"<<endl;
-      report<<OBS_catch_prop<<endl;
+      report<<OBS_catch_prop_FAA<<endl;
       report<<"#OBS_catch_prop_N_EM"<<endl;
       report<<OBS_catch_prop_N_EM<<endl;
       
 //tagging information
       report<<"#nyrs_release"<<endl;
       report<<nyrs_release<<endl;
-      report<<"#years_of_tag_releases "<<endl;
+      report<<"#years_of_tag_releases"<<endl;
       report<<yrs_releases<<endl;
       report<<"#max_life_tags"<<endl;
       report<<max_life_tags<<endl;
@@ -6052,13 +6077,14 @@ REPORT_SECTION
       report<<tag_N_EM<<endl;
       report<<"#input_T_EM"<<endl;
       report<<input_T_EM<<endl;
-      report<<"#OBS_tag_prop_pan_final"<<endl;
+      report<<"#OBS_tag_pan_final"<<endl;
       report<<OBS_tag_prop_pan_final<<endl;
       }
       }
 
 //spatial to spatial EM inputs or panmictic matching - no aggregation needed
-     if((EM_structure>0 && OM_structure>0) || (EM_structure==0 && OM_structure==0)){
+     if((EM_structure>0 && OM_structure>0) ||(EM_structure==0 && OM_structure==0))
+     {
       report<<"#input_weight"<<endl;
       report<<input_weight<<endl;
       report<<"#input_catch_weight"<<endl;
@@ -6104,7 +6130,7 @@ REPORT_SECTION
       report<<"#tag_N_EM"<<endl;
       report<<tag_N_EM<<endl;
       report<<"#input_T_EM"<<endl;
-      report<<input_T_EM<<endl;
+      report<<input_T_EM<<endl; 
       report<<"#OBS_tag_prop_final"<<endl;
       report<<OBS_tag_prop_final<<endl;
       }
@@ -6117,6 +6143,8 @@ REPORT_SECTION
 //Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
+  report<<"#input_R_ave_EM"<<endl;
+  report<<input_R_ave<<endl;
   report<<"#input_Rec_Prop_EM"<<endl;
   report<<input_rec_prop_EM<<endl;
   report<<"#input_selectivity_EM"<<endl;
@@ -6125,9 +6153,9 @@ REPORT_SECTION
   report<<input_survey_selectivity_EM<<endl;
   report<<"#input_steepness_EM"<<endl;
   report<<steep_EM<<endl;
+  report<<"#init_abund_EM"<<endl;
+  report<<init_abund_EM<<endl;
 
- //report<<"#init_abund_EM"<<endl;
- //report<<init_abund_EM<<endl;
 
 /// TRUE VALUES FROM OM
   report<<"#input_M_TRUE"<<endl;
@@ -6165,7 +6193,7 @@ REPORT_SECTION
   report<<"#recruits_BM"<<endl;
   report<<recruits_BM<<endl;
   report<<"#F"<<endl;
-  report<<F<<endl;
+  report<<F_fleet<<endl;
   report<<"#Fyear"<<endl;
   report<<F_year<<endl;
   report<<"#biomass_AM"<<endl;

@@ -174,7 +174,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-1
+2
 
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
@@ -345,39 +345,38 @@
 1
 
 #R_ave - not on the log scale.  Provide actual numbers of fish
-##2957.929
 3208750
-
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
 0.2
 #freq - period of ossilation for recruitment variation. Use when Rec_type ==3
 15
 
+
 #input_T (1,np,1,nreg,1,na,1,np,1,nreg)
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
 
 #input_residency_larval
-0.7
-0.8
+0.675326638
+0.37060034
 
 #input_residency
 0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7
-0.8	0.8	0.8	0.8	0.8	0.8	0.8	0.8
+0.6	0.6	0.6	0.6	0.6	0.6	0.6	0.6
 
 #sel_beta1
 0.8  #approximate mobile fleet
@@ -413,14 +412,15 @@
 
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
 0.01	0.18	0.5	0.8	0.9	1	1	1	##Mobile fleet based on 2018 spatial SS model; top is Gulf of Maine and bottom is GB
-0.01	0.18	0.5	0.8	0.9	1	1	1
+0.01	0.18	0.5	0.8	0.9	1	1	1	
+
 
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
 0.03 0.2 0.63 0.92 0.98 1 1 1
 
 
-#q_survey(by population, area and fleet)
+#q_survey(by population, area and fleet) indexes biomass (not abundance)
 0.0000348
 0.0000348
 
@@ -467,14 +467,16 @@
 ######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
 ######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
 #########################################################################################################################################
-#input_weight
+#input_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
 0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21	#2017Jan1wt
-0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21				
+0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21	#2017Jan1wt			
 
 
-#input_catch_weight
+#input_catch_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
 0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
-0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184  #2017 Catch wt
+0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
+
+
 
 #fecundity
 1 1 1 1 1 1 1 1
@@ -482,7 +484,7 @@
 
 #maturity
 0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.000  #2017 mat at age; top row made artifically bigger because they grow faster; made it up
-0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.000
+0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.00
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################
@@ -499,15 +501,13 @@
 #Equil_ssb_apportion
 0.5
 0.5
-
 #frac_natal ## fraction of the population in the natal population at the onset of the simulation. Use with init_abund_switch==1
+
 0.5
 0.5
 
 #init_abund
-#1478.9646	1586.7164	1430.3332	1420.7977	1369.3057	1174.7804	1223.4117	1305.4175
-#1478.9646	1586.7164	1430.3332	1420.7977	1369.3057	1174.7804	1223.4117	1305.4175
-#Take R ave, decrement by M=0.35 and divide in half for each region
+#Take R ave, decrement by M=0.35 and put 25% in top row (gulf of maine) and 75% in GB; based on 2018 spatial SS model
 1604375	1130584	796709	561431	395634	278799	196466	138447  
 1604375	1130584	796709	561431	395634	278799	196466	138447
 
@@ -533,20 +533,20 @@
 0.1
 
 #_SIM_ncatch #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-500
-500
+100
+100
 
 #SIM_ncatch_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-500
-500
+100
+100
 
 #_SIM_nsurvey #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-500
-500
+100
+100
 
 #SIM_nsurvey_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-500
-500
+100
+100
 
 
 #input_TAC
@@ -728,32 +728,34 @@
 1
 
 #input_T_EM (1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
-0.5	0.5
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
+0.7	0.3
 
+#input_Rave_EM
+3208750
 
 #input_rec_prop_EM
-0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5
-0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5
+0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 
 #sigma_rec_em(1,np_em)
 0.84
 
-#input_steepness_EM
+#input_steep_EM
 1
 
 #init_abund
@@ -769,8 +771,7 @@
 
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
-0.03 0.2 0.63 0.92 0.98 1 1 1
-
+0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
 
 #report_rate(1,ny_rel,1,np_em,1,nreg_em)
   #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
@@ -809,25 +810,25 @@
 ##### Phases for estimation ####
 ################################
 #ph_lmr
-2
+-2
 #lb_R_ave
 10
 #up_R_ave
 30
 #ph_rec
-3
+2
 #lb_rec_devs
 -10
 #ub_rec_devs
 5
 #ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
--4
+4
 #ph_rec_app_YR
 -4
 #ph_init_abund //init abund phases needs to be negative if the init_abund_switch ==1
 2
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
--2
+2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
 #lb_abund_devs
@@ -835,7 +836,7 @@
 #ub_abund_devs
 30
 #ph_F
-4
+3
 #ph_steep
 -1
 #ph_M
@@ -891,7 +892,7 @@
 #wt_srv_age
 1
 #wt_rec
-1
+0
 #wt_tag
 0
 #wt_F_pen// weight on F penalty
@@ -927,17 +928,20 @@
 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 
+
 #OBS_yield_fleet_se(1,np_em,1,nreg,1,ny,1,nf_em)  #standard errors
-0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1
-0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1
+0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 
 #OBS_survey_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs_em) #number of survey ages
-500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
+100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
+
 
 #OBS_catch_at_age_fleet_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs) //fishery sample size ages
-500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
+100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
+
 
 #tag_N(1,np_em,1,nreg_em,1,ny_rel,1,na) //fishery sample size ages
 500	500	500	500	500	500	500	500
@@ -1000,7 +1004,6 @@
 500	500	500	500	500	500	500	500
 500	500	500	500	500	500	500	500
 500	500	500	500	500	500	500	500
-
 
 ################################################################################################################
 ################################################################################################################
