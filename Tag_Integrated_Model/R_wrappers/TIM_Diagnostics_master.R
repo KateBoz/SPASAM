@@ -80,7 +80,7 @@ EM_name<-"TIM_EM"
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\SIMS_EDIT\\MisMatch"
+direct_master<-"E:\\SIMS_EDIT\\MisMatch"
 
 
 
@@ -89,7 +89,7 @@ files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=2
+i=4
   
 #if running the whole master folder
  #for(i in 1:length(files)){
@@ -399,11 +399,6 @@ if(npops>1 && npops_OM==1){
 
 
 
-
-
-
-
-
 ######################
 #Rec_dev resid plot
   
@@ -524,7 +519,7 @@ rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
 #initial abundance
   
 #panmictic/metamictic matching  
-if(nreg_OM==nreg&& npops==1){ 
+if(nreg_OM==nreg&&npops==1){ 
     init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est = as.vector(t(out$Init_Abund)), In_ab_True=as.vector(t(out$Init_Abund_TRUE)))
   }
 
@@ -726,8 +721,13 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
 #####################
 #Fishery Selectivity
 
+
 if(nreg_OM==nreg){ 
 f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),Select_Est = as.vector(t(out$selectivity_age)), Select_T=as.vector(t(out$selectivity_age_TRUE)))
+
+if(out$nfleets>1 && out$nregions==1){ # this is a fleets as areas model
+f.select<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:out$nfleets),each=na),Select_Est = as.vector(out$selectivity_age), Select_T=as.vector(out$selectivity_age_TRUE))
+}
 }
 
 if(nreg_OM>1 && nreg==1){ 
@@ -844,26 +844,34 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
 ########## F by year #######################################
 ############################################################
 
+
+
 #combining true and estimated together
-if(out$nfleets_OM==1 && out$nfleets>1 && out$nregions==1){ # this is a fleets as areas model
+if(out$npops==out$npops_OM && out$nregions==out$nregions_OM){ #matching
+if(out$nfleets>1 && out$nregions==1){ # this is a fleets as areas model
  f.mat.temp<-matrix(unlist(data.frame(out$F)),nyrs*nreg_OM,na, byrow=T)
  f.max=rowMaxs(f.mat.temp)
- f.max.t<-rowMaxs(out$F_TRUE)
- 
+ f.mat.temp.t<-matrix(unlist(data.frame(out$F_TRUE)),nyrs*nreg_OM,na, byrow=T)
+ f.max.t<-rowMaxs( f.mat.temp.t)
  F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs),F_year=f.max, F_year_T=f.max.t)
 }
-  
-
-if(nreg_OM==nreg){ 
-  f.max<-rowMaxs(out$F)
-  f.max.t<-rowMaxs(out$F_TRUE)
+else{
+  f.mat.temp<-matrix(unlist(data.frame(out$F)),nyrs*nreg_OM,na, byrow=T)
+  f.max=rowMaxs(f.mat.temp)
+  f.mat.temp.t<-matrix(unlist(data.frame(out$F_TRUE)),nyrs*nreg_OM,na, byrow=T)
+  f.max.t<-rowMaxs( f.mat.temp.t)
+  #f.max<-rowMaxs(out$F)
+  #f.max.t<-rowMaxs(out$F_TRUE)
 F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=f.max.t)
+}
 }
 
 
-if(nreg_OM>1 && nreg==1 && out$nfleets==1){ 
-  f.max<-rowMaxs(out$F)
-  f.max.t<-rowMaxs(out$F_TRUE)
+if(nreg_OM>1 && nreg==1 && out$nfleets==1){ #mismatch to panmictic
+  f.mat.temp<-matrix(unlist(data.frame(out$F)),nyrs*nreg_OM,na, byrow=T)
+  f.max<-rowMaxs(f.mat.temp)
+  f.mat.temp.t<-matrix(unlist(data.frame(out$F_TRUE)),nyrs*nreg_OM,na, byrow=T)
+  f.max.t<-rowMaxs(f.mat.temp.t)
   
   #aggreagating
   temp1<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg_OM),each=nyrs),F_year_T=f.max.t)
@@ -872,8 +880,33 @@ if(nreg_OM>1 && nreg==1 && out$nfleets==1){
   F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),F_year=f.max, F_year_T=temp2$F_year_T)
 }
 
+if(nreg_OM>1 && nreg==1 && out$nfleets>1){#mismatch with FAA
 
+  f.max.test<-as.vector(unlist(data.frame(out$F_year)))
+  f.max.t<-as.vector(unlist(data.frame(out$F_year_TRUE)))
+  f.mat.temp<-matrix(unlist(data.frame(out$F)),nyrs*nreg_OM,na, byrow=T)
+  f.max<-rowMaxs(f.mat.temp)
+  f.mat.temp.t<-matrix(unlist(data.frame(out$F_TRUE)),nyrs*nreg_OM,na, byrow=T)
+  f.max.t<-rowMaxs( f.mat.temp.t)
+  F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs),F_year=f.max, F_year_T=f.max.t)
+}
 
+if(npops>npops_OM){ #metapop OM
+  
+f.max<-data.frame(matrix(unlist(out$F_year),nyrs,npops,byrow=F))
+f.max.t<-data.frame(matrix(out$F_year_TRUE,nyrs,npops,byrow=F))
+  
+#pull_F_est<-out[grep("alt_F", names(out), value = TRUE)]
+
+#F_est<-data.frame(matrix(unlist(pull_F),nyrs*npops,npops,byrow=TRUE))
+#f.mat.temp<-matrix(unlist(data.frame(F_est)),nyrs*npops,na, byrow=T)
+#f.max<-rowMaxs(f.mat.temp)
+#f.mat.temp<-matrix(unlist(data.frame(F_true)),nyrs*nreg_OM,na, byrow=T)
+#f.max.t<-rowMaxs(f.mat.temp)
+
+F.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$npops),each=nyrs),F_year=as.vector(unlist(f.max)), F_year_T=as.vector(unlist(f.max.t)))
+
+}
 
 F.plot<-melt(F.year,id=c("Reg","Year"))
 F.plot$Reg<-as.factor(F.plot$Reg)
@@ -1086,13 +1119,20 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
 ##############
 # Yield
 
-#need to fix this for fleets as areas 
-if(out$nfleets_OM==1 && out$nfleets>1 && out$nregions==1){ 
-Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs), Estimated=as.vector(out$yield_fleet),Observed=as.vector(out$OBS_yield_fleet))}
+#fleets as areas 
+if((out$nregions_OM==out$nregions && out$nfleets>=1)||(out$nregions_OM>out$nregions && out$nfleets>1)){ 
+Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs), Estimated=as.vector(out$yield_fleet),Observed=as.vector(out$OBS_yield_fleet))
+}
+
+#mismatch to panmictic
+if((out$nregions_OM > out$nregions && out$nfleets==1)){ 
+  Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:out$nfleets),each=nyrs), Estimated=as.vector(out$yield_fleet),Observed=as.vector(out$OBS_yield_fleet))
+}
                      
 if(out$nfleets==out$nfleets_OM && nreg>1){
 Y.year<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs), Estimated=out$yield_fleet,Observed=out$OBS_yield_fleet) 
 }
+
 
 
 Y.year.plot<-melt(Y.year, id=c("Reg","Year"))
@@ -1128,7 +1168,7 @@ Y.resid.plot<-ggplot(y.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (True-Estimated)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1173,7 +1213,7 @@ Surv.resid.plot<-ggplot(surv.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (True-Estimated)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1472,13 +1512,25 @@ EM_est_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fisher
 
 #set up matrix to fill in the values
 
-if(out$nfleets_OM==1 && out$nfleets>1){
+if((out$nfleets_OM==out$nfleets && npops_OM==npops && out$nfleets>1)){ #FAA matching
+  temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],out$nfleets))
+  names(temp_est)<-as.character(1:out$nfleets)}
+
+if(out$nfleets_OM==1 && out$nfleets>1){ #mismatch with FAA
 temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],out$nfleets))
 names(temp_est)<-as.character(1:out$nfleets)}
 
-if(out$nfleets_OM==1 && out$nfleets==1 || out$nfleets_OM>1 && out$nfleets>1){
-temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1], nreg))
+if((nreg==nreg_OM) && (out$nfleets_OM!=out$nfleets)){ #mismatch with metamictic
+temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1], nreg_OM))
 names(temp_est)<-as.character(1:nreg)}
+
+if((nreg==nreg_OM) && (out$nfleets_OM=out$nfleets) && (nreg>1)){ #matching
+  temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1], nreg_OM))
+  names(temp_est)<-as.character(1:nreg_OM)}
+
+if((nreg<nreg_OM) && (out$nfleets_OM==out$nfleets) && out$nfleets==1){ #spatial to panmictic
+  temp_est<-data.frame(matrix(NA,dim(EM_est_table)[1],nreg))
+  names(temp_est)<-as.character(1:nreg)}
 
 EM_est_table<-cbind(EM_est_table,temp_est)
 #params
@@ -1561,8 +1613,21 @@ gt_est <- gTree(children=gList(est_params, title_est))
 OM_true_table<-data.frame(Parameter=c("q","R_ave","beta 1 fishery","beta 2 fishery","beta 3 fishery","beta 4 fishery","beta 1 survey","beta 2 survey","beta 3 survey","beta 4 survey"))
 
 #set up matrix to fill in the values
-temp_om<-data.frame(matrix(NA,dim(OM_true_table)[1],nreg_OM))
-names(temp_om)<-1:nreg_OM
+if((OM_dat[grep("fleets_as_areas_switch",OM_dat, fixed = T)+3]==1 && nreg_OM==1)){
+temp_om<-data.frame(matrix(NA,dim(OM_true_table)[1],out$nfleets_OM))
+names(temp_om)<-1:out$nfleets_OM
+}
+
+if(OM_dat[grep("fleets_as_areas_switch",OM_dat, fixed = T)+3]==1 && nreg_OM>1){
+  temp_om<-data.frame(matrix(NA,dim(OM_true_table)[1],nreg_OM))
+  names(temp_om)<-1:nreg_OM
+}
+
+if(OM_dat[grep("fleets_as_areas_switch",OM_dat, fixed = T)+3]==0){
+  temp_om<-data.frame(matrix(NA,dim(OM_true_table)[1],nreg_OM))
+  names(temp_om)<-1:nreg_OM
+}
+
 OM_true_table<-cbind(OM_true_table,temp_om)
 OM_true_table[1,2:ncol(OM_true_table)]<-round(out$q_survey_TRUE,2)
 
@@ -1649,8 +1714,12 @@ if(out$npops_OM>1 & out$npops>1){
 if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions>1){
   text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Spatial Heterogeneity",sep ="\n")
 }
-if(out$npops_OM==1 && out$nregions_OM==1 && out$npops==1 && out$nregions==1){
+if(out$npops_OM==1 && out$nregions_OM==1 && out$npops==1 && out$nfleets==1){
   text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","Population Structure: Panmictic", sep = "\n")
+}
+
+if(out$npops_OM==1 && out$nregions_OM==1 && out$nfleets>1 && out$nfleets>1){
+  text1<-paste("MODEL STRUCTURE","Match/Mismatch: Matching","OM Population Structure: Fleets-as-Areas", "EM Population Structure: Fleets-as-Areas", sep = "\n")
 }
 
 if(out$npops_OM==1 && out$nregions_OM>1 && out$npops==1 && out$nregions==1){
@@ -2011,6 +2080,7 @@ make.plots()
 time.elapsed<-run.model()
 make.plots()
 }
+
 
 #for checking individual things
 out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
