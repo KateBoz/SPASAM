@@ -150,6 +150,7 @@ DATA_SECTION
   init_int do_tag
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
   init_vector sigma_recruit(1,np)
+
   
 ///////////////////////////////////////////////////////////////////////////////
 ////////READ IN THE SPECS  //////////////////////////////////
@@ -215,6 +216,7 @@ DATA_SECTION
    init_int wt_T_pen
    init_number Tpen
    init_number Tpen2
+
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -235,6 +237,7 @@ DATA_SECTION
 //##########################################################################################################################################
 //#########################################################################################################################################
 
+
 ///////////////////////////////////////////////////////////////////////////////////////READ IN THE OBS DATA  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -249,13 +252,13 @@ DATA_SECTION
   init_5darray OBS_survey_prop(1,np,1,nreg,1,ny,1,nfs,1,na)  
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs)   //sample size
 
+
 //Catch and age compos
  init_4darray OBS_yield_fleet(1,np,1,nreg,1,ny,1,nf)
  init_4darray OBS_yield_fleet_se(1,np,1,nreg,1,ny,1,nf)  // standard error on catch
  init_5darray OBS_catch_at_age_fleet_prop(1,np,1,nreg,1,ny,1,nf,1,na) 
  init_4darray OBS_catch_at_age_fleet_prop_N(1,np,1,nreg,1,ny,1,nf) //sample size
 
- 
 //Catch Prop
 //tagging data parameters
   init_int nyrs_release //number of years with tag release events  
@@ -270,6 +273,7 @@ DATA_SECTION
      !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
  //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
    init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
+
   
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
@@ -293,11 +297,13 @@ DATA_SECTION
  //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
   
    init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
-  // init_4darray init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+   init_vector input_Rave(1,np);//input when fixed in mismatch
    init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
    init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf)
    init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)
    init_vector  input_steep(1,np)
+   init_4darray input_init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -323,8 +329,8 @@ DATA_SECTION
   init_matrix rec_devs_TRUE(1,np_om,1,ny)
   init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
-  init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
-  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
+  init_5darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na,1,nf_om)
+  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om)//no age
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
 
@@ -344,6 +350,7 @@ DATA_SECTION
   init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
   init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
 
+ 
 //need to fix to EM dim when doing diagnostics run
   init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)//
 
@@ -361,7 +368,10 @@ DATA_SECTION
 
 // end of file marker
    init_int debug;
-  
+
+
+// !!exit(99);
+ 
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -1239,11 +1249,11 @@ FUNCTION get_vitals
     for (int j=1;j<=npops;j++)
      {
       if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j)+.5*square(sigma_recruit(j)));}
+      if(ph_lmr<0){R_ave(j)=input_Rave(j);}
       //if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j));}
      }
      
-    if(ph_lmr<0){R_ave=R_ave_TRUE;}
-   // R_ave_start=mfexp(ln_R_ave_start);
+    // R_ave_start=mfexp(ln_R_ave_start);
     
     for (int j=1;j<=npops;j++)
      {
@@ -1670,7 +1680,7 @@ FUNCTION get_abundance
                    init_abund(p,j,r,a)=abund_devs(p,a)*frac_natal(p,j,r);
                    }
                    if(ph_abund_devs<0){
-                    init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
+                    init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
                     }
                    }
                    
@@ -3965,17 +3975,17 @@ REPORT_SECTION
   report<<yield_fleet<<endl;
 
 
- if(fleets_as_areas_switch==0)
-   {
-    report<<"$F"<<endl;
-    report<<F<<endl;
-     }
+ //if(fleets_as_areas_switch==0)
+   //{
+    //report<<"$F"<<endl;
+    //report<<F_fleet<<endl;
+    // }
 
- if(fleets_as_areas_switch==1)
-   {
+ //if(fleets_as_areas_switch==1)
+  // {
     report<<"$F"<<endl;
     report<<F_fleet<<endl;
-     }
+    // }
      
   report<<"$F_year"<<endl;
   report<<F_year<<endl;
