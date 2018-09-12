@@ -5392,7 +5392,7 @@ FUNCTION get_rand_CAA_prop
             OBS_catch_prop_temp1_mb(j,a,y,r,z)=OBS_catch_prop(j,r,z,y,a)*obs_misallocate(j,r);
             OBS_catch_prop_temp1a_mb(j,a,y,r)=sum(OBS_catch_prop_temp1_mb(j,a,y,r));
             OBS_catch_prop_temp1a_pop(a,y,j)=sum(OBS_catch_prop_temp1a_mb(j,a,y));
-            OBS_catch_prop_temp1b_mb(j,r,y,a)=OBS_catch_prop_temp1a_mb(j,a,y,r)/sum(OBS_catch_prop_temp1a_pop(a,y));
+            OBS_catch_prop_temp1b_mb(j,r,y,a)=OBS_catch_prop_temp1a_mb(j,a,y,r)/(sum(OBS_catch_prop_temp1a_pop(a,y))+0.000001);  //add small constant to avoid nan when no catch
            }
           if(use_stock_comp_info_catch==1)
            {
