@@ -746,7 +746,7 @@ PARAMETER_SECTION
  5darray catch_at_age_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl)
  5darray catch_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfl,1,nag)
  5darray SIM_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
- 5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)
+ 5darray OBS_catch_prop(1,nps,1,nr,1,nfl,1,nyr,1,nag)  
  5darray OBS_catch_prop_temp1_mb(1,nps,1,nag,1,nyr,1,nr,1,nfl) //JJD
  4darray OBS_catch_prop_temp1a_mb(1,nps,1,nag,1,nyr,1,nr) //JJD
  4darray OBS_catch_prop_temp1b_mb(1,nps,1,nr,1,nyr,1,nag) //JJD
@@ -917,10 +917,10 @@ PARAMETER_SECTION
  matrix input_weight_region(1,nps,1,nag)
  matrix input_weight_population_temp(1,nag,1,nps)
  vector input_weight_population(1,nag)
- 3darray input_catch_weight_region_temp(1,nps,1,nag,1,nr)
- matrix input_catch_weight_region(1,nps,1,nag)
- matrix input_catch_weight_population_temp(1,nag,1,nps)
- vector input_catch_weight_population(1,nag)
+ 4darray input_catch_weight_region_temp(1,nps,1,nyr,1,nag,1,nr) //JJD
+ 3darray input_catch_weight_region(1,nps,1,nyr,1,nag) //JJD
+ 3darray input_catch_weight_population_temp(1,nyr,1,nag,1,nps) //JJD
+ matrix input_catch_weight_population(1,nyr,1,nag) //JJD
  3darray fecundity_region_temp(1,nps,1,nag,1,nr)
  matrix fecundity_region(1,nps,1,nag)
  matrix fecundity_population_temp(1,nag,1,nps)
@@ -5388,11 +5388,6 @@ FUNCTION get_rand_CAA_prop
           if(use_stock_comp_info_catch==0)
            {
             OBS_catch_prop(j,r,z,y,a)=SIM_catch_prop(j,r,z,y,a)/SIM_ncatch(j,r,z);
-            //JJD - for mgngmt boundary work; take different proportion of obs age comp from each region; for catch-weighted report values
-            OBS_catch_prop_temp1_mb(j,a,y,r,z)=OBS_catch_prop(j,r,z,y,a)*obs_misallocate(j,r);
-            OBS_catch_prop_temp1a_mb(j,a,y,r)=sum(OBS_catch_prop_temp1_mb(j,a,y,r));
-            OBS_catch_prop_temp1a_pop(a,y,j)=sum(OBS_catch_prop_temp1a_mb(j,a,y));
-            OBS_catch_prop_temp1b_mb(j,r,y,a)=OBS_catch_prop_temp1a_mb(j,a,y,r)/(sum(OBS_catch_prop_temp1a_pop(a,y))+0.000001);  //add small constant to avoid nan when no catch
            }
           if(use_stock_comp_info_catch==1)
            {
@@ -5722,12 +5717,43 @@ FUNCTION evaluate_the_objective_function
                   {
                     res_TAC(j,r,z,y)=input_TAC(j,r,z)-yield_fleet(j,r,y,z);
                   }
-                 res_u(j,r,y)=sum(input_u(j,r))-harvest_rate_region_bio(j,r,y);
+                res_u(j,r,y)=sum(input_u(j,r))-harvest_rate_region_bio(j,r,y);
                 }
                }
               }
 
 REPORT_SECTION
+ //JJD For catch weighted quantity calculations
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {
+      for (int r=1;r<=nregions(j);r++)
+       {
+        for (int z=1;z<=nfleets(j);z++)
+         {
+          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
+           {
+           for(int a=1;a<=nages;a++)
+         {
+          if(use_stock_comp_info_catch==0)
+           {
+            //JJD - for mgngmt boundary work; take different proportion of obs age comp from each region; for catch-weighted report values
+            for (int x=1;x<=nregions(j);x++)
+            {
+            OBS_catch_prop_temp1_mb(j,a,y,x,z)=OBS_catch_prop(j,x,z,y,a)*obs_misallocate(j,r);
+            OBS_catch_prop_temp1a_mb(j,a,y,x)=sum(OBS_catch_prop_temp1_mb(j,a,y,x));
+            } //close x
+            OBS_catch_prop_temp1a_pop(a,y,j)=sum(OBS_catch_prop_temp1a_mb(j,a,y));
+            OBS_catch_prop_temp1b_mb(j,r,y,a)=OBS_catch_prop_temp1a_mb(j,a,y,r)/(sum(OBS_catch_prop_temp1a_pop(a,y))+0.000001);  //add small constant to avoid nan when no catch
+           }
+          } //close a 
+           } //close y
+         } //z
+       }  //r
+     } //j
+   } //p
+
 
  //for the mismatch calculate the abundance fraction by region/population
   for (int y=1;y<=nyrs;y++)
@@ -5784,7 +5810,7 @@ REPORT_SECTION
           }
           //JJD
         if(sum(obs_misallocate)!=nregions(p)){
-          input_catch_weight_region_temp(p,a,r)=input_catch_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
+          input_catch_weight_region_temp(p,y,a,r)=input_catch_weight(p,r,a)*OBS_catch_prop_temp1b_mb(p,r,y,a);
           input_weight_region_temp(p,a,r)=input_weight(p,r,a)*catch_frac_age_region_avg(p,r,a);//rearrange to summarize and weight for output
           fecundity_region_temp(p,a,r)=fecundity(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
           maturity_region_temp(p,a,r)=maturity(p,r,a)*catch_frac_age_region_avg(p,r,a);//sum by region
@@ -5807,10 +5833,10 @@ REPORT_SECTION
         input_weight_population_temp(a,p)=input_weight_region(p,a);
         input_weight_population(a)=sum(input_weight_population_temp(a));
 
-        //aggregating catch weight at age
-        input_catch_weight_region(p,a)=sum(input_catch_weight_region_temp(p,a));
-        input_catch_weight_population_temp(a,p)=input_catch_weight_region(p,a);
-        input_catch_weight_population(a)=sum(input_catch_weight_population_temp(a));
+        //aggregating catch weight at age JJD
+        input_catch_weight_region(p,y,a)=sum(input_catch_weight_region_temp(p,y,a));
+        input_catch_weight_population_temp(y,a,p)=input_catch_weight_region(p,y,a);
+        input_catch_weight_population(y,a)=sum(input_catch_weight_population_temp(y,a));
 
         //aggregating fecundity
         fecundity_region(p,a)=sum(fecundity_region_temp(p,a));
@@ -5870,7 +5896,6 @@ REPORT_SECTION
       } //end pop loop          
      } //end year loop
   }
-
 
 //Additional model structure parameters
   report<<"#nages"<<endl;
