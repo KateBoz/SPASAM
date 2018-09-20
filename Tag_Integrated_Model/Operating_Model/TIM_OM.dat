@@ -8,7 +8,7 @@
 1
 
 #nages
-8  ## short version has 0-15 and plus group
+8  ## 
 #nyrs
 30 #
 #npopulations
@@ -29,7 +29,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-0
+1
 
 # parse_TAC
   #==0 do not alter the input TAC or harvest rate
@@ -81,11 +81,11 @@
   #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   #==4 symmetric movement across all stocks and regions
   #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
-0
+1
 
 #move_switch
   #==0 no movement
-  #==1 input movement
+  #==1 input movement ####THIS CAN BE USED FOR AGE_BASED MOVEMENT BUT NOT TIME-VARYING, USE OPTION 21 FOR TIME_VARYING INPUT MOVEMENT
   #==2 movement within stock only based on residency (symmetric)
   #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
   #==4 symmetric movement across all stocks and regions
@@ -94,25 +94,35 @@
   #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
   #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
-  #//uses use_input_Bstar switch
+  #// uses use_input_Bstar switch
+  #// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
+  #==21 use input T_year to allow T to vary by year
+  #==22 use T_Full_Input to input time and age varying T
+8
+
+## DD_move_age_switch
+ #Allow age-based movement when using DD movement (Y/N) (1/0)
+  #==0 no age-based DD movement (assumes movement based on total relative biomass after movement, before mortality, in previous year...compared to Bstar summed across ages)   ///can't use current year because biomass matrix not filled out at time of DD calcs, bec need T for calc of abund_AM which occurs before moving to next age loop
+  #==1 DD movement is age-based (assumes movement based on age-specfic relative biomass at beginning of current year...compared to Bstar by age)
 0
 
 #use_input_Bstar
+#######NOT FULLY IMPLEMENTED YET##########
   #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+############################################
   #==1 use input_Bstar
-0
+1
+############################
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
   #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
   #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
 0
-
 #spawn_return_switch
    #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
    #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
 0
-
 #select_switch
   #==0 input selectivity
   #==1 logistic selectivity based on input sel_beta1 and sel_beta2
@@ -174,7 +184,7 @@
   #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
   #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
   #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
-2
+1
 
 #Rec_type
   #==1 stock-recruit relationship assumes an average value based on R_ave
@@ -194,44 +204,51 @@
  #==1 calc OBS catch age comps by natal population within each area
 0
 
+#number_tags_switch
+  #determines how total tags are determined and how they are distributed across regions
+  #==0 use input tags by year, pop, reg
+  #==1 total tags are based on the input fract of total  abund tagged and is distributed evely across regions
+  #==2 regional tags are based on the input fract of regional abund tagged
+  #==3 total tags are based on the input fract of total abund tagged and is distributed based on survey prop of abundance in each region
+  #==4 regional tags are randomly (uniformly) distributed based on max and min number of tags per region
+  #==5 regional tags are randomly (uniformly) distributed based on max and min number of tags per region AND
+   #prob that tagging occurs in a given year/region is based on opport_tag_prob and a uniform distributed random number
+1
+
+#age_dist_tags
+  #determines how tags are distributed across ages
+  #==0 regional tags distributed evely across all ages
+  #==1 regional tags distributed according to survey proportions at age
+  #==2 regional tags distributed according to regional catch proportions at age
+0   
+#tag_fit_ages
+  #determines whether tags are fit by age cohorts or by region-only cohorts
+  #the latter is for situations where age is unknown and so assume no tag age dynamics and that all fish fully selected
+  #==0, fit by age-based cohorts
+  #==1, fit by region-based cohorts
+0
+
 #/////tagging data parameters
 #nyrs_release
   #number of years with tag release events
-30
+7
 
 #yrs_releases
   #vector containing the model years with releases
+
 1
-2
-3
-4
 5
-6
-7
-8
-9
 10
-11
-12
-13
-14
 15
-16
-17
-18
-19
 20
-21
-22
-23
-24
 25
-26
-27
-28
-29
 30
 
+
+
+#input_ntags (1,np,1,nreg,1,ny_rel)
+5000 5000 5000 5000 5000 5000 5000
+5000 5000 5000 5000 5000 5000 5000
 
 #frac_total_abund_tagged
   #proportion of total abundance that is tagged in each release year
@@ -242,91 +259,74 @@
 0.01
 0.01
 0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
-0.01
 
+#max_tags (1,np,1,nreg)
+ #maximum tags for uniform distribution if tags_switch==4 or 5
+6000
+6000
+#min_tags (1,np,1,nreg)
+ #minimum tags for uniform distribution if tags_switch==4 or 5
+4000
+4000
+#opport_tag_prob
+ #cutoff value defining whether uniform RNG represents no tagging(<tag_prob) or tagging (>tag_prob) in a given area
+0.25
 
 #max_life_tags
   #number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
 5
-
 #SIM_ntag
   #the ESS used to simulate multinomial tagging data
-500
+200
+#myseed_ntags
+  #seed for the RNG for uniform distribution of number of tags
+1204032
+#myseed_prob_tag
+  #seed for the RNG for uniform distribution of prob of tagging
+1917482
 
 #report_rate(1,np,1,ny_rel,1,nreg)
   #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
 
 #//////Density-Dependent Movement parameters
-#input_Bstar(1,np,1,nreg)
+#input_Bstar(1,np,1,nreg,1,nages)
   #used with move_switch==8
   #carrying capacity biomass term
-  
-2000
-900
+15000 15000 15000 15000 15000 15000 15000 15000
+15000 15000 15000 15000 15000 15000 15000 15000
 
+
+### NOT USED #########################
 #SSB_zero_appor(1,np,1,nreg)
   #used with move_switch==8
   #determines apportionment of SSB0 when multiple regions and use_input_Bstar==0
 0.5
 0.5
+############################################
 
 #A
   #used with move_switch==8
   #logistic parameter
 9
 9
+
+#DD_residency
+0.85
+0.85
 
 #return_age - age of return migration for move_switch==6
 7
@@ -344,42 +344,107 @@
 #steep
 1
 
-#R_ave - not on the log scale.  Provide actual numbers of fish
+#R_ave - not on the log scale
 3208750
+
 #amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
 0.2
 #freq - period of ossilation for recruitment variation. Use when Rec_type ==3
 15
 
-
 #input_T (1,np,1,nreg,1,na,1,np,1,nreg)
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
+###for age-based T just vary these inputs by age#######
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+
+#input_T_year (1,np,1,nreg,1,ny,1,np,1,nreg)
+0.80	0.20
+0.80	0.20
+0.86	0.14
+0.77	0.23
+0.84	0.16
+0.87	0.13
+0.83	0.17
+0.86	0.14
+0.78	0.22
+0.78	0.22
+0.84	0.16
+0.91	0.09
+0.92	0.08
+0.79	0.21
+0.88	0.12
+0.77	0.23
+0.75	0.25
+0.88	0.12
+0.89	0.11
+0.83	0.17
+0.83	0.17
+0.79	0.21
+0.92	0.08
+0.77	0.23
+0.90	0.10
+0.95	0.05
+0.88	0.12
+0.94	0.06
+0.94	0.06
+0.83	0.17
+	
+0.08	0.92
+0.06	0.94
+0.11	0.89
+0.11	0.89
+0.21	0.79
+0.25	0.75
+0.05	0.95
+0.24	0.76
+0.16	0.84
+0.24	0.76
+0.23	0.77
+0.13	0.87
+0.05	0.95
+0.19	0.81
+0.08	0.92
+0.21	0.79
+0.15	0.85
+0.05	0.95
+0.09	0.91
+0.11	0.89
+0.15	0.85
+0.17	0.83
+0.18	0.82
+0.22	0.78
+0.18	0.82
+0.09	0.91
+0.21	0.79
+0.12	0.88
+0.06	0.94
+0.22	0.78
+
 
 #input_residency_larval
-0.675326638
-0.37060034
+0.7
+0.8
 
 #input_residency
 0.7	0.7	0.7	0.7	0.7	0.7	0.7	0.7
-0.6	0.6	0.6	0.6	0.6	0.6	0.6	0.6
+0.8	0.8	0.8	0.8	0.8	0.8	0.8	0.8
 
 #sel_beta1
-0.8  #approximate mobile fleet
+0.8
 0.8
 
 #sel_beta2
@@ -394,6 +459,10 @@
 20
 20
 
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant acros REGIONS
 #sel_beta1_survey
 2 #approx fall bigelow
 2
@@ -410,20 +479,37 @@
 20
 20
 
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+
 #input_selectivity (1,ns,1,nreg,1,na,1,nf)
 0.01	0.18	0.5	0.8	0.9	1	1	1	##Mobile fleet based on 2018 spatial SS model; top is Gulf of Maine and bottom is GB
-0.01	0.18	0.5	0.8	0.9	1	1	1	
+0.01	0.09	0.32	0.44	0.8	0.85	1	1
 
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant acros REGIONS
 
 #input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
 0.03 0.2 0.63 0.92 0.98 1 1 1
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
 
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant acros REGIONS
 
-#q_survey(by population, area and fleet) indexes biomass (not abundance)
-0.0000348
-0.0000348
-
+#q_survey(by population, area and fleet) NOT REGION
+0.0348
+0.0348
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
 
 #input_F
 0.3
@@ -441,23 +527,20 @@
 1
 
 #F_MSY
-0.51
+0.5
 
 #input_M
 0.35 0.35 0.35 0.35 0.35 0.35 0.35 0.35
 
-
-#based on sigma of 2018 assessment
 #_sigma_recruit
-0.84  
+0.5
 
 #_sigma_rec_prop #error around recruit apportionment
 0.2
 
-
 #_sigma_F
-0.4
-0.4
+0.2
+0.2
 
 ##########################################################################################################################################
 #########################################################################################################################################
@@ -467,16 +550,13 @@
 ######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
 ######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
 #########################################################################################################################################
-#input_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
+#input_weight
 0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21	#2017Jan1wt
-0.02	0.04	0.09	0.11	0.14	0.18	0.19	0.21	#2017Jan1wt			
+0.02	0.04	0.08	0.1	0.13	0.16	0.17	0.19
 
-
-#input_catch_weight - atl herring don't really grow different spatially and so these weights differ by 10%...made it up; bottom is actual wts at age in stock assessment
+#input_catch_weight
 0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
-0.015	0.048	0.094	0.125	0.154	0.174	0.184	0.184
-
-
+0.014	0.044	0.085	0.114	0.14	0.158	0.167	0.167  #2017 Catch wt
 
 #fecundity
 1 1 1 1 1 1 1 1
@@ -484,7 +564,7 @@
 
 #maturity
 0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.000  #2017 mat at age; top row made artifically bigger because they grow faster; made it up
-0.079	0.355	0.8	0.95	0.988	0.998	1.000	1.00
+0.079	0.322	0.725	0.936	0.988	0.998	1.000	1.000
 ##########################################################################################################################################
 #########################################################################################################################################
 ##########################################################################################################################################
@@ -501,13 +581,12 @@
 #Equil_ssb_apportion
 0.5
 0.5
-#frac_natal ## fraction of the population in the natal population at the onset of the simulation. Use with init_abund_switch==1
 
+#frac_natal ## fraction of the population in the natal population at the onset of the simulation. Use with init_abund_switch==1
 0.5
 0.5
 
 #init_abund
-#Take R ave, decrement by M=0.35 and put 25% in top row (gulf of maine) and 75% in GB; based on 2018 spatial SS model
 1604375	1130584	796709	561431	395634	278799	196466	138447  
 1604375	1130584	796709	561431	395634	278799	196466	138447
 
@@ -515,7 +594,6 @@
 0.8
 0.8
 
-#roughly based on fall bigelow
 #_sigma_survey
 0.5  
 0.5
@@ -524,7 +602,7 @@
 0.5
 0.5
 
-#_sigma_catch  based on 2018 assessment
+#_sigma_catch
 0.1
 0.1
 
@@ -533,21 +611,20 @@
 0.1
 
 #_SIM_ncatch #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-100
-100
+200
+200
 
 #SIM_ncatch_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-100
-100
+200
+200
 
 #_SIM_nsurvey #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-100
-100
+200
+200
 
 #SIM_nsurvey_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
-100
-100
-
+200
+200
 
 #input_TAC
  #TAC that are matching if model_type_switch==1
@@ -562,7 +639,6 @@
 #input_u 
 .0491
 .0491
-
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
@@ -592,6 +668,7 @@
   # ==1 the EM is metamictic
   # ==2 the EM is metapop
 1
+
 #npops_EM
 1
 #nregions_EM
@@ -616,13 +693,21 @@
 
 #move_switch
  # ///// Sets the type of adult movement pattern (sets age class>1 movements)
- # //==0 no movement, set T phases=-1
- # //==1 input movement, set T phases=-1
- # //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
- # //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
- # //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
- # //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
-0
+ #// ***MUST CHANGE PHASES OF T PARAMETERS TO DETERMINE TYPE OF MOVEMENT (constant, Time varying, age-varying, both time and age varying)
+ # ***IF PANMICTIC, NO MOVE, INPUT T, THEN  MAKE SURE ALL T PAR PHASES ARE SET TO NEGATIVE NUMBER****
+ # ==(-2), no movement because panmictic set T par phases==-1
+ # ==(-1) use input movement EM input below (use when want fixed movement that differs from true movement), set T par phases=-1
+ # ==0 no movement, set T par phases=-1
+ # ==1 use true movement from OM, set T par phases=-1
+ # >=2 estimate movement, **IF** one of the movement parameters is a positive phase
+2
+
+#report_rate_switch
+ #//==(-1), use input_report_rate_EM, reporting rate may differ from TRUE report rate
+ #//==0, use TRUE reporting rate from OM
+ #//==1, estimate time-invariant (pop, reg varying) reporting rate, ph_rep_rate_CNST>0
+ #//==2, estimate a time-, pop-, reg-varying reporting rate ph_rep_rate_YR>0
+-1
 
 #natal homing switch
   #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -668,9 +753,10 @@
 1
 
 #apportionment_type
-  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==(-2) input TRUE apportionment
+  #==(-1) no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
   #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
-  #==1 input apportionment
+  #==1 input apportionment (can differ from TRUE apportionment)
   #==2 recruits are apportioned equally to each region within a stock
   #==3 estimate time-invariant apportionment...make sure ONLY ph_rec_app_CNST>0 (ph_rec_app_YR is only used if type==4)
   #==4 THIS DOES NOT APPEAR TO WORK PROPERLY, DO NOT USE.....estimate yearly apportionment, MAKE SURE BOTH APPORTIONMENT PHASES ARE POSITIVE!!!!!!  use both parameters vectors for this 
@@ -688,10 +774,20 @@
  #==1 calc OBS catch age comps by natal population within each area
 0
 
-#F_switch ###THIS NEEDS WORK ###
+#F_switch
   #==1 estimate yearly F
-  #==2 random walk in F
+  #==2 random walk in F //NOT IMPLEMENTED DO NOT USE
 1
+
+#M_switch
+   #all M types are constant across regions
+   #==(-1) use input_M (can differ from TRUE M)
+   #==0 use input_M_TRUE
+   #==1 estimate constant M (const across pop and age), ph_M_CNST>0
+   #==2 estimate population-based M (const across ages), ph_M_pop_CNST>0
+   #==3 estimate age-based M (const across pop), ph_M_age_CNST>0
+   #==4 estimate age- and population-varying M, ph_M_pop_age>0
+-1
 
 #recruit_devs_switch
  # //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
@@ -704,9 +800,16 @@
 0
 
 #init_abund_switch
-  #==0 input init abund
+  #==0 est init abund where R_ave is the age-1 abundance in year 1  (to avoid overparametrization of recruitment)
   #==1 decay from R_ave
 0
+
+#init_number input_dist_init_abund_EM
+  #==(-2) use input_dist_init_abund specified for EM (can differ from true)
+  #==(-1) assume all fish in a pop are equally distributed across regions in that pop (no fish start outside natal pop)
+  #==0 use true distribution of init_abundance
+  #==1 estimate the spatial distribution of init abundance, need to make ph_non_natal_init OR ph_reg_init non-negative depending on spatial structure used
+-2
 
 #tspawn_EM(1,np_em)
 0.85
@@ -720,7 +823,7 @@
 #do_tag
   #==0 do not calculate tagging data
   #==1 calculate tagging data
-0
+1
 
 #do_tag_mult
   #==0 assume neg binomial distribution for tagging data
@@ -728,32 +831,32 @@
 1
 
 #input_T_EM (1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
-0.7	0.3
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.9999 0.0001
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
+0.0001 0.9999
 
-#input_Rave_EM
+#input_R_ave_EM
 3208750
 
-#input_rec_prop_EM
-0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
-0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+#rec_prop_em(1,np_em,1,nreg_em,1,nyr)
+0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 
+0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 
 
 #sigma_rec_em(1,np_em)
-0.84
+0.5
 
 #input_steep_EM
 1
@@ -762,103 +865,125 @@
 1604375	1130584	796709	561431	395634	278799	196466	138447  
 1604375	1130584	796709	561431	395634	278799	196466	138447
 
+#input_dist_init_abund_EM
+0.5
+0.5
+
 #input_M_EM(1,np_em,1,na)
 0.35 0.35 0.35 0.35 0.35 0.35 0.35 0.35
 
-#input_selectivity (1,ns,1,nreg,1,na,1,nf)
+#input_selectivity_EM (1,ns,1,nreg,1,na,1,nf)
 0.01	0.18	0.5	0.8	0.9	1	1	1	##Mobile fleet based on 2018 spatial SS model; top is Gulf of Maine and bottom is GB
-0.01	0.18	0.5	0.8	0.9	1	1	1
+0.01	0.09	0.32	0.44	0.8	0.85	1	1
 
-#input_survey_selectivity(1,ns,1,nreg,1,na,1,nf)
+#input_survey_selectivity_EM(1,ns,1,nreg,1,na,1,nf)
 0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
-0.03 0.2 0.63 0.92 0.98 1 1 1  #fall bigelow
+0.03 0.2 0.63 0.92 0.98 1 1 1
 
-#report_rate(1,ny_rel,1,np_em,1,nreg_em)
-  #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1	
-1	1
+#report_rate(1,np_em,1,nreg_em)
+ # input tag reporting rate for EM which can differ from true reporting rate above, not time-varying
+1
+1
+
+#input_q_survey_EM(1,np,1,nreg,1,nfls)
+0.0348
+0.0348
 
 ################################
 ##### Phases for estimation ####
 ################################
 #ph_lmr
--2
+1
 #lb_R_ave
-10
-#up_R_ave
-30
-#ph_rec
 2
+#up_R_ave
+20
+#ph_rec
+3
 #lb_rec_devs
 -10
 #ub_rec_devs
 5
 #ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
-4
+-4
 #ph_rec_app_YR
 -4
-#ph_init_abund //init abund phases needs to be negative if the init_abund_switch ==1
+#lb_rec_app
+-5
+#ub_rec_app
+5
+#ph_init_abund
 2
 #ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
-2
+-2
 #ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
 -1
+#lb_init_dist //used for above two sets of parameters (init dist of abund)
+-9
+#ub_init_dist //used for above two sets of parameters (init dist of abund)
+10
 #lb_abund_devs
--10
+2
 #ub_abund_devs
-30
+20
 #ph_F
-3
+4
+#lb_F
+-5
+#ub_F
+5
 #ph_steep
 -1
-#ph_M
+#lb_steep
+0.2
+#ub_steep
+1
+#ph_M_CNST  //M cnst 
 -1
+#ph_M_pop_CNST //M vary by pop
+-1
+#ph_M_age_CNST //M vary by age not pop
+-1
+#ph_M_pop_age //M vary by age and pop
+-1
+#lb_M
+-5
+#ub_M
+5
 #ph_sel_log
 5
 #lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
--10 
+-5 
 #ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
-5
+2
 #lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
--10 
+-5
 #ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
-5
-#lb_sel_beta1  //lower bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta3  //lower bound on fishery selectivity parameters in ln space
 -10 
-#ub_sel_beta1  //upper bound on survey selectivity parameters in ln space
+#ub_sel_beta3  //upper bound on fishery selectivity parameters in ln space
 5
-#lb_sel_beta2  //lower bound on survey selectivity parameters in ln space
+#lb_sel_beta4  //lower bound on fishery selectivity parameters in ln space
+-10
+#ub_sel_beta4  //upper bound on fishery selectivity parameters in ln space
+5
+#lb_sel_beta1_surv  //lower bound on survey selectivity parameters in ln space
+-5
+#ub_sel_beta1_surv  //upper bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta2_surv  //lower bound on survey selectivity parameters in ln space
+-5 
+#ub_sel_beta2_surv  //upper bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta3_surv  //lower bound on survey selectivity parameters in ln space
 -10 
-#ub_sel_beta2  //upper bound on survey selectivity parameters in ln space
-5 
+#ub_sel_beta3_surv  //upper bound on survey selectivity parameters in ln space
+5
+#lb_sel_beta4_surv  //lower bound on survey selectivity parameters in ln space
+-10
+#ub_sel_beta4_surv  //upper bound on survey selectivity parameters in ln space
+5
 #ph_sel_log_surv
 5
 #ph_sel_dubl
@@ -868,15 +993,52 @@
 #ph_q
 1
 #lb_q
--15
+-10
 #ub_q
 5
 #ph_F_rho
 -1
+#lb_F_rho
+0
+#ub_F_rho
+2
 #ph_T_YR
--4
+6
+#ph_T_YR_ALT_FREQ
+ # estimate T at intervals set by T_est_freq (i.e., every T_est_Freq year)
+-6
+#T_est_freq (number year parameters is nyrs/T_est_freq, rounded up)
+2
+#ph_T_YR_AGE_ALT_FREQ
+ # est T at invervals set by T_est_frew and T_age_freq (i.e., every T_est_Freq year and every T_age_freq age)
+-6
+###########################################################################
+#T_est_age_freq (number age parameters is nages/T_age_freq, rounded up)
+ #IF juv_age HIGHER THAN CUTPOINT FOR 2nd AGE CLASS THEN WILL HAVE UNUSED MOVEMENT PARAMETERS AND LIKELY CONVERGENCE ISSUES
+8
+#juv_age
+ #age at and below which all Ts  are set to the estimated movement rate for age-1 (when using ph_T_YR_AGE_ALT_FREQ>1)
+4
+######################################################################################
 #ph_T_CNST
--4
+-6
+#ph_T_CNST_AGE
+-6
+#ph_T_YR_AGE
+-6
+#lb_T
+-10
+#ub_T
+10
+#ph_rep_rate_YR
+-6
+#ph_rep_rate_CNST
+-6
+#lb_B
+-6
+#ub_B
+5
+
 #ph_dummy
 -1
 
@@ -894,10 +1056,17 @@
 #wt_rec
 0
 #wt_tag
-0
+1
 #wt_F_pen// weight on F penalty
 1
-
+#wt_M_pen// weight on M penalty
+0
+#wt_B_pen  //reporting rate prior penalty
+0
+#report_rate_sigma //reporting rate variance for prior
+0.1
+#report_rate_ave //average value for reporting rate prior
+0.5
 #abund_pen_switch
  #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
  #//==0 no pen in log space
@@ -905,16 +1074,16 @@
 0
 
 #wt_abund_pen// abund penalty wt
-0
+1
 
 #move_pen_switch
  #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
  #// ==0 no move pen in log space
  #// ==1 include move pen in log space
-0
+1
 
 #wt_move_pen //movement penalty wt
-0
+1
 
 #Tpen
 #value below which move_pen enacted (log space)
@@ -928,83 +1097,530 @@
 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
 
-
 #OBS_yield_fleet_se(1,np_em,1,nreg,1,ny,1,nf_em)  #standard errors
-0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
-0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5 0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1
+0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1 0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1     0.1
 
 #OBS_survey_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs_em) #number of survey ages
-100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
-100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
-
+200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200
 
 #OBS_catch_at_age_fleet_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs) //fishery sample size ages
-100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
-100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100 100	100	100	100	100	100	100	100	100	100
-
+200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200	200
 
 #tag_N(1,np_em,1,nreg_em,1,ny_rel,1,na) //fishery sample size ages
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
-500	500	500	500	500	500	500	500
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
+200	200	200	200	200	200	200	200
 
+#T_Full_Input (1,np,1,nreg,1,xn,1,np,1,nreg) ... xn=na*ny;
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+0.75 0.25
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
+0.15 0.85
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
@@ -1015,20 +1631,20 @@
 #debug
 1541
 #myseed_yield
-899
+8995
 #myseed_survey
-2765
+27653
 #myseed_F
-4567
+45652
 #myseed_rec_devs
-2344
+23441
 #myseed_rec_apport
-7000
+70006
 #myseed_rec_index
-4000
+40009
 #myseed_survey_age
-60000
+600006
 #myseed_catch_age
-45
+455
 #myseed_tag
-5000
+50000
