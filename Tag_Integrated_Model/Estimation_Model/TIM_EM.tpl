@@ -7,6 +7,7 @@
 GLOBALS_SECTION
   #include "admodel.h"
   #include "statsLib.h"
+  #include "qfclib.h"
   #include <contrib.h>
   #define EOUT(var) cout <<#var<<" "<<var<<endl;
 
@@ -29,12 +30,11 @@ DATA_SECTION
 //////////////////////////////////////////////////////
   init_ivector nregions(1,np) //number of regions within a population - for metamictic regions = areas, populations = 1
   !! ivector nreg=nregions;
-  init_ivector nfleets(1,np) //number of fleets in each region by each population
+  init_ivector nfleets(1,np) //number of fleets in  each population
   !! ivector nf=nfleets;
-  init_ivector nfleets_survey(1,np) //number of fleets in each region by each population
+  init_ivector nfleets_survey(1,np) //number of fleets in each population
   ivector nfs(1,np)
   !! nfs=nfleets_survey;
-
 
 /////////////////////////////////////////////////////
 //OM MODEL STRUCTURE for reporting true values
@@ -66,14 +66,21 @@ DATA_SECTION
   //==1 fleets as areas approach for EM
   
   init_number move_switch
-  ///// Sets the type of adult movement pattern (sets age class>1 movements)
-  //==0 no movement, set T phases=-1
-  //==1 input movement, set T phases=-1
-  //==2 movement among populations, set phase_T_pop>1...est yearly movement rates
-  //==3 movement among regions (only 1 pop), set phase_T_reg>1...est yearly movement rates
-  //==4 time-invariant movement multiple pops, set phase_T_CNST_pop>1
-  //==5 time-invariant movement multiple regs, set phase_T_CNST_reg>1
+ /////// Sets how movement will be treated (fixed vs. estimated)
+ // ***MUST CHANGE PHASES OF T PARAMETERS TO DETERMINE TYPE OF MOVEMENT (constant, Time varying, age-varying, both time and age varying)
+ // ***IF PANMICTIC, NO MOVE, INPUT T, THEN  MAKE SURE ALL T PAR PHASES ARE SET TO NEGATIVE NUMBER****
+ // ==(-2), no movement because panmictic set T par phases==-1
+ // ==(-1) use input movement EM input below (use when want fixed movement that differs from true movement), set T par phases=-1
+ // ==0 no movement, set T par phases=-1
+ // ==1 use true movement from OM, set T par phases=-1
+ // >=2 estimate movement, **IF** one of the movement parameters is a positive phase
 
+  init_number report_rate_switch
+  //==(-1), use input_report_rate_EM, reporting rate may differ from TRUE report rate
+  //==0, use TRUE reporting rate from OM
+  //==1, estimate time-invariant (pop, reg varying) reporting rate, ph_rep_rate_CNST>0
+  //==2, estimate a time-, pop-, reg-varying reporting rate ph_rep_rate_YR>0
+  
 ////// Population Structure switches
   init_number natal_homing_switch
   //==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
@@ -133,6 +140,14 @@ DATA_SECTION
   //negative phase == use input_F_TRUE
   //==1 estimate yearly F
   //==2 random walk in F
+   init_number M_switch
+   //all M types are constant across regions
+  //==(-1) use input_M (can differ from TRUE M)
+  //==0 use input_M_TRUE
+  //==1 estimate constant M (const across pop and age)
+  //==2 estimate population-based M (const across ages)
+  //==3 estimate age-based M (const across pop)
+  //==4 estimate age- and population-varying M
   init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
   //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
@@ -142,12 +157,24 @@ DATA_SECTION
   init_number init_abund_switch
   //==0 input init_abund_EM
   //==1 decay from R_ave
-
+  init_number est_dist_init_abund
+  //==(-2) use input_dist_init_abund specified for EM (can differ from true)
+  //==(-1) assume all fish in a pop are equally distributed across regions in that pop (no fish start outside natal pop)
+  //==0 use true distribution of init_abundance
+  //==1 estimate the spatial distribution of init abundance, need to make ph_non_natal_init OR ph_reg_init non-negative depending on spatial structure used
+  
   init_vector tspawn(1,np) //time of spawning in proportion of year (0-1)
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
   init_vector spawn_return_prob(1,np) // used if natal_homing_swith==2
   init_int do_tag
+  init_number fit_tag_age_switch
+   //determines whether tags are fit by age cohorts or by region-only cohorts
+   //the latter is for situations where age is unknown and so assume no tag age dynamics and that all fish fully selected
+   //in this case OM assumes normal tagging age-based dynamics, but EM ignores age structure in tags and assumes just fully selected
+   //therefore creates inherent process error in tag dynamics
+   //==0, fit by age-based cohorts
+   //==1, fit by region-based cohorts
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
   init_vector sigma_recruit(1,np)
 
@@ -162,38 +189,75 @@ DATA_SECTION
   init_number lb_R_ave
   init_number ub_R_ave
   init_int ph_rec
-  init_int lb_rec_devs
-  init_int ub_rec_devs
+  init_number lb_rec_devs
+  init_number ub_rec_devs
   init_int ph_rec_app_CNST
   init_int ph_rec_app_YR
-  init_int ph_abund_devs
+  init_number lb_rec_app
+  init_number ub_rec_app
+  init_int ph_init_abund
   init_int ph_reg_init
   init_int ph_non_natal_init
-  init_int lb_abund_devs
-  init_int ub_abund_devs
+  init_number lb_init_dist
+  init_number ub_init_dist
+  init_number lb_init_abund
+  init_number ub_init_abund
   init_int ph_F
+  init_number lb_F
+  init_number ub_F 
   init_int ph_steep
-  init_int ph_M
+  init_number lb_steep
+  init_number ub_steep
+  init_int ph_M_CNST
+  init_int ph_M_pop_CNST
+  init_int ph_M_age_CNST
+  init_int ph_M_pop_age
+  init_number lb_M
+  init_number ub_M
   init_int ph_sel_log
   init_number lb_sel_beta1
   init_number ub_sel_beta1
   init_number lb_sel_beta2
   init_number ub_sel_beta2
+  init_number lb_sel_beta3
+  init_number ub_sel_beta3
+  init_number lb_sel_beta4
+  init_number ub_sel_beta4
   init_number lb_sel_beta1_surv
   init_number ub_sel_beta1_surv
   init_number lb_sel_beta2_surv
   init_number ub_sel_beta2_surv
+  init_number lb_sel_beta3_surv
+  init_number ub_sel_beta3_surv
+  init_number lb_sel_beta4_surv
+  init_number ub_sel_beta4_surv
   init_int ph_sel_log_surv
   init_int ph_sel_dubl
   init_int ph_sel_dubl_surv
   init_int ph_q
-  init_int lb_q
-  init_int ub_q
-  init_int ph_F_rho // if we want random walk F
+  init_number lb_q
+  init_number ub_q
+  init_int ph_F_rho // if we want random walk F, not implemented
+  init_number lb_F_rho
+  init_number ub_F_rho
   init_int phase_T_YR
+  init_int phase_T_YR_ALT_FREQ
+  init_int T_est_freq
+  init_int phase_T_YR_AGE_ALT_FREQ
+  init_int T_est_age_freq
+  init_int juv_age
   init_int phase_T_CNST
+  init_int phase_T_CNST_AGE
+  init_int phase_T_YR_AGE
+  init_number lb_T
+  init_number ub_T
+  init_int phase_rep_rate_YR
+  init_int phase_rep_rate_CNST
+  init_number lb_B
+  init_number ub_B
+
   init_int ph_dummy
-  number ph_theta
+  //number ph_theta
  // !!if(do_tag_mult==0)
  // !! {
  // !!  ph_theta==2
@@ -210,10 +274,14 @@ DATA_SECTION
    init_number wt_rec
    init_number wt_tag
    init_number wt_F_pen
+   init_number wt_M_pen
+   init_number wt_B_pen
+   init_number report_rate_sigma
+   init_number report_rate_ave
    init_int abund_pen_switch
-   init_int wt_abund_pen
+   init_number wt_abund_pen
    init_int move_pen_switch
-   init_int wt_T_pen
+   init_number wt_T_pen
    init_number Tpen
    init_number Tpen2
 
@@ -232,26 +300,23 @@ DATA_SECTION
   init_3darray fecundity(1,np,1,nreg,1,na)
   init_3darray maturity(1,np,1,nreg,1,na)
   init_matrix prop_fem(1,np,1,nreg) //proportion of population assumed to be female for SSB calcs (typically use 0.5)
-  //##########################################################################################################################################
+
+//##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
 //#########################################################################################################################################
 
-
+  
 ///////////////////////////////////////////////////////////////////////////////////////READ IN THE OBS DATA  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 //Recruit indices, I made one up, but didn't fit, would be the same as survey -lnL
   init_3darray OBS_rec_index_BM(1,np,1,nreg,1,ny)
-
-// 3darray OBS_rec_index_AM(1,npops,1,nr,1,nyr)
-
 //Survey data and age comps
   init_4darray OBS_survey_fleet_bio(1,np,1,nreg,1,ny,1,nfs)  
   init_4darray OBS_survey_fleet_bio_se(1,np,1,nreg,1,ny,1,nfs) //survey standard erros
   init_5darray OBS_survey_prop(1,np,1,nreg,1,ny,1,nfs,1,na)  
   init_4darray OBS_survey_prop_N(1,np,1,nreg,1,ny,1,nfs)   //sample size
-
 
 //Catch and age compos
  init_4darray OBS_yield_fleet(1,np,1,nreg,1,ny,1,nf)
@@ -266,15 +331,14 @@ DATA_SECTION
   init_vector yrs_releases(1,ny_rel) //vector containing the model years with releases 
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
     !! int tag_age=max_life_tags;
-  init_3darray report_rate(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
+  init_3darray age_full_selection(1,np,1,nreg,1,ny)
+  init_matrix input_report_rate(1,np,1,nreg) //input reporting rate, can differ from true
   init_4darray ntags(1,np,1,nreg,1,ny_rel,1,na) //releases
   init_vector ntags_total(1,ny_rel)  
   init_4darray OBS_tag_prop_N(1,np,1,nreg,1,ny_rel,1,na) //eff_N for tag mult tag_prop
-     !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
- //  init_5darray OBS_recaps_temp(1,recap_index,1,na,1,tag_age,1,np,1,3) // not sure how to have 1,nreg here
+    !! int recap_index=np*nreg(1)*ny_rel; // using this to dimension down arrays
    init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)
 
-  
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
   !! ivector nt(1,nyr_rel);
@@ -287,24 +351,25 @@ DATA_SECTION
   !!    nt(x)=xy(x)*sum(nregions)+1;
   !!    nt_om(x)=xy(x)*sum(nregions_OM)+1;
   !!   }
-  //!! cout<<"nt"<<endl<<nt<<endl;
+  
    init_5darray OBS_tag_prop_final(1,np,1,nreg,1,nyr_rel,1,na,1,nt)
-   
+   init_4darray OBS_tag_prop_final_no_age(1,np,1,nreg,1,nyr_rel,1,nt)
+
    matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
    3darray input_residency(1,np,1,nreg,1,na) //
-// probably need to calculate quantity below  or omit *dh
-   vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each 
- //  7darray OBS_recaps(1,np,1,nreg,1,ny_rel,1,na,1,tag_age,1,np,1,nreg) // for filling for calcs later
-  
-   init_matrix input_M(1,np,1,na); // input for now, if we estimate we will want to limit how many Ms
-   init_vector input_Rave(1,np);//input when fixed in mismatch
-   init_3darray input_rec_prop(1,np,1,nreg,1,nyrs);
+   vector frac_total_abund_tagged(1,ny_rel) //proportion of total abundance that is tagged in each
+   
+   init_matrix input_M(1,np,1,na)// input M, can differ from True M
+   init_vector input_R_ave(1,np)
+   init_3darray input_rec_prop(1,np,1,nreg,1,nyrs-1);
    init_4darray input_selectivity(1,np,1,nreg,1,na,1,nf)
    init_4darray input_survey_selectivity(1,np,1,nreg,1,na,1,nfs)
-   init_vector  input_steep(1,np)
-   init_4darray input_init_abund(1,np,1,np,1,nreg,1,na);  //input true initial abundance; just used for reporting
+   init_vector input_steep(1,np)
+   init_4darray input_init_abund(1,np,1,np,1,nreg,1,na)
+   init_3darray input_dist_init_abund(1,np,1,np,1,nreg)
+   init_3darray input_q_survey(1,np,1,nreg,1,nfs) // catchability for different surveys(fleets)operating in different areas
 
-
+ 
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -312,8 +377,9 @@ DATA_SECTION
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
-  init_matrix input_M_TRUE(1,np_om,1,na); // input for now, if we estimate we will want to limit how many Ms
-  init_4darray init_abund_TRUE(1,np_om,1,np_om,1,nreg_om,1,na);  //input true initial abundance; just used for reporting
+  init_3darray frac_natal_true(1,np_om,1,np_om,1,nreg_om)
+  init_matrix input_M_TRUE(1,np_om,1,na); 
+  init_4darray init_abund_TRUE(1,np_om,1,np_om,1,nreg_om,1,na)  //input true initial abundance; just used for reporting
   init_3darray q_survey_TRUE(1,np_om,1,nreg_om,1,nfs_om) // catchability for different surveys(fleets)operating in different areas
   init_3darray sel_beta1_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity slope parameter 1 for logistic selectivity/double logistic
   init_3darray sel_beta2_TRUE(1,np_om,1,nreg_om,1,nf_om)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
@@ -327,13 +393,13 @@ DATA_SECTION
   init_vector R_ave_TRUE(1,np_om) //Average Recruitment or R0 for B-H S-R curve
   init_vector SSB_zero_TRUE(1,np_om)
   init_matrix rec_devs_TRUE(1,np_om,1,ny)
-  init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny-1)
   init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
-  init_5darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na,1,nf_om)
-  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om)//no age
+  init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
+  init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om)
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
   init_matrix biomass_population_TRUE(1,np_om,1,ny)
-
+   
 //these are fixed to EM dimensions when doing a diagnostics run
   init_5darray catch_at_age_fleet_prop_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om,1,na)
   init_4darray yield_fleet_TRUE(1,np_om,1,nreg_om,1,ny,1,nf_om)
@@ -347,17 +413,41 @@ DATA_SECTION
   init_matrix Bratio_population_TRUE(1,np_om,1,ny)
   init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
 
-  init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om)
-  init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om)
+//Selectivity is aggregated for panmictic model
+  init_4darray selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nf_om);
+  init_4darray survey_selectivity_age_TRUE(1,np_om,1,nreg_om,1,na,1,nfs_om);
 
- 
 //need to fix to EM dim when doing diagnostics run
   init_5darray tag_prop_final_TRUE(1,np_om,1,nreg_om,1,nyr_rel,1,na,1,nt_om)//
+  init_4darray tag_prop_final_TRUE_no_age(1,np_om,1,nreg_om,1,nyr_rel,1,nt_om)//
 
   !! int xn=na*ny;
-  //init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
-  init_5darray T_TRUE(1,np,1,nreg,1,xn,1,np,1,nreg) //change the dims to EM
+  init_5darray T_TRUE(1,np_om,1,nreg_om,1,xn,1,np_om,1,nreg_om) //can't start array with vector (hence collapsing internal dimensions (age,year) instead of initial (pop,reg)
+  init_3darray report_rate_TRUE(1,np_om,1,ny_rel,1,nreg_om) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
+  init_number move_switch_OM
+ 
+  ///// Sets the type of adult movement pattern (sets age class>1 movements)
+  //==0 no movement
+  //==1 input movement
+  //==2 movement within population only based on input residency (symmetric off diagnol)
+  //==3 symmetric movement but only allow movement within a population (ie regions within a population) not across populations
+  //==4 symmetric movement across all populations and regions
+  //==5 allow movement across all regions and populations, based on population/region specific residency (symmetric off diagnol)
+  //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal population eg ontogenetic migration)
+  //==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
+  //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
+  //==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  //// uses use_input_Bstar switch
+  //// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
+  //==21 use input T_year to allow T to vary by year
+
+
   
+  init_number DD_move_age_switch_OM
+  /////// Allow age-based movement when using DD movement (Y/N) (1/0)
+  //#==0 no age-based DD movement (assumes movement based on total relative biomass after movement, before mortality, in previous year)   ///can't use current year because biomass matrix not filled out at time of DD calcs, bec need T for calc of abund_AM which occurs before moving to next age loop
+  //#==1 DD movement is age-based (assumes movement based on age-specfic relative biomass at beginning of current year)
+
   init_4darray abund_frac_age_region(1,np_om,1,nreg_om,1,ny,1,na)
   init_3darray abund_frac_region_year(1,np_om,1,nreg_om,1,ny)
   init_matrix abund_frac_region(1,np_om,1,nreg_om)
@@ -367,11 +457,7 @@ DATA_SECTION
 //##########################################################################################################################################
 
 // end of file marker
-   init_int debug;
-
-
-// !!exit(99);
- 
+   init_int debug; 
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -423,58 +509,15 @@ DATA_SECTION
   int u
   int d
   int xx
+  int tag_age_sel
 
   int region_counter
- 
+  number rd_T
  !! cout << "debug = " << debug << endl;
  !! cout << "If debug != 1541 then .dat file is meh" << endl;
  !! cout << "input read" << endl;
 
  !! cout << "end setup of containers" << endl;
-
-    vector offset(1,2);                                    // Multinomial "offset"
-
-LOCAL_CALCS
-  if(fleets_as_areas_switch==!1){ //this is a quick fix to skip this with fleets as areas
-
-// Calculate "offset" for multinomials - survey age, fishery size, survey size
-//   "Offset" value lets the multinomial likelihood equal zero when the observed and
-//     predicted are equal as in Fournier (1990) "robustifies"
-//   First step is to ensure that the data are expressed as proportions
-      for (int j=1;j<=npops;j++)
-     {
-       for (int r=1;r<=nregions(j);r++)
-       {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-             for (int z=1;z<=nfleets_survey(j);z++)
-              {
-              if(diagnostics_switch==1){
-              offset(1) -= ((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001));
-              }
-             }
-            }
-           }
-          }
-        
-     
-     // catch likelihood and multinomial fishery ages
-   for (int j=1;j<=npops;j++)
-     {
-       for (int r=1;r<=nregions(j);r++)
-       {
-          for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-           {
-             for (int z=1;z<=nfleets(j);z++)
-              {
-              if(diagnostics_switch==1){
-                offset(2) -=((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001));
-               }
-              }
-            }
-           }
-          }
-        }
 
 PARAMETER_SECTION
  !! cout << "begin parameter section" << endl;
@@ -485,69 +528,37 @@ PARAMETER_SECTION
   !! int nyr=nyrs;
   !! int nag=nages;
   !! ivector nfl=nfleets;
-  !! ivector nfls=nfleets_survey;  
-
+  !! ivector nfls=nfleets_survey;
   !! int k;
-// need these for some if the init parameter arrays below
+
+  !! ivector nr_om=nregions;
+  !! int parpops_om=npops;
+  !! int nps_om=npops;
+  !! ivector nfl_om=nfleets;
+  !! ivector nfls_om=nfleets_survey;
+  
+  //***********************************************************************
+  //*************************************************************
+  //***problem with ragged arrays for estimated parameters so use these as a stopgap when COULD have ragged arrays
+  //***IF HAVE DIFF NUMBER OF REGIONS/FLEETS PER POPULATION/REGION (when mult pops), THEN SOME OF THE ESTIMATION WON'T WORK
+  //***MAINLY RECRUIT APPORTIONMENT,  EST DIST OF INIT_ABUND, SELECTIVITY, F
   !! int fishfleet=nfleets(1); 
   !! int survfleet=nfleets_survey(1);
-  !! int parreg=nregions(1);
-
- //movement paramters
-
+  !! int parreg=nregions(1); 
+  //***********************************************************************
+  //***********************************************************************
+  //***********************************************************************
    !! int T_lgth=sum(nr);
    !! int T_lgth_YR=sum(nr)*nyr;
- ///#####################################################################################################
-     init_bounded_matrix ln_T_YR(1,T_lgth_YR,1,T_lgth-1,-6,5,phase_T_YR);  
-     init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,-9,10,phase_T_CNST);
-     matrix G(1,T_lgth,1,T_lgth);
-     vector G_temp(1,T_lgth);
-
-
-// selectivity parameters
-
-   !! int sel_lgth=sum(nr);
-
-   init_bounded_matrix log_sel_beta1(1,sel_lgth,1,fishfleet,lb_sel_beta1,ub_sel_beta1,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
-   init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,-10,5,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
-   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,lb_sel_beta1_surv,ub_sel_beta1_surv,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,lb_sel_beta2_surv,ub_sel_beta2_surv,ph_sel_log_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
-   init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,-10,5,ph_sel_dubl_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  
-
-  3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  3darray sel_beta2(1,nps,1,nr,1,nfl)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  3darray sel_beta3(1,nps,1,nr,1,nfl)  //selectivity slope parameter 2 for double selectivity
-  3darray sel_beta4(1,nps,1,nr,1,nfl)  //selectivity inflection parameter 2 for double logistic selectivity
-  3darray sel_beta1surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  3darray sel_beta2surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
-  3darray sel_beta3surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
-  3darray sel_beta4surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
-
-
-  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
-  5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
-  4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
-  4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
-  
-  init_bounded_matrix ln_q(1,parpops,1,survfleet,lb_q,ub_q,ph_q)
- 
-  3darray q_survey(1,parpops,1,nr,1,nfls)  //
- //###########WHY HAVE Q estimated by pop by applied by region?  can't q_survey just be a matrix?
-//F parameters
+   !! int T_lgth_YR_ALT_FREQ=sum(nr)*floor(((nyrs-1)/T_est_freq)+1);
+   !! int T_lgth_YR_AGE_ALT_FREQ=sum(nr)*floor(((nyrs-1)/T_est_freq)+1)*floor(((nages-1)/T_est_age_freq)+1);
+   !! int T_lgth_AGE=sum(nr)*nag;
+   !! int T_lgth_YR_AGE=sum(nr)*nag*nyr;
+   !! int YR_APP=nps*nyr;
    !! int F_lgth=sum(nr)*nyr;
-
-  init_bounded_matrix ln_F(1,F_lgth,1,fishfleet,-5,5,ph_F) //the actual parameters  
-  init_bounded_matrix F_rho(1,parpops,1,fishfleet,0,2,ph_F_rho) //random walk params*
-  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
-  4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
-  4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
-  4darray M(1,nps,1,nr,1,nyr,1,nag)
- //tagging data and parameters
-
+   !! int sel_lgth=sum(nr);
+   
+ //tagging data indices
   !! int nyr_rel=nyrs_release;
   !! ivector xy(1,nyr_rel);
   !! ivector nt(1,nyr_rel);
@@ -560,68 +571,134 @@ PARAMETER_SECTION
   !!    xy(x)=min(max_life_tags,nyrs-xx+1);
   !!    nt(x)=xy(x)*sum(nregions)+1;
   !!    nt2(x)=nt(x)-1;
-  !!    tag_age(x)=xy(x);
+  !!    tag_age(x)=xy(x); 
   !!   }
+//ESTIMATED PARAMETERS
+  init_bounded_vector steep(1,parpops,lb_steep,ub_steep,ph_steep) //B-H steepness //could be estimated parameter or input value
+  init_bounded_vector ln_R_ave(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
+  init_bounded_matrix ln_rec_devs(1,nps,1,nyr-1,lb_rec_devs,ub_rec_devs,ph_rec)
 
-
-  7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
-  4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
-  4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
-  5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
-  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr) 
-  5darray T_terminal(1,nps,1,nr,1,nag,1,nps,1,nr) 
-  5darray T_year(1,nps,1,nr,1,nyr,1,nps,1,nr) 
-  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
-  
- // ###################################################################################################################
- // ###################################################################################################################
- //OLD YEARLY APPORTIONMENT APPROACH, NEITHER VERSION WORKS CORRECTLY
-
-//  init_3darray ln_rec_prop_YR(1,nps,1,nyr-1,1,nr-1,ph_rec_app_YR)  //no apportionment in first year because no SR used
-
-//  matrix G_app(1,nps,1,nr);
-//  vector G_app_temp(1,nps);
-
- //#########################################################################################################################
-  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,parreg-1,-5,5,ph_rec_app_CNST)//check this too!
-  init_bounded_matrix ln_rec_prop_YR(1,nps,1,nyr-1,-5,5,ph_rec_app_YR) //needs work
+//recruit apportionment parameters
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF REGIONS IS CONSTANT ACROSS POPULATIONS****************
+  init_bounded_matrix ln_rec_prop_CNST(1,nps,1,parreg-1,lb_rec_app,ub_rec_app,ph_rec_app_CNST)//needs testing
+  init_bounded_matrix ln_rec_prop_YR(1,YR_APP,1,parreg-1,lb_rec_app,ub_rec_app,ph_rec_app_YR) //needs testing
+  //*****************************************************************************
 
   matrix G_app(1,nps,1,nr);//check this
   vector G_app_temp(1,nps);
- //#########################################################################################################################
-   !! int dev_lgth=nps*(nyr-1);
-  // init_bounded_dev_vector ln_rec_devs_RN(1,dev_lgth,-40,40,ph_rec)
-  init_bounded_matrix ln_rec_devs_RN(1,nps,1,nyr-1,lb_rec_devs,ub_rec_devs,ph_rec)
-  init_bounded_matrix ln_abund_devs(1,nps,1,nag,lb_abund_devs,ub_abund_devs,ph_abund_devs) //for initial abundance
+  
+ //movement paramters
+   init_bounded_matrix ln_T_YR(1,T_lgth_YR,1,T_lgth-1,lb_T,ub_T,phase_T_YR);
+   init_bounded_matrix ln_T_YR_ALT_FREQ(1,T_lgth_YR_ALT_FREQ,1,T_lgth-1,lb_T,ub_T,phase_T_YR_ALT_FREQ);
+   init_bounded_matrix ln_T_YR_AGE_ALT_FREQ(1,T_lgth_YR_AGE_ALT_FREQ,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE_ALT_FREQ);
+   init_bounded_matrix ln_T_CNST_AGE(1,T_lgth_AGE,1,T_lgth-1,lb_T,ub_T,phase_T_CNST_AGE);
+   init_bounded_matrix ln_T_YR_AGE(1,T_lgth_YR_AGE,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE);  
+   init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,lb_T,ub_T,phase_T_CNST);
+   matrix G(1,T_lgth,1,T_lgth);
+   vector G_temp(1,T_lgth);
 
-  init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,-9,10,ph_non_natal_init)
-  init_bounded_matrix ln_reg(1,nps,1,parreg-1,-9,10,ph_reg_init)
+//reporting rate
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF REGIONS IS CONSTANT ACROSS POPULATIONS****************
+   init_bounded_matrix ln_rep_rate_YR(1,YR_APP,1,parreg,lb_B,ub_B,phase_rep_rate_YR);
+   init_bounded_matrix ln_rep_rate_CNST(1,parpops,1,parreg,lb_B,ub_B,phase_rep_rate_CNST);
+  //*****************************************************************************
+   3darray report_rate(1,nps,1,nyr_rel,1,nr)
+   
+// selectivity parameters
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF fishing FLEETS IS CONSTANT ACROSS POPULATIONS****************
+  // selectivity allowed to vary by region and fleet
+   init_bounded_matrix log_sel_beta1(1,sel_lgth,1,fishfleet,lb_sel_beta1,ub_sel_beta1,ph_sel_log);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2(1,sel_lgth,1,fishfleet,lb_sel_beta2,ub_sel_beta2,ph_sel_log);   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta3(1,sel_lgth,1,fishfleet,lb_sel_beta3,ub_sel_beta3,ph_sel_dubl);  //selectivity slope parameter 2 for double selectivity
+   init_bounded_matrix log_sel_beta4(1,sel_lgth,1,fishfleet,lb_sel_beta4,ub_sel_beta4,ph_sel_dubl);//selectivity inflection parameter 2 for double logistic selectivity
+
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF Survey FLEETS IS CONSTANT ACROSS POPULATIONS****************
+  // survey selectivity and catchability allowed to vary by population and survey (not by region)
+   init_bounded_matrix log_sel_beta1surv(1,parpops,1,survfleet,lb_sel_beta1_surv,ub_sel_beta1_surv,ph_sel_log_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta2surv(1,parpops,1,survfleet,lb_sel_beta2_surv,ub_sel_beta2_surv,ph_sel_log_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta3surv(1,parpops,1,survfleet,lb_sel_beta3_surv,ub_sel_beta3_surv,ph_sel_dubl_surv);   //selectivity slope parameter 1 for logistic selectivity/double logistic
+   init_bounded_matrix log_sel_beta4surv(1,parpops,1,survfleet,lb_sel_beta4_surv,ub_sel_beta4_surv,ph_sel_dubl_surv);  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  
+  init_bounded_matrix ln_q(1,parpops,1,survfleet,lb_q,ub_q,ph_q) // catchability constant across a population (can't vary by region), but varies by survey
+  3darray q_survey(1,parpops,1,nr,1,nfls)  //set by region, but really just using same q across regions
+  //*****************************************************************************
+
+//Mortality parameters
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF FLEETS IS CONSTANT ACROSS POPULATIONS****************
+  init_bounded_matrix ln_F(1,F_lgth,1,fishfleet,lb_F,ub_F,ph_F) 
+  init_bounded_matrix F_rho(1,parpops,1,fishfleet,lb_F_rho,ub_F_rho,ph_F_rho) //random walk params*
+  //*****************************************************************************
+  init_bounded_number ln_M_CNST(lb_M,ub_M,ph_M_CNST) //cnst M by age and pop
+  init_bounded_vector ln_M_pop_CNST(1,nps,lb_M,ub_M,ph_M_pop_CNST) //cnst M by age vary by pop 
+  init_bounded_vector ln_M_age_CNST(1,nag,lb_M,ub_M,ph_M_age_CNST) //cnst M by pop vary by age 
+  init_bounded_matrix ln_M_pop_age(1,nps,1,nag,lb_M,ub_M,ph_M_pop_age) //M vary by age and pop 
+
+//init_abund parameters
+  init_bounded_matrix ln_init_abund(1,nps,1,nag-1,lb_init_abund,ub_init_abund,ph_init_abund) //for initial abundance
+  init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,lb_init_dist,ub_init_dist,ph_non_natal_init) //est init_abund dist for natal homing
+  
+  //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF REGIONS IS CONSTANT ACROSS POPULATIONS****************
+  init_bounded_matrix ln_reg(1,nps,1,parreg-1,lb_init_dist,ub_init_dist,ph_reg_init) //est init abund dist for metapop/metamictic
+  //*****************************************************************************
+  
   matrix G_nat(1,nps,1,T_lgth);
   vector G_nat_temp(1,nps);
-  matrix G_reg(1,nps,1,nr);
+  matrix G_reg(1,nps,1,parreg);
   vector G_reg_temp(1,nps);
   3darray frac_natal(1,nps,1,nps,1,nr)
+
  //###############################################################################################################################
  //###################################################################################################################################
-  matrix abund_devs(1,nps,1,nages)
+  matrix init_abund_age(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
-  init_bounded_vector ln_R_ave(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
   vector R_ave(1,parpops) // switch to log scale
- // init_bounded_vector ln_R_ave_start(1,parpops,lb_R_ave,ub_R_ave,ph_lmr) //estimated parameter Average Recruitment
- // vector R_ave_start(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
-  init_bounded_vector steep(1,parpops,0.2,1,ph_steep) //B-H steepness //could be estimated parameter or input value
   vector alpha(1,nps) //derived quantity
   vector beta(1,nps) //derived quantity
   matrix SR(1,nps,1,nyr-1)
   matrix total_recruits(1,nps,1,nyr-1)
-//end recruitment parameters
-
-
  4darray init_abund(1,nps,1,nps,1,nr,1,nag)  //estimated as devs from exponential decline from R_ave
- 
+
+// selectivity parameters
+  3darray sel_beta1(1,nps,1,nr,1,nfl)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta2(1,nps,1,nr,1,nfl)   //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta3(1,nps,1,nr,1,nfl)  //selectivity slope parameter 2 for double selectivity
+  3darray sel_beta4(1,nps,1,nr,1,nfl)  //selectivity inflection parameter 2 for double logistic selectivity
+  3darray sel_beta1surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta2surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta3surv(1,nps,1,nr,1,nfls)   //selectivity slope parameter 1 for logistic selectivity/double logistic
+  3darray sel_beta4surv(1,nps,1,nr,1,nfls)  //selectivity inflection parameter 1 for logistic selectivity/double logistic
+
+  5darray survey_selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfls)  //param
+  5darray selectivity(1,nps,1,nr,1,nyr,1,nag,1,nfl)
+  4darray survey_selectivity_age(1,nps,1,nr,1,nag,1,nfls)  //param
+  4darray selectivity_age(1,nps,1,nr,1,nag,1,nfl)
+  
+//F parameters
+  5darray F_fleet(1,nps,1,nr,1,nyr,1,nag,1,nfl) //derived quantity in which we likely have interest in precision
+  4darray F_year(1,nps,1,nr,1,nyr,1,nfl) //derived quantity in which we likely have interest in precision
+  4darray F(1,nps,1,nr,1,nyr,1,nag) //derived quantity in which we likely have interest in precision
+  4darray M(1,nps,1,nr,1,nyr,1,nag)
+
+  7darray tags_avail(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) 
+  4darray total_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  3darray total_rec_no_age(1,nps,1,nr,1,nyr_rel)
+  3darray not_rec_no_age(1,nps,1,nr,1,nyr_rel)
+  3darray ntags_no_age(1,nps,1,nr,1,nyr_rel)
+  4darray not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  7darray tag_prop(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr)
+  4darray tag_prop_not_rec(1,nps,1,nr,1,nyr_rel,1,nag)
+  4darray tag_prop_final_no_age(1,nps,1,nr,1,nyr_rel,1,nt)
+  6darray tag_prop_no_age(1,nps,1,nr,1,nyr_rel,1,tag_age,1,nps,1,nr)
+  3darray tag_prop_not_rec_no_age(1,nps,1,nr,1,nyr_rel)
+  5darray tag_prop_final(1,nps,1,nr,1,nyr_rel,1,nag,1,nt)
+  6darray T(1,nps,1,nr,1,nyr,1,nag,1,nps,1,nr)
+  6darray T_true_report(1,nps_om,1,nr_om,1,nyr,1,nag,1,nps_om,1,nr_om) 
+  5darray T_terminal(1,nps,1,nr,1,nag,1,nps,1,nr) 
+  5darray T_year(1,nps,1,nr,1,nyr,1,nps,1,nr) 
+  7darray recaps(1,nps,1,nr,1,nyr_rel,1,nag,1,tag_age,1,nps,1,nr) //recaps
+  7darray tag_recap_no_age_temp(1,nps,1,nr,1,nyr_rel,1,tag_age,1,nps,1,nr,1,nag) //recaps
+  
  // 6-d arrays
  6darray survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) 
  6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
@@ -651,9 +728,7 @@ PARAMETER_SECTION
  3darray rec_index_AM_temp(1,nps,1,nyr,1,nr) //
  matrix rec_devs_randwalk(1,nps,1,nyr-1)
 
- 3darray Rec_Prop(1,nps,1,nr,1,nyr)
- 3darray Rec_prop_temp1(1,nps,1,nr,1,nyr)
- 3darray Rec_prop_temp2(1,nps,1,nr,1,nyr)
+ 3darray Rec_Prop(1,nps,1,nr,1,nyr-1)
  vector env_rec(1,nyr)
 
 //abundance 
@@ -797,6 +872,7 @@ PARAMETER_SECTION
  matrix tags_avail_temp(1,nps,1,nr)
  3darray tag_prop_temp(1,nps,1,nyr_rel,1,nr)
  5darray tag_prop_temp2(1,nps,1,nr,1,nyr_rel,1,nag,1,nt2)
+ 4darray tag_prop_temp2_no_age(1,nps,1,nr,1,nyr_rel,1,nt2)
 
  // likelihood components
   number survey_age_like
@@ -807,7 +883,11 @@ PARAMETER_SECTION
   number catch_like 
   number survey_like
   number Tpen_like
-  number abund_dev_pen
+  number F_pen_like
+  number M_pen_like
+  number Bpen_like
+
+  number init_abund_pen
  // init_bounded_number  theta(1,100,ph_theta);   // for negbinomial -lnL
 
  init_number dummy(ph_dummy)
@@ -835,6 +915,8 @@ PROCEDURE_SECTION
    get_movement();
    get_selectivity();
    get_F_age();
+   get_M_age();
+   get_report_rate();
    get_vitals();
    get_SPR();
    get_abundance();
@@ -847,8 +929,52 @@ PROCEDURE_SECTION
 
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
+ if((npops==1 && sum(nregions)==1) || move_switch==(-2)) //if panmictic then movement is 100%
+  {
 
- if(move_switch==0)
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+     for(int y=1;y<=nyrs;y++)
+       {
+        for (int a=1;a<=nages;a++)
+         {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              T(j,r,y,a,k,n)=1;            
+        }
+       } 
+      }
+     }
+    }
+   }
+  }
+ if(move_switch==(-1)) //fix at input T 
+  {
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+     for(int y=1;y<=nyrs;y++)
+       {
+        for (int a=1;a<=nages;a++)
+         {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              T(j,r,y,a,k,n)=input_T(j,r,a,k,n);
+        }
+       } 
+      }
+     }
+    }
+   }
+  }
+ if(move_switch==0) // no movement
   {
      for (int j=1;j<=npops;j++)
    {
@@ -878,10 +1004,7 @@ FUNCTION get_movement
        }
       }
 
-
-
- if(move_switch==1 || (phase_T_YR<0 && phase_T_CNST<0 && move_switch!=0))
-// if T fixed set it to input T
+ if(move_switch==1) //fix at true T from OM
   {
   for (int j=1;j<=npops;j++)
    {
@@ -895,7 +1018,7 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);            
+              T(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);
         }
        } 
       }
@@ -904,36 +1027,61 @@ FUNCTION get_movement
    }
   }
 
- //cout<<T_TRUE<<endl;
- //exit(99);
 
- if(npops==1 && sum(nregions)==1) //if panmictic then movement is 100%
+  if(move_switch>=2) //when movement is nonzero and movement parameters estimated
+   {
+   if(phase_T_CNST>0) //uses logit transform to ensure movement sums to 1 for a given region 
+    {
+    G=0;
+     G_temp=0;
+      for (int j=1;j<=sum(nregions);j++) //from region
+       {
+        for (int i=1;i<=sum(nregions);i++) //to region
+         {
+            if(j==i)
+            {
+            G(j,i)=1;  //residency is 1-sum(movement)
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_CNST(j,i-1)); //estimated T matrix has one less column than sum(regions) so need i-1 to adjust indices to account for not estimating par where j==1
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_CNST(j,i));
+            }
+           }
+          }    
+      G_temp=rowsum(G);
+
+ for(int y=1;y<=nyrs;y++)
   {
-
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
      {
-     for(int y=1;y<=nyrs;y++)
-       {
         for (int a=1;a<=nages;a++)
          {
           for (int k=1;k<=npops;k++)
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=1;            
+              T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j)); //nreg_temp gives sum of all regions in all previous populations, ie first entry is 0 (for pop 1), 2nd entry is sum of regions in population 1, etc... 
+              //T(j,r,y,a,k,n)=1;
+              // because G has entry for all regions, need to add nreg_temp to index to ensure in correct part of G matrix as region counters reset
+                 // G(from region, to region), region indices to not go to all regions so need addition term to ensure moving through whole matrix
+             }
+            } 
+           }
+          }
+         }
         }
-       } 
-      }
+       }
      }
-    }
-   }
-  }
 
-  if(move_switch>1)
+  if(move_switch>=2) //when movement is nonzero and movement parameters estimated
    {
-    if(phase_T_YR>0) 
+    if(phase_T_YR>0)  //est T by year
     {
       for(int y=1;y<=nyrs;y++)
        {
@@ -949,7 +1097,7 @@ FUNCTION get_movement
             }
             if(i>j)
             {
-            G(j,i)=mfexp(ln_T_YR(j+sum(nregions)*(y-1),i-1));
+            G(j,i)=mfexp(ln_T_YR(j+sum(nregions)*(y-1),i-1)); //bec indices are collapsed for estimated T matrix, need to bump up past nregions for each successive year hence additional sum(nregions)*(y-1) term
             }
             if(j!=i && i<j)
             {
@@ -977,11 +1125,16 @@ FUNCTION get_movement
         }
        }
       }
+     }
 
-   if(phase_T_CNST>0) 
+  if(move_switch>=2) //when movement is nonzero and movement parameters estimated
+   {
+    if(phase_T_YR_ALT_FREQ>0) //estimate a T parameter for every T_est_Freq years
     {
-    G=0;
-     G_temp=0;
+      for(int y=1;y<=floor(((nyrs-1)/T_est_freq)+1);y++)
+       {
+      G=0;
+      G_temp=0;
       for (int j=1;j<=sum(nregions);j++)
        {
         for (int i=1;i<=sum(nregions);i++) 
@@ -992,39 +1145,242 @@ FUNCTION get_movement
             }
             if(i>j)
             {
-            G(j,i)=mfexp(ln_T_CNST(j,i-1));
+            G(j,i)=mfexp(ln_T_YR_ALT_FREQ(j+sum(nregions)*(y-1),i-1)); //bec indices are collapsed for estimated T matrix, need to bump up past nregions for each successive year hence additional sum(nregions)*(y-1) term
             }
             if(j!=i && i<j)
             {
-            G(j,i)=mfexp(ln_T_CNST(j,i));
+            G(j,i)=mfexp(ln_T_YR_ALT_FREQ(j+sum(nregions)*(y-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+       for (int a=1;a<=nages;a++)
+        {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             for (int x=1;x<=T_est_freq;x++)
+              {            
+               T(j,r,x+(y-1)*T_est_freq,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));           
+            }
+           } 
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+
+
+  if(move_switch>=3) //when movement is nonzero and movement parameters estimated
+   {
+    if(phase_T_YR_AGE_ALT_FREQ>0) //EST T by for every T_est_freq years and T_est_age_freq ages, with all ages <age_juv getting the first age movement parameter
+    {
+      for(int y=1;y<=floor(((nyrs-1)/T_est_freq)+1);y++)
+       {
+      for(int a=1;a<=floor(((nages-1)/T_est_age_freq)+1);a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE_ALT_FREQ(j+sum(nregions)*(a-1)+sum(nregions)*floor(((nages-1)/T_est_age_freq)+1)*(y-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE_ALT_FREQ(j+sum(nregions)*(a-1)+sum(nregions)*floor(((nages-1)/T_est_age_freq)+1)*(y-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);
+     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             for(int x=1;x<=T_est_freq;x++)
+             {
+              for(int z=1;z<=T_est_age_freq;z++)
+               {
+                 T(j,r,x+(y-1)*T_est_freq,z+(a-1)*T_est_age_freq,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+               }
+              }
+             }
             }
            }
-          }    
-      G_temp=rowsum(G);
-
- for(int y=1;y<=nyrs;y++)
-  {
-  for (int j=1;j<=npops;j++)
+          }
+         }
+        }
+       }
+       
+  for (int j=1;j<=npops;j++) //adjust T matrix so that all juvenile ages have the same T
    {
     for (int r=1;r<=nregions(j);r++)
      {
+     for(int y=1;y<=nyrs;y++)
+       {
         for (int a=1;a<=nages;a++)
          {
           for (int k=1;k<=npops;k++)
            {
             for (int n=1;n<=nregions(k);n++)
              {
-              T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
-             }
-            } 
-           }
+                if(a<=juv_age && a!=1)
+                 {
+                  T(j,r,y,a,k,n)=T(j,r,y,1,k,n); //fill all juvenile ages with movement for age-1
+                 }
+                if(a>juv_age && a<=T_est_age_freq)
+                 {
+                  T(j,r,y,a,k,n)=T(j,r,y,T_est_age_freq+1,k,n); //fill all ages>juv_age but <freq of est ages (i.e., would otherwise get same T as juv age) with the movement of the next age class
+                 }
+        }
+       } 
+      }
+     }
+    }
+    }
+   }
+
+
+  if(move_switch>=2) //when movement is nonzero and movement parameters estimated
+   {
+    if(phase_T_YR_AGE>0) //EST T by year and age
+    {
+      for(int y=1;y<=nyrs;y++)
+       {
+      for(int a=1;a<=nages;a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE(j+sum(nregions)*(a-1)+sum(nregions)*nages*(y-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE(j+sum(nregions)*(a-1)+sum(nregions)*nages*(y-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+            
+            }
+           } 
           }
          }
         }
        }
       }
+     }
 
-  for (int j=1;j<=npops;j++)
+
+  if(move_switch>=2) //when movement is nonzero and movement parameters estimated
+   {
+    if(phase_T_CNST_AGE>0) //est T by age ONLY
+    {
+      for(int a=1;a<=nages;a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_CNST_AGE(j+sum(nregions)*(a-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_CNST_AGE(j+sum(nregions)*(a-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+       for(int y=1;y<=nyrs;y++)
+        {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             T(j,r,y,a,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+            
+            }
+           } 
+          }
+         }
+        }
+       }
+      }
+     }
+
+//need to output this at the OM dimemsions
+//  for (int j=1;j<=npops_OM;j++) //output true T for report file
+//   {
+//    for (int r=1;r<=nregions_OM(j);r++)
+//     {
+//     for(int y=1;y<=nyrs;y++)
+//       {
+//        for (int a=1;a<=nages;a++)
+//         {
+//          for (int k=1;k<=npops_OM;k++)
+//           {
+//            for (int n=1;n<=nregions_OM(k);n++)
+//             {
+              //T_true_report(j,r,y,a,k,n)=T_TRUE(j,r,a+(y-1)*nages,k,n);
+//              T_true_report(j,r,y,a,k,n)=1;
+//        }
+//       } 
+//      }
+//     }
+//    }
+ //  }
+
+   
+  for (int j=1;j<=npops;j++)  //output terminal T for report file
    {
     for (int r=1;r<=nregions(j);r++)
      {
@@ -1041,7 +1397,7 @@ FUNCTION get_movement
           }
          }
          
-  for (int j=1;j<=npops;j++)
+  for (int j=1;j<=npops;j++) ///output yearly T at age 4 for report file ***BE CAREFUL WITH AGE VARYING T
    {
     for (int r=1;r<=nregions(j);r++)
      {
@@ -1058,9 +1414,28 @@ FUNCTION get_movement
          }
         }
 
+
+   
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
-
+ //set q to true if neg phase
+   if(ph_q<0)
+    {
+     q_survey=input_q_survey;
+    }
+   if(ph_q>0)
+   {
+    for(int i=1;i<=npops;i++) 
+     {
+      for(int k=1;k<=nregions(i);k++) 
+        {
+         for(int j=1;j<=nfleets_survey(i);j++) 
+          {
+           q_survey(i,k,j) = mfexp(ln_q(i,j));
+          }
+         }
+        }
+       }
  if (ph_sel_log<0 && ph_sel_dubl<0)
  {
  sel_beta1=sel_beta1_TRUE;   //selectivity slope parameter 1 for logistic selectivity/double logistic
@@ -1070,18 +1445,20 @@ FUNCTION get_selectivity
  }
  else
  {
-    for (int j=1;j<=npops;j++)
+  for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
-      {
-        for (int z=1;z<=nfleets(j);z++)                    
-      {
+     {
+      for (int z=1;z<=nfleets(j);z++)                    
+       {
  // get betas on their arithmetic scale
- sel_beta1(j,r,z)=mfexp(log_sel_beta1(r+nreg_temp(j),z));
- sel_beta2(j,r,z)=mfexp(log_sel_beta2(r+nreg_temp(j),z));
- sel_beta3(j,r,z)=mfexp(log_sel_beta3(r+nreg_temp(j),z));
- sel_beta4(j,r,z)=mfexp(log_sel_beta4(r+nreg_temp(j),z));
-  }}}
+         sel_beta1(j,r,z)=mfexp(log_sel_beta1(r+nreg_temp(j),z));
+         sel_beta2(j,r,z)=mfexp(log_sel_beta2(r+nreg_temp(j),z));
+         sel_beta3(j,r,z)=mfexp(log_sel_beta3(r+nreg_temp(j),z));
+         sel_beta4(j,r,z)=mfexp(log_sel_beta4(r+nreg_temp(j),z));
+        }
+      }
+     }
  } //close else for positive phase
 
  if (ph_sel_log_surv<0 && ph_sel_dubl_surv<0)
@@ -1093,18 +1470,20 @@ FUNCTION get_selectivity
  }
  else
  {
-     for (int j=1;j<=npops;j++)
+  for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
-      {
-        for (int z=1;z<=nfleets_survey(j);z++)                    
-      {
+     {
+      for (int z=1;z<=nfleets_survey(j);z++)                    
+       {
  // get betas on their arithmetic scale
- sel_beta1surv(j,r,z)=mfexp(log_sel_beta1surv(j,z));
- sel_beta2surv(j,r,z)=mfexp(log_sel_beta2surv(j,z));
- sel_beta3surv(j,r,z)=mfexp(log_sel_beta3surv(j,z));
- sel_beta4surv(j,r,z)=mfexp(log_sel_beta4surv(j,z));
-  }}}
+        sel_beta1surv(j,r,z)=mfexp(log_sel_beta1surv(j,z));
+        sel_beta2surv(j,r,z)=mfexp(log_sel_beta2surv(j,z));
+        sel_beta3surv(j,r,z)=mfexp(log_sel_beta3surv(j,z));
+        sel_beta4surv(j,r,z)=mfexp(log_sel_beta4surv(j,z));
+       }
+    }
+  }
  } //close else for survey select positive phase
  
  //fishery selectivity
@@ -1130,11 +1509,12 @@ FUNCTION get_selectivity
                 {
                 selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
                 }
+                }
               }
             }
           }
         }
-      }
+      
 
 //survey selectivity
  for (int j=1;j<=npops;j++)
@@ -1184,6 +1564,8 @@ FUNCTION get_selectivity
               }
              }
             }
+
+
            
 
 ///////FISHING MORTALITY CALCULATIONS///////
@@ -1203,10 +1585,12 @@ FUNCTION get_F_age
              {
               F_year(j,r,y,z)=F_year_TRUE(j,r,y,z);
              }
-             else {
+             else
+             {
              if(F_switch==1) //estimate annual deviations
               {
-               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); 
+               F_year(j,r,y,z)=mfexp(ln_F(y+nreg_temp(j)*nyrs+(r-1)*nyrs,z)); //ln_F index is 1 to sum(nreg)*nyr so this setup
+               //allows running through index by year, then moves to next region and fills in each year, then moves to next pop and fills in by year for each region, etc...
               }
         //     if(F_switch==2) //random walk or AR1  in F if we ever want to try it.
         //      {
@@ -1219,47 +1603,89 @@ FUNCTION get_F_age
              } //end else for negative F phase
              F_fleet(j,r,y,a,z)=F_year(j,r,y,z)*selectivity(j,r,y,a,z);    
             }
-            F(j,r,y,a)=sum(F_fleet(j,r,y,a)); // moved down one loop I think was correct *dh*
+            F(j,r,y,a)=sum(F_fleet(j,r,y,a)); 
            }
          }
         }
        }
 
-
-FUNCTION get_vitals
- //set q to true if neg phase
-   if(ph_q<0){
-      q_survey=q_survey_TRUE;
-      }
-      
-   else{
-       for(int i=1;i<=npops;i++) 
-    {
-        for(int k=1;k<=nregions(i);k++) 
-        {
-          for(int j=1;j<=nfleets_survey(i);j++) 
+FUNCTION get_M_age
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+      for (int y=1;y<=nyrs;y++)
+       {
+        for (int a=1;a<=nages;a++)
+         {
+          if(M_switch==(-1)) //use input M, may differ from TRUE M 
           {
-           q_survey(i,k,j) = mfexp(ln_q(i,j));}
+            M(j,r,y,a)=input_M(j,a);
+          }
+          if(M_switch==0) //use true M
+          {
+            M(j,r,y,a)=input_M_TRUE(j,a);
+          }
+          if(M_switch==1) //EST constant M
+          {
+            M(j,r,y,a)=mfexp(ln_M_CNST);
+          }
+          if(M_switch==2) //EST pop-based M
+          {
+            M(j,r,y,a)=mfexp(ln_M_pop_CNST(j));
+          }
+          if(M_switch==3) //EST age-based M
+          {
+            M(j,r,y,a)=mfexp(ln_M_age_CNST(a));
+          }
+          if(M_switch==4) //EST age and pop varying M
+          {
+            M(j,r,y,a)=mfexp(ln_M_pop_age(j,a));
+          }
+         }
         }
        }
       }
 
-//see if this helps
-    
+
+FUNCTION get_report_rate //reporting rate is assumed to be function of release event and recap location (not a function of recap year...could expand to this, but not priority at momement)
+ for(int y=1; y<=nyrs_release; y++)
+  {
+  for (int j=1;j<=npops;j++)
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+          if(report_rate_switch==(-1)) //input report rate by pop and region, can differ from TRUE report rate from OM
+           {
+            report_rate(j,y,r)=input_report_rate(j,r);
+           }
+          if(report_rate_switch==0) //set report rate to TRUE value from OM
+           {
+            report_rate(j,y,r)=report_rate_TRUE(j,y,r);
+           }
+          if(report_rate_switch==1) //EST constant reporting rate that differs by pop and region
+           {
+            report_rate(j,y,r)=(mfexp(ln_rep_rate_CNST(j,r)))/(mfexp(ln_rep_rate_CNST(j,r))+1);
+           }
+          if(report_rate_switch==2)
+           {
+            report_rate(j,y,r)=(mfexp(ln_rep_rate_YR(j+npops*(y-1),r)))/(mfexp(ln_rep_rate_YR(j+npops*(y-1),r))+1);
+           }
+       }
+     }
+   }
+
+FUNCTION get_vitals
+
     for (int j=1;j<=npops;j++)
      {
       if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j)+.5*square(sigma_recruit(j)));}
-      if(ph_lmr<0){R_ave(j)=input_Rave(j);}
+      if(ph_lmr<0){R_ave(j)=input_R_ave(j);}
       //if(ph_lmr>0){R_ave(j)=mfexp(ln_R_ave(j));}
      }
-     
-    // R_ave_start=mfexp(ln_R_ave_start);
-    
+ 
     for (int j=1;j<=npops;j++)
-     {
-      //if(ph_lmr<0){ R_ave(j)=R_ave_TRUE(j);}
-      //if(ph_lmr>0){ R_ave(j)=mfexp(ln_R_ave(j)+square(sigma_recruit(j))*0.5);}
-    
+     {    
       for (int r=1;r<=nregions(j);r++)   
        {       
         for (int y=1;y<=nyrs;y++)
@@ -1268,7 +1694,6 @@ FUNCTION get_vitals
            {
             for (int z=1;z<=nfleets(j);z++)
              {           
-              M(j,r,y,a)=input_M(j,a);
               weight_population(j,r,y,a)=input_weight(j,r,a);
               weight_catch(j,r,y,a)=input_catch_weight(j,r,a);
 
@@ -1301,39 +1726,36 @@ FUNCTION get_vitals
            }         
          }
        }
-
- for(int y=1;y<=nyrs;y++)
+       
+ for(int y=1;y<=nyrs-1;y++)
   {
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
      {
-               if(apportionment_type==1) //input recruitment apportionment directly by population and region
+               if(apportionment_type==(-2)) //input TRUE recruitment apportionment directly by population and region
+                {
+                 Rec_Prop(j,r,y)=Rec_Prop_TRUE(j,r,y); //rec_prop_true is every year
+                }
+               if(apportionment_type==(-1)) // no apportionment
+                {
+                 Rec_Prop(j,r,y)=1;
+                }           
+               if(apportionment_type==1) //input recruitment apportionment directly by population and region (can be different from true apportionment)
                 {
                  Rec_Prop(j,r,y)=input_rec_prop(j,r,y);
                 }
                if(apportionment_type==2) //equal apportionment by nregions
                 {
-               Rec_Prop(j,r,y)=1.0/nregions(j);
+                 Rec_Prop(j,r,y)=1.0/nregions(j);
                 }
-               if(apportionment_type==(-1)) // no apportionment
-                {
-                 Rec_Prop(j,r,y)=1;
-                }
-               if((ph_rec_app_YR<0 & ph_rec_app_CNST<0) & (apportionment_type!=2 || apportionment_type!=(-1))) //input recruitment apportionment directly by population and region
-                {
-                 Rec_Prop(j,r,y)=input_rec_prop(j,r,y);
-                }
- }
- }
- }
+        }
+      }
+     }
 
 
   if(apportionment_type==3)
    {
-    if(ph_rec_app_CNST<0) 
-    {Rec_Prop=input_rec_prop;}
-   
    if(ph_rec_app_CNST>0) 
     {
     G_app=0;
@@ -1344,23 +1766,19 @@ FUNCTION get_vitals
         for (int i=1;i<=nregions(j);i++) 
          {
             
-         if(j==i)
+         if(i==1)
           {
            G_app(j,i)=1;
             }
-           if(i>j)
+           if(i>1)
             {
             G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1));
-            }
-            if(j!=i && i<j)
-            {
-            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i));
             }
            }
           }
        G_app_temp=rowsum(G_app);
 
- for(int y=1;y<=nyrs;y++)
+ for(int y=1;y<=nyrs-1;y++)
   {
   for (int j=1;j<=npops;j++)
    {
@@ -1374,11 +1792,9 @@ FUNCTION get_vitals
   }
 
 
- //THIS YEARLY APPORTIONEMENT DOES NOT APPEAR TO WORK
+ //THIS YEARLY APPORTIONMENT NEEDS TO BE TESTED THOROUGHLY
   if(apportionment_type==4)
    {
-    if(ph_rec_app_YR>0) 
-    {
   for(int y=1;y<=nyrs-1;y++)
   {
     G_app=0;
@@ -1387,84 +1803,99 @@ FUNCTION get_vitals
        {
         for (int i=1;i<=nregions(j);i++) 
          {
-            if(j==i)
+            if(i==1)
             {
             G_app(j,i)=1;
             }
-            if(i>j)
+            if(i>1)
             {
-            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i-1))*mfexp(ln_rec_prop_YR(j,y));
-            }
-            if(j!=i && i<j)
-            {
-            G_app(j,i)=mfexp(ln_rec_prop_CNST(j,i))*mfexp(ln_rec_prop_YR(j,y));
+             G_app(j,i)=mfexp(ln_rec_prop_YR(j+npops*(y-1),i-1));
             }
            }
-          }
-         
+          }        
       G_app_temp=rowsum(G_app);
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
      {
-        Rec_Prop(j,r,y+1)=G_app(j,r)/G_app_temp(j); //apportionment not used in first year bec no SR function used
+        Rec_Prop(j,r,y)=G_app(j,r)/G_app_temp(j); //apportionment not used in first year bec no SR function used
       }
      }
     }
    }
-  }
 
-//###################### ALT YEARLY APPORTIONEMENT APPROACH, NEITHER VERSION APPEARS TO WORK
-  //if(apportionment_type==4)
-  // {
-   // if(ph_rec_app_YR>0) 
-   // {
-    //  for(int y=1;y<=nyrs-1;y++)
-   //    {
-  //  G_app=0;
-  //   G_app_temp=0;
- //     for (int j=1;j<=npops;j++)
-    //   {
-  //      for (int i=1;i<=nregions(j);i++) 
-//         {
-           // if(j==i)
-         //   {
-       //     G_app(j,i)=1;
-     //       }
-   //         if(i>j)
-           // {
-         //   G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i-1));
-       //     }
-     //       if(j!=i && i<j)
-   //         {
-           // G_app(j,i)=mfexp(ln_rec_prop_YR(j,y,i));
-         //   }
-       //    }
-     //     }    
-   //   G_app_temp=rowsum(G_app);   
- // for (int j=1;j<=npops;j++)
-  // {
-//    for (int r=1;r<=nregions(j);r++)
-   //  {
-     //   Rec_Prop(j,r,y+1)=G_app(j,r)/G_app_temp(j); //apportionment not used in first year bec no SR function used
-   //   }
-   //  }
-  //  }
- //  }
- // }
-//###################################################################################################
 
       for (int j=1;j<=npops;j++)
        {
         for (int a=1;a<=nages;a++)
          {
-          abund_devs(j,a)=mfexp(ln_abund_devs(j,a)); //age based abund devs by population
+          if(a==1)
+          {
+           init_abund_age(j,a)=R_ave(j); //use R_ave as age-1 abund in year 1 to avoid overparametrization
+          }
+          if(a>1)
+          {
+          init_abund_age(j,a)=mfexp(ln_init_abund(j,a-1)); //age based abund devs by population
+          }
          }
        }
+  
+ if(est_dist_init_abund==(-2)) //use input_dist_init_abund specified for EM (can differ from true)
+  {
+         for (int j=1;j<=npops;j++)
+          {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              frac_natal(j,k,n)=input_dist_init_abund(j,k,n);
+             }
+            } 
+           }
+         }
 
+ if(est_dist_init_abund==(-1)) //assume all fish in a pop are equally distributed across regions in that pop (no fish start outside natal pop)
+  {
+         for (int j=1;j<=npops;j++)
+          {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+              if(j==k)
+               {
+                 frac_natal(j,k,n)=1/nregions(k);
+               }
+              if(j!=k)
+               {
+                 frac_natal(j,k,n)=0;
+               }
+             }
+            } 
+           }
+         }
+         
+ if(est_dist_init_abund==0) //use true distribution of init_abundance
+  {
+         for (int j=1;j<=npops;j++)
+          {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+             if(npops==npops_OM){
+              frac_natal(j,k,n)=frac_natal_true(j,k,n);
+              }
+             if(npops=!npops_OM)
+             frac_natal(j,k,n)=input_dist_init_abund(j,k,n);
+             }
+            } 
+           }
+         }
+
+ if(est_dist_init_abund==1) //estimate the spatial distribution of init abundance
+  {
    if(natal_homing_switch>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
-    {
-   if(ph_non_natal_init>0) //estimate parameters to distribute a population across multiple non-natal areas in first year
     {
     G_nat=0;
      G_nat_temp=0;
@@ -1499,13 +1930,9 @@ FUNCTION get_vitals
             } 
            }
           }
-         }
-
 
    if(natal_homing_switch==0) //estimate parameters to distribute a population across multiple regions
     {
-   if(ph_reg_init>0)
-   {
     G_reg=0;
      G_reg_temp=0;
       for (int j=1;j<=npops;j++)
@@ -1546,43 +1973,8 @@ FUNCTION get_vitals
             } 
            }
     }
+    }
 
-       if(ph_reg_init<0 && sum(nregions)==npops)//for panmictic
-        {
-         for (int j=1;j<=npops;j++)
-          {
-          for (int k=1;k<=npops;k++)
-           {
-            for (int n=1;n<=nregions(k);n++)
-             {
-              if(j==k)
-               {
-                 frac_natal(j,k,n)=1;
-               }
-              if(j!=k)
-               {
-                 frac_natal(j,k,n)=0;
-               }
-             }
-            } 
-           }
-         }
-
-   if(ph_reg_init<0 && npops==1)//for metamictic population
-        {
-         for (int j=1;j<=npops;j++)
-          {
-          for (int k=1;k<=npops;k++)
-           {
-            for (int n=1;n<=nregions(k);n++)
-             {
-                 frac_natal(j,k,n)=1.0/nregions(k);
-             }
-            } 
-           }
-         }
-       }
- 
     for (int j=1;j<=npops;j++)
      {              
         for (int y=1;y<=nyrs-1;y++)
@@ -1593,8 +1985,7 @@ FUNCTION get_vitals
                 }
                if(recruit_devs_switch==1)  // allow lognormal error around SR curve
                 {
-                rec_devs(j,y)=mfexp(ln_rec_devs_RN(j,y)-.5*square(sigma_recruit(j)));
-              //rec_devs(j,y)=mfexp(ln_rec_devs_RN(y+(j-1)*(nyrs-1))-.5*square(sigma_recruit(j)));
+                rec_devs(j,y)=mfexp(ln_rec_devs(j,y)-.5*square(sigma_recruit(j)));
                  
                   if(ph_rec<0)
                   {            
@@ -1672,24 +2063,27 @@ FUNCTION get_abundance
                 {
                  for (int z=1;z<=nfleets(j);z++)
                  {
-                if(init_abund_switch==0){
-                  if(ph_abund_devs>0)
+                 
+                if(init_abund_switch==0) //estimate abundance at age or fix at true value if est ph<0
+                {
+                  if(ph_init_abund>0) //ESTIMATE
                    {
-                   //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
-                   //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*frac_natal(p,j,r);  //not sure what this is doing; JJD: I think this is estimating init_abundance as deviations from an exponential decline from Rave
-                   init_abund(p,j,r,a)=abund_devs(p,a)*frac_natal(p,j,r);
+                   init_abund(p,j,r,a)=init_abund_age(p,a)*frac_natal(p,j,r);
                    }
-                   if(ph_abund_devs<0){
+                   if(ph_init_abund<0) //FIX at TRUE Value
+                   {
                     init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
                     }
-                   }
-                   
-               if(init_abund_switch==1){
-                   if(ph_abund_devs<0){
+                  }
+
+               if(init_abund_switch==1) //assume an exponential decay from R_ave for init abundance
+                  {
+                   if(ph_init_abund<0)
+                   {
                      //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
-                     //init_abund(p,j,r,a)=init_abund_TRUE(p,j,r,a);
-                   }}
+                   }
+                  }
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
@@ -2086,11 +2480,11 @@ FUNCTION get_abundance
                  {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regions within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
                      SR(j,y-1)=R_ave(j);
                      total_recruits(j,y-1)=R_ave(j)*rec_devs(j,y-1);
-                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2102,11 +2496,11 @@ FUNCTION get_abundance
 
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regions within a population
+                   if(apportionment_type!=0)  //use prespecified Rec_Prop to apportion recruitment among regions within a population
                     {
                     SR(j,y-1)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)));
                     total_recruits(j,y-1)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y-1);
-                    recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                    recruits_BM(j,r,y)=((SSB_population_overlap(p,j,y-1))/(alpha(j)+beta(j)*SSB_population_overlap(p,j,y-1)))*rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regions within a population
                     {
@@ -2118,11 +2512,11 @@ FUNCTION get_abundance
                   
                 if(Rec_type==3) //environmental recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      SR(j,y-1)=env_rec(y);
                      total_recruits(j,y-1)=env_rec(y)*rec_devs(j,y-1);
-                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=env_rec(y)*rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regions within a population
                     {
@@ -2138,11 +2532,11 @@ FUNCTION get_abundance
               {
                 if(Rec_type==1) //average recruitment
                   {
-                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                     SR(j,y-1)=R_ave(j);
                     total_recruits(j,y-1)=R_ave(j)*rec_devs(j,y-1);
-                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                    recruits_BM(j,r,y)=R_ave(j)*rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                     if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2153,11 +2547,11 @@ FUNCTION get_abundance
                   }
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0)  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      SR(j,y-1)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)));
                      total_recruits(j,y-1)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y-1);
-                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=((SSB_population(j,y-1))/(alpha(j)+beta(j)*SSB_population(j,y-1)))*rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2169,11 +2563,11 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //average recruitment
                   {
-                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
                      SR(j,y-1)=env_rec(y);
                      total_recruits(j,y-1)=env_rec(y)* rec_devs(j,y-1);
-                     recruits_BM(j,r,y)=env_rec(y)* rec_devs(j,y-1)*Rec_Prop(j,r,y);
+                     recruits_BM(j,r,y)=env_rec(y)* rec_devs(j,y-1)*Rec_Prop(j,r,y-1);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                    {
@@ -2257,9 +2651,9 @@ FUNCTION get_abundance
                  {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2269,9 +2663,9 @@ FUNCTION get_abundance
 
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0)  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=((SSB_population_overlap(p,k,y-1))/(alpha(k)+beta(k)*SSB_population_overlap(p,k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2281,9 +2675,9 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(p,n,y,a,j,r);
+                      abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(p,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2297,9 +2691,9 @@ FUNCTION get_abundance
               {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_overlap_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2308,9 +2702,9 @@ FUNCTION get_abundance
                     }
                  if(Rec_type==2) //BH recruitment
                   {
-                 if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                 if(apportionment_type!=0)  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_overlap_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2320,9 +2714,9 @@ FUNCTION get_abundance
 
                 if(Rec_type==3) //environmental recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_overlap_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2365,9 +2759,9 @@ FUNCTION get_abundance
               {
                  if(Rec_type==1) //average recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=R_ave(k)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                      }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2376,9 +2770,9 @@ FUNCTION get_abundance
                   }
                  if(Rec_type==2) //BH recruitment
                   {
-                   if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1))  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                   if(apportionment_type!=0)  //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                    abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                    abundance_move_temp(k,n)=((SSB_population(k,y-1))/(alpha(k)+beta(k)*SSB_population(k,y-1)))*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0) //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -2387,9 +2781,9 @@ FUNCTION get_abundance
                   }
                 if(Rec_type==3) //env recruitment
                   {
-                  if(apportionment_type==1 || apportionment_type==2 ||apportionment_type==3||apportionment_type==4||apportionment_type==(-1)) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
+                  if(apportionment_type!=0) //use prespecified Rec_Prop to apportion recruitment among regionp within a population
                     {
-                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y)*T(k,n,y,a,j,r);
+                     abundance_move_temp(k,n)=env_rec(y)*rec_devs(k,y-1)*Rec_Prop(k,n,y-1)*T(k,n,y,a,j,r);
                     }
                    if(apportionment_type==0)  //use relative SSB to apportion recruitment among regionp within a population
                     {
@@ -3470,10 +3864,16 @@ FUNCTION get_tag_recaptures
             {
              for (int r=1;r<=nregions(j);r++)
              {
+             tag_age_sel=age_full_selection(j,r,xx);
               if(y==1) //year of release for a cohort
                {              
                  tags_avail(i,n,x,a,y,j,r)=ntags(i,n,x,a)*T(i,n,xx,a,j,r); 
-                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,a)*(1.-mfexp(-(F(j,r,xx,a)+M(j,r,xx,a))))/(F(j,r,xx,a)+(M(j,r,xx,a)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                                
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,a)*(1.-mfexp(-(F(j,r,xx,a)+M(j,r,xx,a))))/(F(j,r,xx,a)+(M(j,r,xx,a)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+               if(fit_tag_age_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                {
+                 tags_avail(i,n,x,a,y,j,r)=ntags(i,n,x,a)*T(i,n,xx,tag_age_sel,j,r); 
+                 recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,tag_age_sel)*(1.-mfexp(-(F(j,r,xx,tag_age_sel)+M(j,r,xx,tag_age_sel))))/(F(j,r,xx,tag_age_sel)+(M(j,r,xx,tag_age_sel)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                                
+                }
                }
               if(y>1) // must account for the maximum age so use min function to ensure that not exceeding the max age
               {
@@ -3482,9 +3882,14 @@ FUNCTION get_tag_recaptures
                {
                 for (int s=1;s<=nregions(p);s++)
                 {
+                tag_age_sel=age_full_selection(p,s,xx);
                  if(natal_homing_switch==0) //if no natal homing
                  {
                   tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                   if(fit_tag_age_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }                        
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
@@ -3492,14 +3897,21 @@ FUNCTION get_tag_recaptures
                 //########################################################################################################              
                  if(natal_homing_switch==1) //if natal homing 
                  {
-                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)             
+                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                   if(fit_tag_age_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }               
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
                  //recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-2),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))))))/(F(j,r,(xx+y-2),min((a+y),nages))+(M(j,r,(xx+y-2),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
                   recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
-              
+                   if(fit_tag_age_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),tag_age_sel)*(1.-mfexp(-(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)))))/(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                    }              
               }
              }
             }
@@ -3562,16 +3974,10 @@ FUNCTION get_tag_recaptures
              } 
             }
            }
-          }
+          }         
          }
         }
        }
-
- //in order to use the multinomial RNG, need to have a vector of probabilities
- //this essentially requires stacking the tag_prop array into vectors for each release cohort covering all recap states (recap year, population, region)
- //need to extract each recap prob vector and store, then combine into array where can extract the last index (essentially the columns of the array)
- //can then use the fill.multinomial with that vector of probabilities
-
 
  for (int i=1;i<=npops;i++)
   {
@@ -3632,73 +4038,152 @@ FUNCTION get_tag_recaptures
           }
          }
         }
- }
+
+
+ if(fit_tag_age_switch==1) //only fit cohorts by region not age
+ {
+ for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+      xx=yrs_releases(x);
+      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+        {
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+             {
+               tag_recap_no_age_temp(i,n,x,y,j,r,a)=recaps(i,n,x,a,y,j,r);
+               total_rec_no_age(i,n,x)=sum(total_rec(i,n,x));
+               not_rec_no_age(i,n,x)=sum(not_rec(i,n,x));
+             }
+            }
+           }
+          }
+        ntags_no_age(i,n,x)=sum(ntags(i,n,x));
+       }
+      }
+     }
+ for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+      xx=yrs_releases(x);
+      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
+        {
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+             {
+              if(ntags_no_age(i,n,x)>0)
+               {
+                tag_prop_no_age(i,n,x,y,j,r)=sum(tag_recap_no_age_temp(i,n,x,y,j,r))/ntags_no_age(i,n,x);
+                tag_prop_not_rec_no_age(i,n,x)=not_rec_no_age(i,n,x)/ntags_no_age(i,n,x);
+               }
+              if(ntags_no_age(i,n,x)==0)
+               {                   
+                tag_prop_no_age(i,n,x,y,j,r)=0;
+                tag_prop_not_rec_no_age(i,n,x)=0;
+               }
+             } 
+            }
+           }
+          }
+         }
+        }
+       }
+
+ for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+      xx=yrs_releases(x);
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+             {
+              tag_prop_temp(j,y,r)=0; //for whatever reason ADMB won't let a 3darray=double...this is workaround for total_recap_temp=0;, ie setting temp 3darray to 0 after loops through all years 
+             }
+            }
+           }
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++) //recap region
+              {
+               tag_prop_temp(j,y,r)=tag_prop_no_age(i,n,x,y,j,r); //fill temp array with a single release cohort's recapture probabilities (excluding not recaptured)
+              }
+            }
+           }
+         //tag_prop_temp2=0;
+         for(int y=1;y<=min(max_life_tags,nyrs-xx+1);y++)  //recap year
+          {
+           for(int j=1;j<=npops;j++) //recap stock
+            {
+             for (int r=1;r<=nregions(j);r++)
+              {
+               tag_prop_temp2_no_age(i,n,x,((y-1)*sum(nregions)+nreg_temp(j)+r))=tag_prop_temp(j,y,r); //stack array into single vector by year, population, region
+              }
+             }
+            }
+             for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
+              {
+              if(s<(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1))
+              {
+               tag_prop_final_no_age(i,n,x,s)=tag_prop_temp2_no_age(i,n,x,s);
+              }
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags<=(nyrs-xx+1)) //add not recap probability to final entry of temp array
+              {
+               tag_prop_final_no_age(i,n,x,s)=tag_prop_not_rec_no_age(i,n,x);  //for estimation model will use this version of tag_prop in likelihood
+              }
+              if(s==(min(max_life_tags,nyrs-xx+1)*sum(nregions)+1) && max_life_tags>(nyrs-xx+1)) //add not recap probability to final entry of temp array with adjustment for release events where model ends before max_life_tags (so NR remains in last state)
+              {
+               tag_prop_final_no_age(i,n,x,(max_life_tags*sum(nregions)+1))=tag_prop_not_rec_no_age(i,n,x);  //for estimation model will use this version of tag_prop in likelihood
+              }
+            }
+           }
+          }
+         }
+        } //end tag_age_switch_loop
+        
+    } //end do_tag loop
+
 FUNCTION evaluate_the_objective_function
    //f=dummy; //in case all the estimated parameters are turned off
 
    f=0.0;
 
-
+  Bpen_like.initialize();
   Tpen_like.initialize();
- if(move_pen_switch==1)
- {
- if(active(ln_T_YR))
-  {
-  for (int y=1;y<=nyrs;y++) //need to alter to fit number of years of catch data
-   {
-     for (int j=1;j<=npops;j++)
-      {
-      for (int i=1;i<=npops-1;i++) 
-       {
-          if(ln_T_YR(j+sum(nregions)*(y-1),i)<Tpen)
-           {
-           Tpen_like+=(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i));
-          }
-          if(ln_T_YR(j+sum(nregions)*(y-1),i)>Tpen2)
-           {
-           Tpen_like+=(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i));
-          }
-         }
-        }
-       }
-      }
-
- if(active(ln_T_CNST))
-  {
-     for (int j=1;j<=sum(nregions);j++)
-      {
-      for (int i=1;i<=sum(nregions)-1;i++) 
-       {
-          if(ln_T_CNST(j,i)<Tpen)
-           {
-           Tpen_like+=10*(Tpen-ln_T_CNST(j,i))*(Tpen-ln_T_CNST(j,i));
-          }
-          if(ln_T_CNST(j,i)>Tpen2)
-           {
-           Tpen_like+=(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
-          }
-         }
-        }
-      
-     // EOUT(Tpen_like);
-     // EOUT(ln_T_CNST);
-     }
-   f+=Tpen_like*wt_T_pen;   
- }
-
-
-
- catch_like.initialize();
- fish_age_like.initialize();
- survey_age_like.initialize();
- survey_like.initialize();
- tag_like.initialize();
- tag_like_temp.initialize();
- rec_like.initialize();
+  F_pen_like.initialize();
+  M_pen_like.initialize();
+  catch_like.initialize();
+  fish_age_like.initialize();
+  survey_age_like.initialize();
+  survey_like.initialize();
+  tag_like.initialize();
+  tag_like_temp.initialize();
+  rec_like.initialize();
+  init_abund_pen.initialize();
 
 
  // Calculate multinomial likelihoods for compositions (Fournier style)
- // and survey biomass lognormal likelihood
+//  2nd term (-obs*log(obs) lets the multinomial likelihood equal zero when the observed and
+//     predicted are equal as in Fournier (1990) "robustifies"
+ //  survey biomass lognormal likelihood
       for (int j=1;j<=npops;j++)
      {
        for (int r=1;r<=nregions(j);r++)
@@ -3707,21 +4192,21 @@ FUNCTION evaluate_the_objective_function
            {
              for (int z=1;z<=nfleets_survey(j);z++)
               {
-              if(diagnostics_switch==1){
-              survey_like +=   wt_srv*square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001)))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
-              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001)));
+              if(diagnostics_switch==1) //use true observations, no measurement error
+              {
+               survey_like +=   square((log(survey_fleet_bio_TRUE(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001)))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
+               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((survey_fleet_prop_TRUE(j,r,y,z)+0.001)*log(survey_fleet_prop_TRUE(j,r,y,z)+0.001)));
                }
                
-              if(diagnostics_switch==0){
-              survey_like +=   wt_srv*square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) ))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
-              survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_survey_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001)));
+              if(diagnostics_switch==0) //use observed values with measurement error
+              {
+               survey_like +=  square((log(OBS_survey_fleet_bio(j,r,y,z)+0.0001)-log(survey_fleet_bio(j,r,y,z)+0.0001) ))/ (2.*square(OBS_survey_fleet_bio_se(j,r,y,z))); //OBS_survey_fleet_bio(j,r,y,z))));
+               survey_age_like -= OBS_survey_prop_N(j,r,y,z) * (((OBS_survey_prop(j,r,y,z)+0.001)*log(survey_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_survey_prop(j,r,y,z)+0.001)*log(OBS_survey_prop(j,r,y,z)+0.001)));
               }
              }
             }
            }
           }
-        
-           //survey_age_like -=offset(1);
            
      // catch likelihood and multinomial fishery ages
    for (int j=1;j<=npops;j++)
@@ -3733,55 +4218,110 @@ FUNCTION evaluate_the_objective_function
              for (int z=1;z<=nfleets(j);z++)
               {
 
-              if(diagnostics_switch==1){
+              if(diagnostics_switch==1) //use true observations, no measurement error
+              {
                catch_like+= square((log(yield_fleet_TRUE(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001)) )/ (2.*square(OBS_yield_fleet_se(j,r,y,z))); //OBS_yield_fleet(j,r,y,z))));
                fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*(((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001))-((catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop_TRUE(j,r,y,z)+0.001)));
-                }
-              if(diagnostics_switch==0){
-              catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) ))/ (2.*square(OBS_yield_fleet_se(j,r,y,z))); //OBS_yield_fleet(j,r,y,z))));
-              fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*(((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)));
+              }
+              if(diagnostics_switch==0) //use observed values with measurement error
+              {
+               catch_like+= square((log(OBS_yield_fleet(j,r,y,z)+0.0001)-log(yield_fleet(j,r,y,z)+0.0001) ))/ (2.*square(OBS_yield_fleet_se(j,r,y,z))); //OBS_yield_fleet(j,r,y,z))));
+               fish_age_like -= OBS_catch_at_age_fleet_prop_N(j,r,y,z)*(((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(catch_at_age_fleet_prop(j,r,y,z)+0.001))-((OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)*log(OBS_catch_at_age_fleet_prop(j,r,y,z)+0.001)));
               }
              }
             }
            }
           }
 
-  abund_dev_pen.initialize();
-
-     //  fish_age_like -=offset(2);
-  //      for(int j=1;j<=npops;j++)
-  //  {
- if(active(ln_rec_devs_RN))
-          for(int j=1;j<=npops;j++) {
-     rec_like+=dnorm(ln_rec_devs_RN(j),0,sigma_recruit(j));
+ 
+ if(do_tag_mult==1)
+  {
+  if(fit_tag_age_switch==0) //fit cohorts by age and region
+   {
+  for (int i=1;i<=npops;i++)
+  {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+           xx=yrs_releases(x); //actual release years
+      for (int a=1;a<=nages;a++) //release age
+        {
+        if(ntags(i,n,x,a)==0)
+         {
+          OBS_tag_prop_N(i,n,x,a)==0; //make tag likelihood==0 if there are no releases in a given cohort (i.e., mainly if no releases at young ages due to selectivity==0)
+         }
+         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) 
+           {
+           if(diagnostics_switch==1) //use true values for diagnostic runs
+           {
+            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
+            }
+            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts so don't need to adjust to avoid recap entries with no possible recaptures
+             {
+              tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a)+0.001)*log(tag_prop_final(i,n,x,a)+0.001)-(OBS_tag_prop_final(i,n,x,a)+0.001)*log(OBS_tag_prop_final(i,n,x,a)+0.001)); //doing row multiplication because dropping final 's' subscript
+             }
+           if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+             {
+              if(s<((nyrs-xx+1)*sum(nregions)+1)) //years with recaps get added to likelihood, index<first yr where yr_release+age_tag>nyrs
+                {
+                tag_like_temp +=(OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001)-(OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(OBS_tag_prop_final(i,n,x,a,s)+0.001);
+               }
+              if(s==((nyrs-xx+1)*sum(nregions)+1)) //skip to not recaptured state once you get to first year where age_tag+yr_release>nyrs (i.e. skip years where no possible recaps), 
+               {
+                 tag_like_temp += (OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)-(OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001);
+                }
+               tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp; //only multiply eff_N by total likelihood for a cohort to avoid over emphasizing data
+             }
+            }
+           }
+          }
+         }
+        }
       }
 
+  if(fit_tag_age_switch==1) //only fit cohorts by region not age
+   {
+   for (int i=1;i<=npops;i++)
+    {
+   for (int n=1;n<=nregions(i);n++)
+    {
+    for(int x=1; x<=nyrs_release; x++)
+     {
+           xx=yrs_releases(x); //actual release years
+           if(ntags_no_age(i,n,x)==0)
+            {
+             OBS_tag_prop_N(i,n,x,1)==0; //make tag likelihood==0 if there are no releases in a given cohort (i.e., mainly if no releases at young ages due to selectivity==0)
+            }
+         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) 
+           {
+           if(diagnostics_switch==1) //use true values for diagnostic runs
+           {
+            OBS_tag_prop_final_no_age(i,n,x,s)=tag_prop_final_TRUE_no_age(i,n,x,s);
+            }
+            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts so don't need to adjust to avoid recap entries with no possible recaptures
+             {
+              tag_like -= OBS_tag_prop_N(i,n,x,1) * ((OBS_tag_prop_final_no_age(i,n,x)+0.001)*log(tag_prop_final_no_age(i,n,x)+0.001)-(OBS_tag_prop_final_no_age(i,n,x)+0.001)*log(OBS_tag_prop_final_no_age(i,n,x)+0.001)); //doing row multiplication because dropping final 's' subscript
+             }
+           if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+             {
+              if(s<((nyrs-xx+1)*sum(nregions)+1)) //years with recaps get added to likelihood, index<first yr where yr_release+age_tag>nyrs
+                {
+                tag_like_temp +=(OBS_tag_prop_final_no_age(i,n,x,s)+0.001)*log(tag_prop_final_no_age(i,n,x,s)+0.001)-(OBS_tag_prop_final_no_age(i,n,x,s)+0.001)*log(OBS_tag_prop_final_no_age(i,n,x,s)+0.001);
+               }
+              if(s==((nyrs-xx+1)*sum(nregions)+1)) //skip to not recaptured state once you get to first year where age_tag+yr_release>nyrs (i.e. skip years where no possible recaps), 
+               {
+                 tag_like_temp += (OBS_tag_prop_final_no_age(i,n,x,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final_no_age(i,n,x,(max_life_tags*sum(nregions)+1))+0.001)-(OBS_tag_prop_final_no_age(i,n,x,(max_life_tags*sum(nregions)+1))+0.001)*log(OBS_tag_prop_final_no_age(i,n,x,(max_life_tags*sum(nregions)+1))+0.001);
+                }
+               tag_like -= OBS_tag_prop_N(i,n,x,1)*tag_like_temp; //only multiply eff_N by total likelihood for a cohort to avoid over emphasizing data
+             }
+            }
+           }
+          }
+         }
+        }
 
- //may be better way to penalize....
-
-  //  }
-  
- if(abund_pen_switch==1)
- {
-  if (active(ln_abund_devs))
-  {
- //f+=100* norm2(ln_abund_devs);
- if(active(ln_rec_devs_RN))
-          for(int j=1;j<=npops;j++) {
- abund_dev_pen+=wt_abund_pen* norm2(ln_abund_devs(j));
- } 
-    }}
-
-       if(active(ln_F))
-  {
- if (current_phase()<3) f+= wt_F_pen*(norm2(mfexp(ln_F)));
- }
-
- //if(active(ln_rec_devs_RN))
-// {
-// for(int j=1;j<=npops;j++) {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
-// rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
-// }}
+       } //end do_tag_mult loop
 
 // if(do_tag_mult==0)
 //  {
@@ -3806,53 +4346,136 @@ FUNCTION evaluate_the_objective_function
   // I have done Poisson and negative-binomial, if you want multinomial than that's up to you
   // Right now this has a 7d array for recaps and a 6d for OBS
  // }
-  
- if(do_tag_mult==1)
-  {  
-   for (int i=1;i<=npops;i++)
+
+
+
+
+
+//VARIOUS PENALTY FUNCTIONS
+  //
+
+//need to expand for age based and time/age based movement
+ if(move_pen_switch==1) //penalizes large and small values of estimated T parameter, because can get lost in log space esp at very large or small values of true T
+ {
+ if(active(ln_T_YR))
   {
-   for (int n=1;n<=nregions(i);n++)
-    {
-    for(int x=1; x<=nyrs_release; x++)
-     {
-           xx=yrs_releases(x);
-      for (int a=1;a<=nages;a++) //release age //because accounting for release age, don't need to account for recap age, just adjust mortality and T, to use plus group value if recapture age exceeds max age
-        {
-        if(ntags(i,n,x,a)==0)
-         {
-          OBS_tag_prop_N(i,n,x,a)==0; //make tag likelihood==0 if there are no releases in a given cohort (i.e., mainly if no releases at young ages due to selectivity==0)
-         }
-         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) //create temp array that has columns of recap prob for each release cohort and add not recap probability to final entry of temp array
+  for (int y=1;y<=nyrs;y++) 
+   {
+     for (int j=1;j<=npops;j++)
+      {
+      for (int i=1;i<=npops-1;i++) 
+       {
+          if(ln_T_YR(j+sum(nregions)*(y-1),i)<Tpen)
            {
-           if(diagnostics_switch==1){
-            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
-            }
-            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts
-             {
-              tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
-             }
-           // if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
-           //  {
-           //    if(s<((nyrs-xx+1)*sum(nregions)+1))
-           //     {
-           //      tag_like_temp +=((OBS_tag_prop_final(i,n,x,a,s)+0.001)*log(tag_prop_final(i,n,x,a,s)+0.001));
-           //     }
-           //    if(s==((nyrs-xx+1)*sum(nregions)+1))
-           //     {
-           //      tag_like_temp += ((OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
-           //     }
-           //    tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp;
-             }
+           Tpen_like+=(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i));
+          }
+          if(ln_T_YR(j+sum(nregions)*(y-1),i)>Tpen2)
+           {
+           Tpen_like+=(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i));
+          }
+         }
+        }
+       }
+      }
 
 
-            }}}}}
+ if(active(ln_T_CNST))
+  {
+     for (int j=1;j<=sum(nregions);j++)
+      {
+      for (int i=1;i<=sum(nregions)-1;i++) 
+       {
+          if(ln_T_CNST(j,i)<Tpen)
+           {
+           Tpen_like+=(Tpen-ln_T_CNST(j,i))*(Tpen-ln_T_CNST(j,i));
+          }
+          if(ln_T_CNST(j,i)>Tpen2)
+           {
+           Tpen_like+=(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
+          }
+         }
+        }
 
+     }
+ }
+
+ if(active(ln_rec_devs))
+   {
+     for(int j=1;j<=npops;j++)
+      {
+       rec_like+=dnorm(ln_rec_devs(j),0,sigma_recruit(j));
+      }
+    }
+ //if(active(ln_rec_devs_RN))
+// {
+// for(int j=1;j<=npops;j++) {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
+// rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
+// }}
 
   
-  // tag_like=dmultinom(OBS_tag_prop_N,OBS_tag_prop_final,tag_prop_final);
+ if(abund_pen_switch==1)
+ {
+  if (active(ln_init_abund))
+  {
+      init_abund_pen+= norm2(ln_init_abund);
+    } 
+   }
+  
 
-  /// Early penalty to keep F under wraps
+ if(active(ln_F))   /// Early penalty to keep F under wraps
+  {
+    if (current_phase()<last_phase())
+    {
+     F_pen_like+= (norm2(mfexp(ln_F)));
+    }
+  }
+  
+ if(active(ln_M_CNST))   /// Early penalty to keep M under wraps
+  {
+    if (current_phase()<last_phase())
+    {
+     M_pen_like+= (square(mfexp(ln_M_CNST)));
+    }
+  }
+ if(active(ln_M_pop_CNST))   /// Early penalty to keep M under wraps
+  {
+    if (current_phase()<last_phase())
+    {
+     M_pen_like+= (norm2(mfexp(ln_M_pop_CNST)));
+    }
+  }
 
+ if(active(ln_M_age_CNST))   /// Early penalty to keep M under wraps
+  {
+    if (current_phase()<last_phase())
+    {
+     M_pen_like+= (norm2(mfexp(ln_M_age_CNST)));
+    }
+  }
+
+ if(active(ln_M_pop_age))   /// Early penalty to keep M under wraps
+  {
+    if (current_phase()<last_phase())
+    {
+     M_pen_like+= (norm2(mfexp(ln_M_pop_age)));
+    }
+  }
+
+
+    if(active(ln_rep_rate_YR) || active(ln_rep_rate_CNST))
+     {
+     for (int j=1;j<=npops;j++)
+      {
+       for (int r=1;r<=nregions(j);r++)
+        {
+         for(int y=1; y<=nyrs_release; y++)
+          {
+            Bpen_like+=log(square(report_rate_sigma))+(square(report_rate(j,y,r)-report_rate_ave)/(2*square(report_rate_sigma)));
+          }
+        }
+      }
+     }
+     
 // Sum objective function
    f           += survey_like*wt_srv;
    f           += catch_like*wt_catch;
@@ -3860,7 +4483,11 @@ FUNCTION evaluate_the_objective_function
    f           += survey_age_like*wt_srv_age;
    f           += rec_like*wt_rec;
    f           += tag_like*wt_tag;
-   f           += abund_dev_pen;
+   f           += init_abund_pen*wt_abund_pen;
+   f           += Tpen_like*wt_T_pen;   
+   f           += F_pen_like*wt_F_pen;
+   f           += M_pen_like*wt_M_pen;
+   f           += Bpen_like*wt_B_pen;
 
 REPORT_SECTION
     //likelihoods
@@ -3881,10 +4508,29 @@ REPORT_SECTION
   report<<rec_like<<endl;
   report<<"$Tpen_like"<<endl;
   report<<Tpen_like<<endl;
+  report<<"$F_pen_like"<<endl;
+  report<<F_pen_like<<endl;
+  report<<"$M_pen_like"<<endl;
+  report<<M_pen_like<<endl;
+  report<<"$Bpen_like"<<endl;
+  report<<Bpen_like<<endl;
   report<<"$abund_dev_pen"<<endl;
-  report<<abund_dev_pen<<endl;
+  report<<init_abund_pen<<endl;
 
-
+//use these to determine which movement graphs to use in sim wrappers
+  report<<"$ph_T_YR"<<endl;
+  report<<phase_T_YR<<endl;
+  report<<"$ph_T_CNST"<<endl;
+  report<<phase_T_CNST<<endl;
+  report<<"$ph_T_CNST_AGE"<<endl;
+  report<<phase_T_CNST_AGE<<endl;
+  report<<"$ph_T_YR_AGE"<<endl;
+  report<<phase_T_YR_AGE<<endl;
+  report<<"$move_switch_OM"<<endl;
+  report<<move_switch_OM<<endl;
+  report<<"$DD_move_age_switch_OM"<<endl;
+  report<<DD_move_age_switch_OM<<endl;
+  
 //EM structure
   report<<"$nages"<<endl;
   report<<nages<<endl;
@@ -3914,7 +4560,8 @@ REPORT_SECTION
 
   report<<"$M"<<endl;
   report<<M<<endl;
-
+  report<<"$M_TRUE"<<endl;
+  report<<input_M_TRUE<<endl;
  //EST values
   //report<<"$T_terminal"<<endl; ///need to fix this for reporting out the 6D array
   //report<<T_terminal<<endl;
@@ -3957,6 +4604,11 @@ REPORT_SECTION
   report<<Rec_Prop<<endl;
   report<<"$recruits_BM"<<endl;
   report<<recruits_BM<<endl;
+  report<<"$F"<<endl;
+  report<<F<<endl;
+  report<<"$F_year"<<endl;
+  report<<F_year<<endl;
+  
   report<<"$biomass_AM"<<endl;
   report<<biomass_AM<<endl;
   report<<"$biomass_population"<<endl;
@@ -3974,22 +4626,6 @@ REPORT_SECTION
   report<<"$yield_fleet"<<endl;
   report<<yield_fleet<<endl;
 
-
- //if(fleets_as_areas_switch==0)
-   //{
-    //report<<"$F"<<endl;
-    //report<<F_fleet<<endl;
-    // }
-
- //if(fleets_as_areas_switch==1)
-  // {
-    report<<"$F"<<endl;
-    report<<F_fleet<<endl;
-    // }
-     
-  report<<"$F_year"<<endl;
-  report<<F_year<<endl;
-  
   report<<"$total_recruit"<<endl;
   report<<total_recruits<<endl;
   report<<"$SR"<<endl;
@@ -4001,6 +4637,8 @@ REPORT_SECTION
  /// TRUE VALUES
   report<<"$input_T"<<endl;
   report<<input_T<<endl;
+  report<<"$report_rate_TRUE"<<endl;
+  report<<report_rate_TRUE<<endl;
   report<<"$T_year_TRUE"<<endl;
   report<<T_year_TRUE<<endl;
   report<<"$q_survey_TRUE"<<endl;
@@ -4040,7 +4678,7 @@ REPORT_SECTION
   report<<"$Init_Abund_TRUE"<<endl;
   report<<init_abund_TRUE<<endl;
   report<<"$Init_Abund_Devs"<<endl;
-  report<<abund_devs<<endl;
+  report<<init_abund_age<<endl;
   report<<"$biomass_AM_TRUE"<<endl;
   report<<biomass_AM_TRUE<<endl;
   report<<"$biomass_population_TRUE"<<endl;
@@ -4094,17 +4732,26 @@ REPORT_SECTION
   report<<"$survey_selectivity_age_TRUE"<<endl;
   report<<survey_selectivity_age_TRUE<<endl;
 
-
-
-
-
-
 ////////////////////////////////////////////////////////////////////
 //reporting hi dimensional arrays
  if(npops==1)// for panmictic and metamictic population outputs
-     {
+  {
         report<<"$T_year"<<endl;
         report<<T_year<<endl;
+        report<<"$T_est"<<endl;
+        report<<T<<endl;
+        
+        if(npops_OM<=npops){
+        report<<"$T_true"<<endl;
+        report<<T_TRUE<<endl;
+        }
+        
+        if(npops_OM>npops){
+          for (int p=1;p<=npops_OM;p++)
+           {
+        report<<"$T_true"<<p<<endl;
+        report<<T_TRUE[p]<<endl;}}
+        
         report<<"$EST_survey_prop"<<endl;
         report<<survey_at_age_fleet_prop<<endl;
         report<<"$EST_catch_age_fleet_prop"<<endl;
@@ -4130,6 +4777,7 @@ REPORT_SECTION
       report<<OBS_tag_prop_final<<endl;
       }
      }
+    
 
 
  ////////////////////////////////////////////////////////////
@@ -4137,13 +4785,24 @@ REPORT_SECTION
 
  if(npops>1) //more than one population or if one population, more than 1 region within that population
   {
-  region_counter=1;
+    if(npops_OM<npops){
+        report<<"$T_true"<<endl;
+        report<<T_TRUE<<endl;
+        }
+        
     for (int p=1;p<=npops;p++)
      {
       // 5D arrays by population go here
 
         report<<"$alt_T_year"<<p<<endl;
         report<<T_year[p]<<endl;
+        report<<"$T_est"<<p<<endl;
+        report<<T[p]<<endl;
+        
+      if(npops_OM==npops){
+        report<<"$T_true"<<p<<endl;
+        report<<T_TRUE[p]<<endl;
+        }
         report<<"$EST_survey_age_prop"<<p<<endl;
         report<<survey_at_age_fleet_prop[p]<<endl;
         report<<"$EST_catch_age_fleet_prop"<<p<<endl;
@@ -4185,6 +4844,7 @@ REPORT_SECTION
   report<<abundance_at_age_BM<<endl;
   report<<"$abund_at_age_AM"<<endl;
   report<<abundance_at_age_AM<<endl;
+
 
   report<<"$dummy_run"<<endl;
   report<<ph_dummy<<endl;
