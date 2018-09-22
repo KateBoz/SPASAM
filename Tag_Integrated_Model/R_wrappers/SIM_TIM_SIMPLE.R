@@ -75,7 +75,7 @@ resid.switch=2
 
 
 #2) Set number of simulations to perform
-nsim <-8
+nsim <-1
 
 
 #########################################
@@ -89,7 +89,7 @@ nsim <-8
 
 #3) set master file with holding the runs 
 
-direct_master<-"E:\\SIMS_EDIT\\SIMS_TEST\\1.2_MulitArea_Matching"
+direct_master<-"E:\\SIMS_EDIT\\SIMS_TEST\\"
 setwd(direct_master)
 
 #list files in the directory
@@ -98,7 +98,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=1
+folder.num=2
 
 i=folder.num
 
@@ -111,16 +111,16 @@ i=folder.num
 
 ##############################################################
 #OM Location
-OM_direct<-paste0(direct_master,"\\Operating_Model",sep="")
+OM_direct<-paste0(direct_master,files[i],"\\Operating_Model",sep="")
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
-EM_direct<-paste0(direct_master,"\\Estimation_Model",sep="") #location of run(s)
+EM_direct<-paste0(direct_master,files[i],"\\Estimation_Model",sep="") #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 
 #Build diagnostics/results folder
-dir.create(paste0(direct_master,"\\Diagnostics",sep=""))
-diag_direct<-paste0(direct_master,"\\Diagnostics",sep="")
+dir.create(paste0(direct_master,files[i],"\\Diagnostics",sep=""))
+diag_direct<-paste0(direct_master,files[i],"\\Diagnostics",sep="")
 
 
 #Build directories and folders to keep results from run
