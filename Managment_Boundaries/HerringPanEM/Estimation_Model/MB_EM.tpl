@@ -223,11 +223,11 @@ DATA_SECTION
 //#########################################################################################################################################
   ////////////////BIOLOGICAL PARAMETERS////////////////
   /////////////////////////////////////////////////////
-  init_3darray input_weight(1,np,1,nreg,1,na)  
-  init_3darray input_catch_weight(1,np,1,nreg,1,na)
-  init_3darray fecundity(1,np,1,nreg,1,na)
-  init_3darray maturity(1,np,1,nreg,1,na)
-  init_matrix prop_fem(1,np,1,nreg) //proportion of population assumed to be female for SSB calcs (typically use 0.5)
+  init_4darray input_weight(1,np,1,ny,1,nreg,1,na)  //JJD
+  init_4darray input_catch_weight(1,np,1,ny,1,nreg,1,na)  //JJD
+  init_4darray fecundity(1,np,1,ny,1,nreg,1,na) //JJD
+  init_4darray maturity(1,np,1,ny,1,nreg,1,na) //JJD
+  init_3darray prop_fem(1,np,1,ny,1,nreg) //proportion of population assumed to be female for SSB calcs (typically use 0.5)  JJD
   //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -622,8 +622,8 @@ PARAMETER_SECTION
  4darray weight_catch(1,nps,1,nr,1,nyr,1,nag)
  3darray wt_mat_mult(1,nps,1,nyr,1,nag)
  4darray wt_mat_mult_reg(1,nps,1,nr,1,nyr,1,nag)
- 3darray ave_mat_temp(1,nps,1,nag,1,nr) //to calc average maturity 
- matrix ave_mat(1,nps,1,nag) //to calc average maturity
+ 4darray ave_mat_temp(1,nps,1,nyr,1,nag,1,nr) //to calc average maturity 
+ 3darray ave_mat(1,nps,1,nyr,1,nag) //to calc average maturity
  matrix SPR_N(1,nps,1,nag) 
  matrix SPR_SSB(1,nps,1,nag) 
  vector SPR(1,nps) 
@@ -1252,32 +1252,32 @@ FUNCTION get_vitals
             for (int z=1;z<=nfleets(j);z++)
              {           
               M(j,r,y,a)=input_M(j,a);
-              weight_population(j,r,y,a)=input_weight(j,r,a);
-              weight_catch(j,r,y,a)=input_catch_weight(j,r,a);
+              weight_population(j,r,y,a)=input_weight(j,y,r,a); //JJD
+              weight_catch(j,r,y,a)=input_catch_weight(j,y,r,a); //JJD
 
               if(maturity_switch_equil==0) // for SPR calculations when maturity across areas is equal or if want a straight average of maturity across areas
                {
                 if(SSB_type==1) //fecundity based SSB
                  {
-                  ave_mat_temp(j,a,r)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a);//rearranging for summing
-                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
-                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                  ave_mat_temp(j,y,a,r)=prop_fem(j,y,r)*fecundity(j,y,r,a)*maturity(j,y,r,a);//rearranging for summing JJD
+                  ave_mat(j,y,a) = sum(ave_mat_temp(j,y,a))/nregions(j); //average maturity across regions JJD
+                  wt_mat_mult(j,y,a)=ave_mat(j,y,a);//for SPR calcs JJD
                  }
                if(SSB_type==2) //weight based SSB
                 {
-                  ave_mat_temp(j,a,r)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);//rearranging for summing
-                  ave_mat(j,a) = sum(ave_mat_temp(j,a))/nregions(j); //average maturity across regions
-                  wt_mat_mult(j,y,a)=ave_mat(j,a);//for SPR calcs
+                  ave_mat_temp(j,y,a,r)=prop_fem(j,y,r)*weight_population(j,r,y,a)*maturity(j,y,r,a);//rearranging for summing
+                  ave_mat(j,y,a) = sum(ave_mat_temp(j,y,a))/nregions(j); //average maturity across regions JJD
+                  wt_mat_mult(j,y,a)=ave_mat(j,y,a);//for SPR calcs
                 }
                }              
 
                if(SSB_type==1) //fecundity based SSB
                 {
-                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*fecundity(j,r,a)*maturity(j,r,a);// for yearly SSB calcs
+                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,y,r)*fecundity(j,y,r,a)*maturity(j,y,r,a);// for yearly SSB calcs
                 }
                if(SSB_type==2) //weight based SSB
                 {
-                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,r)*weight_population(j,r,y,a)*maturity(j,r,a);
+                 wt_mat_mult_reg(j,r,y,a)=prop_fem(j,y,r)*weight_population(j,r,y,a)*maturity(j,y,r,a);
                 }
                }   
              }
