@@ -456,10 +456,8 @@
 
 
 #_sigma_F
-0
-0
-#0.4
-#0.4
+0.4
+0.4
 
 ##########################################################################################################################################
 #########################################################################################################################################
@@ -569,8 +567,8 @@
 ###for management boundary work; proportion of data from a region that gets inappropriately added or left from a panmictic EM;  set up for a value for each region
 ###These values would apply to all data: catch, survey, age comps, etc.;  all 1's would be no misreporting or misallocation.
 ### init_matrix obs_misallocate(1,np,1,nreg)  //JJD
-0.2
-1
+0.99
+0.99
 
 ################################################################################################################
 ################################################################################################################
