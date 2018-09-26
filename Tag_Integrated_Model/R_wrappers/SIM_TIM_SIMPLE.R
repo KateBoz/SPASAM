@@ -89,7 +89,7 @@ nsim <-1
 
 #3) set master file with holding the runs 
 
-direct_master<-"E:\\SIMS_EDIT\\SIMS_TEST\\"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SIMS_TEST_2\\CAPAM_RUNS\\"
 setwd(direct_master)
 
 #list files in the directory
@@ -98,13 +98,13 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=2
+folder.num=10
 
 i=folder.num
 
-
+##run.sims<-function(folder.num=i){
 #run the whole code
-#{ 
+{ 
 
 #if running the several folders use the loop - This will come later
 #for(i in 1:3){
@@ -257,6 +257,9 @@ if(file.exists("TIM_EM.cor")==TRUE)
   #save dat
   file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".dat",sep=""),  
             to = paste0(results_good,"\\Run",j,".dat",sep=""))
+  #save gradient file
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\gradient.dat",sep=""),  
+            to = paste0(results_good,"\\gradient",j,".dat",sep=""))
   }
   
 # if not converged..save results to results_bad
@@ -280,6 +283,10 @@ if(file.exists("TIM_EM.cor")==FALSE)
   #save dat
   file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\",EM_name,".dat",sep=""),  
             to = paste0(results_bad,"\\Run",j,".dat",sep=""))
+  
+  #save gradient file
+  file.copy(from = paste0(runs_dir,"\\Run",j,"\\Estimation_Model\\gradient.dat",sep=""),  
+            to = paste0(results_good,"\\gradient",j,".dat",sep=""))
   }
   
   
@@ -314,7 +321,8 @@ Sim.Stats$Total_like=rowSums(Sim.Stats)
 write.csv(file="Sim_Stats.csv",Sim.Stats)
 
 
-}  # end of simulations and value save
+}  # end of simulations and summary save
 
+}
 
 

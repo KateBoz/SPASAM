@@ -3,11 +3,7 @@
 # Created by: Katelyn Bosley
 ####################################################
 
-# Manually make changes in the OM .dat and run both OM and EM together
-
-#remove junk from workspace
-rm(list=(ls()))
-
+#use this code when running simulations
 
 #load libraries
 load_libraries<-function() {
@@ -57,7 +53,7 @@ cor.level = 0.4# can change this in the make.plots function below
 ##############################################
 
 #set residual switch for different values plotted
-resid.switch=2
+#resid.switch=2
 # =1 straight residual (TRUE-ESTIMATED; not % of true)
 # =2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
 
@@ -67,41 +63,10 @@ resid.switch=2
 #################################################################################
   
 #name OPERATING MODEL of the .exe
-#OM_name<-OM_name #name of the OM you are wanting to run
-#OM_name<-"MB_OM" 
-OM_name<-"TIM_OM" 
+OM_name<-OM_name #name of the OM you are wanting to run
 
 #name ESTIMATION MODEL of the .exe
-#EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
-#EM_name<-"MB_EM" 
-EM_name<-"TIM_EM" 
-
-
-#set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
-
-# master file with holding the runs 
-direct_master<-"E:\\SIMS_EDIT\\DANS_TIM"
-
-
-
-#list files in the directory
-files<-list.files(direct_master)
-
-#select the file you want to run
-#if only running 1 folder set i to the number corresponding to the folder you want to run
-i=6
-  
-#if running the whole master folder
- #for(i in 1:length(files)){
-
-#OM Location
-  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-
-#EM Location
-  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
-
-###########################################################################
-  
+EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
 
 
 ############################################################################
@@ -203,6 +168,7 @@ ages<-seq(1:out$nages)
 #for running the meta pop example. Might need fixing if more complex
 if(npops_OM>1){
   nreg_OM=sum(nreg_OM)}
+
 if(npops>1){
   nreg=sum(nreg)}
    
@@ -729,8 +695,8 @@ if(npops>1 & npops_OM>1){
 }
 
 
-#mismatch metamictic to panmictic  
-if(nreg_OM>1 && out$nregions_OM==1&& npops==1){ 
+#mismatch metamictic/metapop to panmictic  
+if((out$npops_OM==1 && sum(out$nregions_OM)>1&& npops==1 && nreg==1)||(out$npops_OM>1 && sum(out$nregions_OM)>1 && npops==1 && nreg==1)){ 
   init.abund<-data.frame(Age=rep(ages,nreg), Reg=rep(c(1:nreg),each=na),In_ab_Est=out$Init_Abund,In_ab_True=colSums(out$Init_Abund_TRUE))
 }
 
@@ -1146,8 +1112,12 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
 
 #matching Panmictic and multi-area
 if((out$nregions_OM==out$nregions && npops==1&&npops_OM==1)){ 
-  T_est<-data.frame(out$T_est)
-  T_true<-data.frame(out$T_true)
+  pull<-out[grep("T_est", names(out), value = TRUE)]
+  pull.t<-out[grep("T_true", names(out), value = TRUE)]
+  
+  T_est<-data.frame(do.call("rbind",pull))
+  T_true<-data.frame(do.call("rbind",pull.t))
+  
   
 if(resid.switch==1){
   T_resid<-(T_true-T_est)}
@@ -1164,15 +1134,15 @@ for(i in 1:nreg){
 
 
 
-#other matching population types
+#other matching metapop
 if(npops==npops_OM && npops>1){
   
 #combine movements
 pull<-out[grep("T_est", names(out), value = TRUE)]
 pull.t<-out[grep("T_true", names(out), value = TRUE)]
 
-T_est<-data.frame(matrix(unlist(pull),nyrs*npops*na,npops,byrow=TRUE))
-T_true<-data.frame(matrix(unlist(pull.t),nyrs*npops*na,npops,byrow=TRUE))
+T_est<-data.frame(do.call("rbind",pull))
+T_true<-data.frame(do.call("rbind",pull.t))
 
 
 if(resid.switch==1){
@@ -1195,7 +1165,8 @@ names(T_resid)[i]<-paste0("Resid_",i)
 # for mismatch metamictic to panmictic
 if(nreg==1 && nreg_OM>1&&npops_OM==1){
   T_est<-data.frame(matrix(NA,nyrs*nreg_OM*na,nreg_OM))
-  T_true<-data.frame(out$T_true)
+  pull.t<-out[grep("T_true", names(out), value = TRUE)]
+  T_true<-data.frame(do.call("rbind",pull.t))
   
   if(resid.switch==1){
     T_resid<-(T_true-T_est)}
@@ -1215,9 +1186,10 @@ if(npops_OM==1 && npops>1){
   
   #combine movements
   pull<-out[grep("T_est", names(out), value = TRUE)]
+  T_est<-data.frame(matrix(unlist(pull),na*nyrs*npops,npops,byrow=T)) #just setting the
   
-  T_est<-data.frame(matrix(unlist(pull),nyrs*npops*na,npops,byrow=TRUE))
-  T_true<-data.frame(out$T_true) #just setting the estimated movement = 1
+  pull.t<-out[grep("T_true", names(out), value = TRUE)]
+  T_true<-data.frame(do.call("rbind",pull.t))
   
   if(resid.switch==1){
     T_resid<-(T_true-T_est)}
@@ -1237,10 +1209,11 @@ if(npops_OM==1 && npops>1){
 if(npops_OM>1 && nreg>1 && npops==1){ 
 
   #combine movements
-  pull<-out[grep("T_true", names(out), value = TRUE)]
+  pull.t<-out[grep("T_true", names(out), value = TRUE)]
+  T_true<-data.frame(matrix(unlist(pull.t),na*nyrs*npops_OM,npops_OM,byrow=T))
   
-  T_est<-data.frame(out$T_est)
-  T_true<-data.frame(matrix(unlist(pull),na*nyrs*npops_OM,npops_OM,byrow=TRUE)) #just setting the estimated movement = 1
+  pull<-out[grep("T_est", names(out), value = TRUE)]
+  T_est<-data.frame(do.call("rbind",pull)) #just setting the estimated movement = 1
   
   if(resid.switch==1){
     T_resid<-(T_true-T_est)}
@@ -1262,10 +1235,10 @@ if(npops_OM>1 && nreg==1 && npops==1){
   
   #combine movements
   pull<-out[grep("T_true", names(out), value = TRUE)]
+  T_true<-data.frame(matrix(unlist(pull),na*nyrs*npops_OM,npops_OM,byrow=TRUE)) #just setting the
   
   T_est<-data.frame(matrix(NA,na*nyrs*npops_OM,npops_OM,byrow=TRUE)) #just setting the estimated movement = 1
   
-  T_true<-data.frame(matrix(unlist(pull),na*nyrs*npops_OM,npops_OM,byrow=TRUE)) #just setting the estimated movement = 1
   
   if(resid.switch==1){
     T_resid<-(T_true-T_est)}
@@ -1339,6 +1312,9 @@ T.year.p<-ggplot(T.year.plot,aes(Year,value))+
   scale_linetype_manual(values=T.lines)+
   ylab("Movement Rate")+
   diag_theme+
+  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+        axis.text.y=element_text(size=9),
+        plot.title=element_text(size=11))+
   theme(legend.position = "right", legend.justification = c(1,1))+
   ggtitle("Yearly Movement Rate")
 
@@ -1361,6 +1337,10 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
         legend.background = element_rect(fill="transparent"),
         panel.border = element_rect(colour = "black"))+
   theme(legend.title = element_blank())+
+  theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+        axis.text.y=element_text(size=9),
+        plot.title=element_text(size=11))+
+  #theme(legend.title = element_blank())+
   theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Yearly Movement Rate Residuals")
@@ -1684,17 +1664,16 @@ OM_error_table<-cbind(OM_error_table,temp)
 
 ###building table
 
-if(npops==1){
+if(npops_OM==1){
 rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
 OM_error_table[1,2]<-OM_dat[rec_om]
   
 rec_app_om<-grep("_sigma_rec_prop",OM_dat, fixed = T)+1
 OM_error_table[2,2]<-OM_dat[rec_app_om]
-
 }
 
 
-if(npops>1){
+if(npops_OM>1){
 rec_om<-grep("_sigma_recruit",OM_dat, fixed = T)+1
 OM_error_table[1,2:(1+nreg_OM)]<-OM_dat[rec_om:(rec_om+(nreg_OM-1))]
 
@@ -2340,25 +2319,8 @@ sink()
 
 make.plots()
 
-#} #end running the whole code
+#end running the whole code
 
-#} #end loops if doing many runs
-
-
-################################################################################
-################################################################################
-#to make things simple and fast just run these pieces of code consecutively when editing
-
-{
-time.elapsed<-run.model()
-make.plots()
-}
-
-
-#for checking individual things
-out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
-
-setwd(OM_direct)
 
   
 
