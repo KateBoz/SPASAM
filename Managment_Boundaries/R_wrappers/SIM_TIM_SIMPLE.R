@@ -152,7 +152,7 @@ results_bad<-paste0(diag_direct,"\\Results_NOT_conv",sep="")
 # this run generates the .pin file for the simulations
 
 if(diag.run==1){
-source("TIM_Diagnostics_SIM.R") # make sure this code is in the direct_master folder.
+source("TIM_Diagnostics_master.R") # make sure this code is in the direct_master folder.
 
 invisible(file.rename(from=paste0(EM_direct,"\\Model_Diagnostics.pdf",sep=""),to=paste0(diag_direct,"\\Model_Diagnostics.pdf",sep="")))
 invisible(file.rename(from=paste0(EM_direct,"\\Tag_Residuals.pdf",sep=""),to=paste0(diag_direct,"\\Tag_Residuals.pdf",sep="")))
