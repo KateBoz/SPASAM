@@ -1,0 +1,2806 @@
+####TEST BASE MODEL 4 TIM####
+
+#OM_structure
+#   // ==0 the OM is panmictic
+#   // ==1 the OM is metamictic
+#   // ==2 the OM is metapop
+#   // ==3 the OM is natal homing - not there yet...
+1
+
+#nages
+16  ## 
+#nyrs
+30 #
+#npopulations
+1
+#nregions
+3
+#nfleets
+1
+#nfleets_survey
+1
+
+#model_type_switch
+  #==0 do not use TAC to set F
+  #==1 use TAC to set F, USE THIS IF calc_TAC_from_uMSY==1
+  #==2 use uMSY to set F
+0
+
+#do_tag
+  #==0 do not calculate tagging data
+  #==1 calculate tagging data
+1
+
+# parse_TAC
+  #==0 do not alter the input TAC or harvest rate
+  #==1 use observed data source to parse TAC or harvest rate (used when allocating harvest but pop structure unknown)
+0
+
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////// USING calc_TAC_from_uMSY==1 IS PROBABLY ONLY CORRECT WAY TO PARSE u /////////////////////////////////////////////////
+#/////////////// IF PARSE input_u directly, then sum(u) unlikely to equal input_u because of differences in population sizes/////////
+#/////////////// ie applying less than the full uMSY to each area/region ////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# calc_TAC_from_uMSY
+###########################################################################################################################
+  #MUST HAVE MODEL_TYPE==1, even though uses input u (harvest rate)
+##############################################################################################################################
+  #==0 don't use
+  #==1 calculate a yearly TAC from uMSY(input)*biomass_population(j,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+  #==2 calculate a yearly TAC from uMSY(input)*biomass_region(j,r,y) to get a yearly TAC that obtains MSY in equil without crashing the stock
+0
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#parse_TAC_source
+  #==0 recruitment index_BM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==1 recruitment index_AM, assume rec index occurs at tspawn so always have inherent 1 year timelag in using to parse TAC (even if tspawn==0)
+  #==2 survey biomass
+  #==3 equal apportionment across all fleets in a given area
+2
+#TAC_survey_parse_timelag_switch
+ # //==0 no timelag, use survey apportionment in current year (if tsurvey==0) or previous year (if tsurvey>0) (ie inherent lag if survey not at beginning of year)
+  #//==1 use timelag, use survey apportionment from y-TAC_survey_parse_timelag, assume equal apportionment of TAC among fleets in  years where y<timelag
+0
+#TAC_survey_parse_timelag
+ # //whole number value to implement a time lag in year that use survey apportionment from
+1
+
+#tsurvey in proportion of year (0-1) (1,nps,1,nreg)
+0.5
+0.5
+0.5
+
+#larval_move_switch  ## THIS NEEDS TO BE SET ==1 if the OM is being used for estimation##
+  #==0 no movement
+  #==1 input movement
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+1
+
+#move_switch
+  #==0 no movement
+  #==1 input movement ####THIS CAN BE USED FOR AGE_BASED MOVEMENT BUT NOT TIME-VARYING, USE OPTION 21 FOR TIME_VARYING INPUT MOVEMENT
+  #==2 movement within stock only based on residency (symmetric)
+  #==3 symmetric movement but only allow movement within a stock (ie regions within a stock) not across stocks
+  #==4 symmetric movement across all stocks and regions
+  #==5 allow movement across all regions and stocks, based on stock/region specific residency (symmetric off diagnol)
+  #==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal stock eg ontogenetic migration)
+  #==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
+  #//    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
+  #==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  #// uses use_input_Bstar switch
+  #// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
+  #==21 use input T_year to allow T to vary by year
+  #==22 use T_Full_Input to input time and age varying T
+21
+
+## DD_move_age_switch
+ #Allow age-based movement when using DD movement (Y/N) (1/0)
+  #==0 no age-based DD movement (assumes movement based on total relative biomass after movement, before mortality, in previous year...compared to Bstar summed across ages)   ///can't use current year because biomass matrix not filled out at time of DD calcs, bec need T for calc of abund_AM which occurs before moving to next age loop
+  #==1 DD movement is age-based (assumes movement based on age-specfic relative biomass at beginning of current year...compared to Bstar by age)
+0
+
+#use_input_Bstar
+#######NOT FULLY IMPLEMENTED YET##########
+  #==0 set Bstar for DD movement equal to SSB_zero*SSB_zero_appor (if nreg==1, Bstar=SSB0), **NOTE** for Rec_type!=2 (not BH), defaults to using input_Bstar since no SSB0 calcs are done
+############################################
+  #==1 use input_Bstar
+1
+############################
+
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
+0
+#select_switch
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#select_switch_survey
+  #==0 input selectivity
+  #==1 logistic selectivity based on input sel_beta1 and sel_beta2
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#F_switch
+  #==1 input F
+  #==2 input single overall F (FMSY)
+  #==3 Estimate F that minimizes difference in input and estimated total harvest rate
+  #==4 overall F is split evenly among stocks (each fleet uses stock F)
+  #==5 overall F is is split evenly among all regions (each fleet uses region F)
+  #==6 overall F is split evenly among fleets
+  #==7 F devs about input F based on sigma_F
+  #==8 random walk in F
+  #==9 dunce cap F; F increases to a peak half way through time series then decrease back to min over remainder of time series
+9
+
+#recruit_devs_switch
+  #==0 use stock-recruit relationship directly
+  #==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+1
+
+#recruit_randwalk_switch
+  #==0 no random walk recruitment deviations
+  #==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!
+0
+
+#init_abund_switch
+  #==0 input init abund
+  #==1 decay from R_ave
+1
+
+#maturity_switch_equil
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+0
+
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+
+#apportionment_type
+  #==-1 no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment
+  #==2 recruits are apportioned equally to each region within a stock
+  #==3 recruits are apportioned in a completely random manner with uniform equilibrium distribution
+  #==4 recruits are apportioned stochastically with normal error surrounding the input proportions...uses the multivariate logistic random variables (Cox and Krunland 2008, FIsheries Research)
+  #==5 recruits are approtioned based on theoretical enviormental phase shift.. working on
+1
+
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  #==3 cyclical (sine wave type)
+1
+
+#use_stock_comp_info_survey
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS survey age comps by area (summed across natal population)
+ #==1 calc OBS survey age comps by natal population within each area
+0
+
+#use_stock_comp_info_catch
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS catch age comps by area (summed across natal population)
+ #==1 calc OBS catch age comps by natal population within each area
+0
+
+#number_tags_switch
+  #determines how total tags are determined and how they are distributed across regions
+  #==0 use input tags by year, pop, reg
+  #==1 total tags are based on the input fract of total  abund tagged and is distributed evely across regions
+  #==2 regional tags are based on the input fract of regional abund tagged
+  #==3 total tags are based on the input fract of total abund tagged and is distributed based on survey prop of abundance in each region
+  #==4 regional tags are randomly (uniformly) distributed based on max and min number of tags per region
+  #==5 regional tags are randomly (uniformly) distributed based on max and min number of tags per region AND
+   #prob that tagging occurs in a given year/region is based on opport_tag_prob and a uniform distributed random number
+1
+
+#age_dist_tags
+  #determines how tags are distributed across ages
+  #==0 regional tags distributed evely across all ages
+  #==1 regional tags distributed according to survey proportions at age
+  #==2 regional tags distributed according to regional catch proportions at age
+0
+
+#tag_fit_ages
+  #determines whether tags are fit by age cohorts or by region-only cohorts
+  #the latter is for situations where age is unknown and so assume no tag age dynamics and that all fish fully selected
+  #==0, fit by age-based cohorts
+  #==1, fit by region-based cohorts
+0
+
+#/////tagging data parameters
+#nyrs_release
+  #number of years with tag release events
+7
+
+#yrs_releases
+  #vector containing the model years with releases
+
+1
+5
+10
+15
+20
+25
+30
+
+
+
+#input_ntags (1,np,1,nreg,1,ny_rel)
+5000 5000 5000 5000 5000 5000 5000
+5000 5000 5000 5000 5000 5000 5000
+5000 5000 5000 5000 5000 5000 5000
+
+#frac_total_abund_tagged
+  #proportion of total abundance that is tagged in each release year
+0.05
+0.05
+0.05
+0.05
+0.05
+0.05
+0.05
+
+#max_tags (1,np,1,nreg)
+ #maximum tags for uniform distribution if tags_switch==4 or 5
+6000
+6000
+6000
+
+#min_tags (1,np,1,nreg)
+ #minimum tags for uniform distribution if tags_switch==4 or 5
+4000
+4000
+4000
+
+#opport_tag_prob
+ #cutoff value defining whether uniform RNG represents no tagging(<tag_prob) or tagging (>tag_prob) in a given area
+0.25
+
+#max_life_tags
+  #number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
+  # THIS CANNOT BE MORE THAN THE NUMBER OF RELEASES!
+7
+
+#SIM_ntag
+  #the ESS used to simulate multinomial tagging data
+500
+
+#myseed_ntags
+  #seed for the RNG for uniform distribution of number of tags
+1204032
+#myseed_prob_tag
+  #seed for the RNG for uniform distribution of prob of tagging
+1917482
+
+#report_rate(1,np,1,ny_rel,1,nreg)
+  #tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+
+#//////Density-Dependent Movement parameters
+#input_Bstar(1,np,1,nreg,1,nages)
+  #used with move_switch==8
+  #carrying capacity biomass term
+6000	6000	6000	6000	6000	6000	4000	4000	4000	4000	4000	4000	4000	4000	4000	4000
+900	9000	9000	9000	9000	9000	6000	6000	6000	6000	6000	6000	6000	6000	6000	6000
+3000	3000	3000	3000	3000	3000	3000	3000	2000	2000	2000	2000	1000	1000	1000	1000
+
+### NOT USED #########################
+#SSB_zero_appor(1,np,1,nreg)
+  #used with move_switch==8
+  #determines apportionment of SSB0 when multiple regions and use_input_Bstar==0
+0.4
+0.3
+0.3
+############################################
+
+#A
+  #used with move_switch==8
+  #logistic parameter
+9
+9
+9
+
+#DD_residency
+0.65
+0.55
+0.75
+
+#return_age - age of return migration for move_switch==6
+7
+#return_probability- probability of returning for move_switch==6
+1
+#spawn_return_prob - probability of returning for spawning if overlap_switch==2
+1
+#phase_F - must be turned on (==1) if F_type==3
+-1
+#phase_dummy - must be turned on (==1) if F_type!=3
+1
+#tspawn in proportion of year (0-1)
+0
+#steep
+0.814
+
+#R_ave - not on the log scale
+22000
+
+#amplitude - amplitude of occilations for recritment variation. Use when Rec_type ==3
+0.2
+
+#freq - period of ossilation for recruitment variation. Use when Rec_type ==3
+15
+
+#input_T (1,np,1,nreg,1,na,1,np,1,nreg)
+###for age-based T just vary these inputs by age#######
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+		
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+		
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+
+
+#input_T_year (1,np,1,nreg,1,ny,1,np,1,nreg)
+0.573	0.308	0.119
+0.634	0.313	0.052
+0.582	0.336	0.082
+0.537	0.327	0.136
+0.518	0.331	0.151
+0.555	0.343	0.102
+0.489	0.385	0.126
+0.582	0.305	0.113
+0.556	0.319	0.125
+0.541	0.293	0.165
+0.616	0.349	0.034
+0.574	0.342	0.084
+0.575	0.329	0.096
+0.566	0.344	0.090
+0.462	0.366	0.172
+0.571	0.344	0.084
+0.600	0.307	0.093
+0.662	0.254	0.085
+0.674	0.267	0.059
+0.614	0.342	0.044
+0.606	0.345	0.049
+0.623	0.270	0.107
+0.651	0.278	0.071
+0.571	0.353	0.077
+0.539	0.303	0.158
+0.486	0.340	0.174
+0.552	0.403	0.045
+0.558	0.314	0.128
+0.600	0.284	0.116
+0.639	0.256	0.105
+		
+0.328	0.577	0.095
+0.313	0.633	0.054
+0.360	0.496	0.144
+0.260	0.575	0.165
+0.357	0.589	0.054
+0.252	0.594	0.154
+0.349	0.540	0.111
+0.285	0.667	0.049
+0.258	0.694	0.048
+0.379	0.464	0.157
+0.225	0.713	0.062
+0.250	0.560	0.190
+0.327	0.593	0.080
+0.274	0.652	0.074
+0.321	0.539	0.139
+0.261	0.627	0.112
+0.264	0.592	0.144
+0.254	0.627	0.119
+0.317	0.607	0.076
+0.402	0.523	0.076
+0.304	0.560	0.136
+0.364	0.570	0.066
+0.310	0.621	0.069
+0.262	0.645	0.092
+0.364	0.587	0.050
+0.362	0.497	0.141
+0.290	0.613	0.097
+0.244	0.580	0.176
+0.313	0.515	0.172
+0.248	0.642	0.110
+		
+0.257	0.289	0.454
+0.261	0.187	0.552
+0.236	0.278	0.486
+0.263	0.150	0.586
+0.209	0.302	0.489
+0.257	0.147	0.596
+0.268	0.307	0.425
+0.192	0.353	0.455
+0.282	0.264	0.454
+0.211	0.278	0.511
+0.247	0.295	0.458
+0.236	0.299	0.465
+0.283	0.260	0.457
+0.180	0.275	0.545
+0.268	0.201	0.531
+0.285	0.234	0.481
+0.310	0.282	0.408
+0.224	0.193	0.584
+0.352	0.145	0.503
+0.355	0.226	0.419
+0.223	0.173	0.604
+0.247	0.153	0.600
+0.292	0.208	0.500
+0.269	0.200	0.531
+0.195	0.325	0.481
+0.178	0.263	0.559
+0.258	0.145	0.597
+0.277	0.301	0.422
+0.250	0.181	0.569
+0.284	0.237	0.479
+
+
+#input_residency_larval
+0.65
+0.55
+0.75
+
+#input_residency
+0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65	0.65
+0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55	0.55
+0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75	0.75
+
+#sel_beta1
+0.8
+0.8
+0.8
+
+#sel_beta2
+3.0 
+3.0
+3.0
+
+#sel_beta3
+-0.6
+-0.6
+-0.6
+
+#sel_beta4
+20
+20
+20
+
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant across REGIONS
+
+#sel_beta1_survey
+0.8
+0.8
+0.8
+
+#sel_beta2_survey
+2.0
+2.0
+2.0
+
+#sel_beta3_survey
+-0.6
+-0.6
+-0.6
+
+#sel_beta4_survey
+20
+20
+20
+
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+
+#input_selectivity (1,ns,1,nreg,1,na,1,nf)
+0	0.2	1	1	1	1	1	1	1	1	1	1	1	1	1       1
+0.01	0.05	0.37	0.84	0.97	1	1	1	1	1	1	1	1	1	1       1
+0.01	0.02	0.06	0.61	0.77	0.89	0.96	0.99	1	1	1	1	1	1	1       1
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant acros REGIONS
+
+#input_survey_selectivity(1,ns,1,nreg,1,na,1,nfs)
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+# SURVEY SELECTIVITY ONLY ESTIMABLE BY POPULATION (not by REGION), therefore to avoid bias make selectivity parameters constant acros REGIONS
+
+#q_survey(by population, area and fleet) NOT REGION
+8.69616
+8.69616
+8.69616
+#*******************************************************************************************************************************************
+#*******************************************************************************************************************************************
+#************************************************************************************************************
+
+#input_F
+0.1
+0.15
+0.15
+#dunce F parameters (1,nps,1,nr,1,3)  for Dunce Cap F option ==9
+  # first column is start year of fishery (F before this ==0)
+  # second column is  min  F
+  # third column is max F
+1 .04 .3
+1 0.1  .4
+1 0.15 .7
+
+#F_rho (degree of autocorrelation in F random walk
+1
+1
+1
+
+#F_MSY
+0.5
+
+#input_M
+0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1
+#_sigma_recruit
+0.8
+
+#_sigma_rec_prop #error around recruit apportionment
+0.2
+
+#_sigma_F
+0.6
+0.5
+0.7
+
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+######### FOR NATAL HOMING THERE IS NO ACCOUNTING OF REGIONAL DIFFERENCES IN VITAL RATES ACROSS REGIONS WITHIN A POPULATION
+######### IE BECAUSE GENETICS DEFINE VITAL RATES, THEY MUST ALL BE THE SAME
+######### **********DO NOT INPUT REGIONALLY VARYING VITAL RATES, NATAL REGION WILL NOT BE PROPERLY TRACKED IN SSB CALCS #############
+#########################################################################################################################################
+#input_weight
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+
+#input_catch_weight
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+0.1196	0.462921	0.944267682	1.466866663	1.96493134	2.407225572	2.783549328	3.095124048	3.348480963	3.552000399	3.714122304	3.842521512	3.94380643	4.023484171	4.086049073	4.135118229
+
+#fecundity
+0	0	0	0	0	0	0	0	0	1	1	1	1	1	1	1
+0	0	0	0	0	0	0	0	0	1	1	1	1	1	1	1
+0	0	0	0	0	0	0	0	0	1	1	1	1	1	1	1
+
+#maturity
+0.04099382	0.05244924	0.06688255	0.08493169	0.10729157	0.13467178	0.16772645	0.20695391	0.25257161	0.30438519	0.36168447	0.42320774	0.48720844	0.55163133	0.61436685	1
+0.07030182	0.10589635	0.15647946	0.22514032	0.31275801	0.41616045	0.52750871	0.63618582	0.73254018	0.81095849	0.87045093	0.91322415	0.94280292	0.96271103	0.97586726	1
+0.3055761	0.3540195	0.4056564	0.4594679	0.5142415	0.5686751	0.6214986	0.6715889	0.7180575	0.7602978	0.79799	        0.8310722	0.8596893	0.8841344	0.9047923	1
+##########################################################################################################################################
+#########################################################################################################################################
+##########################################################################################################################################
+#########################################################################################################################################
+
+#prop_fem
+0.5
+0.5
+0.5
+
+#input_Rec_prop
+0.436
+0.301
+0.263
+
+#Equil_ssb_apportion
+0.436
+0.301
+0.263
+
+#frac_natal ## fraction of the population in the natal population at the onset of the simulation. Use with init_abund_switch==1
+0.436
+0.301
+0.263
+
+#init_abund
+8000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
+5000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
+9000	7200	6480	5554.285714	5049.350649	4590.318772	4131.286895	3098.465171	2323.848878	2091.463991	1673.171192	1464.024793	1330.93163	1209.937846	1075.500307	977.7275521
+
+#_rec_index_sigma
+0.5
+0.5
+0.5
+
+#_sigma_survey
+0.2
+0.2
+0.2
+
+#sigma_survey_overlap
+0.2
+0.2
+0.2
+
+#_sigma_catch
+0.05
+0.05
+0.05
+
+#sigma_catch_overlap
+0.05
+0.05
+0.05
+
+#_SIM_ncatch #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+500
+500
+500
+
+#SIM_ncatch_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+500
+500
+500
+
+#_SIM_nsurvey #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+500
+500
+500
+
+#SIM_nsurvey_overlap #//cannot exceed 2000, otherwise change dimension of associated temp vector in parameter section
+500
+500
+500
+
+#input_TAC
+ #TAC that are matching if model_type_switch==1
+################################################################################################################
+################################################################################################################
+################################################################################################################
+### IF PARSE TAC OR U USING OBS DATA THEN MAKE SURE THAT FULL TAC OR U FOR THAT AREA IS INPUT FOR EACH FLEET IN THAT AREA ###
+########################################################################################################
+1
+1
+1
+
+#input_u 
+.0491
+.0491
+.0491
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#max_Fnew
+5
+#Fnew_start
+ #starting value for NR to match TAC
+0.1
+#NR_iterations
+ #NR iterations used to match TAC
+10
+#NR_dev
+ #NR deviations when calculating derivative
+0.001
+
+################################################################################################################
+################################################################################################################
+################################################################################################################
+## EM inputs
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#EM_structure - for setting up .rep
+  # ==0 the EM is panmictic
+  # ==1 the EM is metamictic
+  # ==2 the EM is metapop
+1
+
+#npops_EM
+1
+#nregions_EM
+3
+#nfleets_EM
+1
+#nfleets_survey_EM
+1
+#tsurvey_EM
+0.5
+0.5
+0.5
+
+#diagnostics_switch
+  #==0 allow OBS data to be used for estimation
+  #==1 allow TRUE data from OM without error to be used for estimation
+0
+
+#fleets_as_areas_switch
+  # ==0 not fleets as areas
+  # ==1 fleets as areas EM
+0
+
+#move_switch
+ # ///// Sets the type of adult movement pattern (sets age class>1 movements)
+ #// ***MUST CHANGE PHASES OF T PARAMETERS TO DETERMINE TYPE OF MOVEMENT (constant, Time varying, age-varying, both time and age varying)
+ # ***IF PANMICTIC, NO MOVE, INPUT T, THEN  MAKE SURE ALL T PAR PHASES ARE SET TO NEGATIVE NUMBER****
+ # ==(-2), no movement because panmictic set T par phases==-1
+ # ==(-1) use input movement EM input below (use when want fixed movement that differs from true movement), set T par phases=-1
+ # ==0 no movement, set T par phases=-1
+ # ==1 use true movement from OM, set T par phases=-1
+ # >=2 estimate movement, **IF** one of the movement parameters is a positive phase
+2
+
+#report_rate_switch
+ #//==(-1), use input_report_rate_EM, reporting rate may differ from TRUE report rate
+ #//==0, use TRUE reporting rate from OM
+ #//==1, estimate time-invariant (pop, reg varying) reporting rate, ph_rep_rate_CNST>0
+ #//==2, estimate a time-, pop-, reg-varying reporting rate ph_rep_rate_YR>0
+0
+
+#natal homing switch
+  #==0 no natal homing (SSB is sum of SSB in population regardless of natal origin; weight/mat/fecund/ are based on current population not natal population) - Metapopulation/metamictic
+  #==1 do natal homing (a fish only adds to SSB if it is in its natal population at spawning time; weight/mat/fecund/ are based on natal population) - Natal homing
+  #natal homing  assumes genetic based life history and contribution to SSB (i.e., natal homing and no demographic mixing), natal homing==0 assumes demographic mixing (e.g. metapopulations where life history is more location based)
+0
+
+#spawn_return_switch
+   #==0 if natal_homing_switch==1 then only fish that are in natal population add to SSB
+   #==1 natal_homing_switch==1 a fraction of fish return to natal population to spawn (inpsantaneous migration to natal population and back at time of spawning) based spawn_return_prob; weight/mat/fecund/ are based on natal population)
+0
+
+#select_switch_EM
+  #==0 input selectivity
+  #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#select_switch_survey_EM
+  #==0 input selectivity
+  #==1 logistic selectivity based on estimated sel_beta1 and sel_beta2 by region/pop
+  #==2 double logistic selectivity based on input sel_beta1, sel_beta2,sel_beta3,sel_beta4
+1
+
+#maturity_switch_equil
+  #//==0 for equal by area or average
+  #//==1 weighted average using equil_ssb_apportion to determine proportional contribution to equil vital rates by region
+  #//SSB0 must be calculated to determine stock-recruit function (if only know steepness and R0 for the population)
+  #//Use equilibrium SPR calcs to get SSB0, but to do so requires vital rates (maturity, weight), which are typically constant across a population
+  #//With multiple regions within a pop each with different vitals, must make assumption regarding the proportional contribution of each region's demograhics to equil SSB
+  #//When ==1 just assume equal (average) contributions, when ==1 input a proportional contribution (ie assume one region has higher carrying capacity and contributes more to equil SSB)
+0
+
+#SSB_type
+  #==1 fecundity based SSB
+  #==2 weight based SSB
+2
+
+#Rec_type
+  #==1 stock-recruit relationship assumes an average value based on R_ave
+  #==2 Beverton-Holt stock-recruit functions based on stock-specific input steepness, R0 (R_ave), M, and weight
+  #==3 cyclical (sine wave type)
+1
+
+#apportionment_type
+  #==(-2) input TRUE apportionment
+  #==(-1) no recruitment apportionment to regions within a stock (each region within a stock gets full amount of recruits from SR curve)
+  #==0 apportionment to each region is based on relative SSB in region compared to stock SSB
+  #==1 input apportionment (can differ from TRUE apportionment)
+  #==2 recruits are apportioned equally to each region within a stock
+  #==3 estimate time-invariant apportionment...make sure ONLY ph_rec_app_CNST>0 (ph_rec_app_YR is only used if type==4)
+  #==4 THIS DOES NOT APPEAR TO WORK PROPERLY, DO NOT USE.....estimate yearly apportionment, MAKE SURE BOTH APPORTIONMENT PHASES ARE POSITIVE!!!!!!  use both parameters vectors for this 
+3
+
+#use_stock_comp_info_survey
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS survey age comps by area (summed across natal population)
+ #==1 calc OBS survey age comps by natal population within each area
+0
+
+#use_stock_comp_info_catch
+ #Determines whether it is assumed that info (stock composition data) is available determine natal origin for age composition data
+ #==0 calc OBS catch age comps by area (summed across natal population)
+ #==1 calc OBS catch age comps by natal population within each area
+0
+
+#F_switch
+  #==1 estimate yearly F
+  #==2 random walk in F //NOT IMPLEMENTED DO NOT USE
+1
+
+#M_switch
+   #all M types are constant across regions
+   #==(-1) use input_M (can differ from TRUE M)
+   #==0 use input_M_TRUE
+   #==1 estimate constant M (const across pop and age), ph_M_CNST>0
+   #==2 estimate population-based M (const across ages), ph_M_pop_CNST>0
+   #==3 estimate age-based M (const across pop), ph_M_age_CNST>0
+   #==4 estimate age- and population-varying M, ph_M_pop_age>0
+-1
+
+#recruit_devs_switch
+ # //==0 use stock-recruit relationphip directly (make sure to set ph_rec=0), also assumes initial abund for all ages=R0
+ # //==1 allow lognormal error around SR curve (i.e., include randomness based on input sigma_recruit)
+1
+
+#recruit_randwalk_switch
+ # //==0 no random walk recruitment deviations
+ # //==1 have random walk lognormal recruitment deviations (requirs recruit_devs_switch==1)....NEEDS WORK!!!!!
+0
+
+#init_abund_switch
+  #==0 est init abund where R_ave is the age-1 abundance in year 1  (to avoid overparametrization of recruitment)
+  #==1 decay from R_ave
+1
+
+#init_number input_dist_init_abund_EM
+  #==(-2) use input_dist_init_abund specified for EM (can differ from true)
+  #==(-1) assume all fish in a pop are equally distributed across regions in that pop (no fish start outside natal pop)
+  #==0 use true distribution of init_abundance
+  #==1 estimate the spatial distribution of init abundance, need to make ph_non_natal_init OR ph_reg_init non-negative depending on spatial structure used
+1
+
+#tspawn_EM(1,np_em)
+0
+
+#return_probability_EM(1,np_em)
+1
+
+#spawn_return_prob_EM(1,np_em)
+1
+
+#do_tag
+  #==0 do not calculate tagging data
+  #==1 calculate tagging data
+1
+
+#do_tag_mult
+  #==0 assume neg binomial distribution for tagging data
+  #==1 assume multinomial distribution (same as OM)
+1
+
+#input_T_EM (1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+0.7	0.2	0.1
+		
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+0.2	0.7	0.1
+		
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+0.1	0.2	0.7
+
+
+#input_R_ave_EM
+22000
+
+#rec_prop_em(1,np_em,1,nreg_em,1,nyr)
+0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333
+0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333
+0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333	0.333
+
+#sigma_rec_em(1,np_em)
+0.8
+
+#input_steep_EM
+0.814
+
+#init_abund
+8000	5600	5040	4320	3927.272727	3570.247934	3213.22314	2409.917355	1807.438017	1626.694215	1301.355372	1138.68595	1035.169046	941.0627689	836.5002391	760.4547628
+5000	6400	5760	4937.142857	4488.311688	4080.283353	3672.255018	2754.191263	2065.643447	1859.079103	1487.263282	1301.355372	1183.050338	1075.500307	956.0002732	869.0911575
+9000	7200	6480	5554.285714	5049.350649	4590.318772	4131.286895	3098.465171	2323.848878	2091.463991	1673.171192	1464.024793	1330.93163	1209.937846	1075.500307	977.7275521
+
+#input_dist_init_abund_EM
+0.333
+0.333
+0.333
+
+#input_M_EM(1,np_em,1,na)
+0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1	0.1
+
+#input_selectivity_EM (1,ns,1,nreg,1,na,1,nf)
+0	0.2	1	1	1	1	1	1	1	1	1	1	1	1	1       1
+0.01	0.05	0.37	0.84	0.97	1	1	1	1	1	1	1	1	1	1       1
+0.01	0.02	0.06	0.61	0.77	0.89	0.96	0.99	1	1	1	1	1	1	1       1
+
+#input_survey_selectivity_EM(1,ns,1,nreg,1,na,1,nf)
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+0	0.23	0.98	1	1	1	1	1	1	1	1	1	1	1       1       1
+
+#report_rate(1,np_em,1,nreg_em)
+ # input tag reporting rate for EM which can differ from true reporting rate above, not time-varying
+1
+1
+1
+
+#input_q_survey_EM(1,np,1,nreg,1,nfls)
+8.69616
+8.69616
+8.69616
+
+################################
+##### Phases for estimation ####
+################################
+#ph_lmr
+2
+#lb_R_ave
+2
+#up_R_ave
+20
+#ph_rec
+3
+#lb_rec_devs
+-10
+#ub_rec_devs
+5
+#ph_rec_app_CNST //if apportionment_type==4 then both app phases below need to be positive (estimate 2 sets of parameters)
+4
+#ph_rec_app_YR
+-4
+#lb_rec_app
+-5
+#ub_rec_app
+5
+#ph_init_abund
+-2
+#ph_reg_init // est initial distribution of abundance across regions, only use if mult regs (non natal homing)
+2
+#ph_non_natal_init // est initial distribution of abundance across both regions and populations, only use if natal homing
+-1
+#lb_init_dist //used for above two sets of parameters (init dist of abund)
+-9
+#ub_init_dist //used for above two sets of parameters (init dist of abund)
+10
+#lb_abund_devs
+2
+#ub_abund_devs
+20
+#ph_F
+4
+#lb_F
+-5
+#ub_F
+5
+#ph_steep
+-1
+#lb_steep
+0.2
+#ub_steep
+1
+#ph_M_CNST  //M cnst 
+-1
+#ph_M_pop_CNST //M vary by pop
+-1
+#ph_M_age_CNST //M vary by age not pop
+-1
+#ph_M_pop_age //M vary by age and pop
+-1
+#lb_M
+-5
+#ub_M
+5
+#ph_sel_log
+5
+#lb_sel_beta1  //lower bound on fishery selectivity parameters in ln space
+-5 
+#ub_sel_beta1  //upper bound on fishery selectivity parameters in ln space
+2
+#lb_sel_beta2  //lower bound on fishery selectivity parameters in ln space
+-5
+#ub_sel_beta2  //upper bound on fishery selectivity parameters in ln space
+2
+#lb_sel_beta3  //lower bound on fishery selectivity parameters in ln space
+-10 
+#ub_sel_beta3  //upper bound on fishery selectivity parameters in ln space
+5
+#lb_sel_beta4  //lower bound on fishery selectivity parameters in ln space
+-10
+#ub_sel_beta4  //upper bound on fishery selectivity parameters in ln space
+5
+#lb_sel_beta1_surv  //lower bound on survey selectivity parameters in ln space
+-5
+#ub_sel_beta1_surv  //upper bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta2_surv  //lower bound on survey selectivity parameters in ln space
+-5 
+#ub_sel_beta2_surv  //upper bound on survey selectivity parameters in ln space
+2
+#lb_sel_beta3_surv  //lower bound on survey selectivity parameters in ln space
+-10 
+#ub_sel_beta3_surv  //upper bound on survey selectivity parameters in ln space
+5
+#lb_sel_beta4_surv  //lower bound on survey selectivity parameters in ln space
+-10
+#ub_sel_beta4_surv  //upper bound on survey selectivity parameters in ln space
+5
+#ph_sel_log_surv
+5
+#ph_sel_dubl
+-5
+#ph_sel_dubl_surv
+-5
+#ph_q
+1
+#lb_q
+-10
+#ub_q
+5
+#ph_F_rho
+-1
+#lb_F_rho
+0
+#ub_F_rho
+2
+#ph_T_YR
+6
+#ph_T_YR_ALT_FREQ
+ # estimate T at intervals set by T_est_freq (i.e., every T_est_Freq year)
+-6
+#T_est_freq (number year parameters is nyrs/T_est_freq, rounded up)
+2
+#ph_T_YR_AGE_ALT_FREQ
+ # est T at invervals set by T_est_frew and T_age_freq (i.e., every T_est_Freq year and every T_age_freq age)
+-6
+###########################################################################
+#T_est_age_freq (number age parameters is nages/T_age_freq, rounded up)
+ #IF juv_age HIGHER THAN CUTPOINT FOR 2nd AGE CLASS THEN WILL HAVE UNUSED MOVEMENT PARAMETERS AND LIKELY CONVERGENCE ISSUES
+8
+#juv_age
+ #age at and below which all Ts  are set to the estimated movement rate for age-1 (when using ph_T_YR_AGE_ALT_FREQ>1)
+4
+######################################################################################
+#ph_T_CNST
+-6
+#ph_T_CNST_AGE
+-6
+#ph_T_YR_AGE
+-6
+#lb_T
+-10
+#ub_T
+10
+#ph_rep_rate_YR
+-6
+#ph_rep_rate_CNST
+-6
+#lb_B
+-6
+#ub_B
+5
+
+#ph_dummy
+-1
+
+##################################
+### likelihood weights
+#################################
+#wt_surv
+1
+#wt_catch
+1
+#wt_fish_ag
+1
+#wt_srv_age
+1
+#wt_rec
+0.01
+#wt_tag
+1
+#wt_F_pen// weight on F penalty
+1
+#wt_M_pen// weight on M penalty
+0
+#wt_B_pen  //reporting rate prior penalty
+0
+#report_rate_sigma //reporting rate variance for prior
+0.1
+#report_rate_ave //average value for reporting rate prior
+0.5
+#abund_pen_switch
+ #// include penalty (norm2) on init_abund_devs?  0==no, 1==yes
+ #//==0 no pen in log space
+ #//==1 include pen in log space
+0
+
+#wt_abund_pen// abund penalty wt
+0
+
+#move_pen_switch
+ #stabilizes movement parameter estimates...infinite number of large and small values can give same actual movement rate near bounds due to logit transform
+ #// ==0 no move pen in log space
+ #// ==1 include move pen in log space
+1
+
+#wt_move_pen //movement penalty wt
+1
+
+#Tpen
+#value below which move_pen enacted (log space)
+-5
+#Tpen2
+#value above which move_pen enacted(log space)
+5
+
+#controlling error for the EM
+#OBS_survey_fleet_bio_se_EM(1,np_em,1,nreg_em,1,ny,1,nf_em)  #standard errors
+0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2
+0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2
+0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2	0.2
+
+
+#OBS_yield_fleet_se(1,np_em,1,nreg,1,ny,1,nf_em)  #standard errors
+0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05
+0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05
+0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05	0.05
+
+#OBS_survey_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs_em) #number of survey ages
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+
+#OBS_catch_at_age_fleet_prop_N(1,np_em,1,nreg_em,1,ny,1,nfs) //fishery sample size ages
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+
+#tag_N(1,np_em,1,nreg_em,1,ny_rel,1,na) //fishery sample size ages
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+500	500	500	500	500	500	500	500	500	500	500	500	500	500	500	500
+
+#input full T with OM dimensions
+#T_Full_Input (1,np,1,nreg,1,xn,1,np,1,nreg) ... xn=na*ny;		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.64	0.23	0.14
+0.68	0.28	0.04
+0.55	0.27	0.17
+0.56	0.32	0.12
+0.59	0.24	0.17
+0.57	0.28	0.15
+0.66	0.28	0.06
+0.55	0.37	0.07
+0.55	0.32	0.13
+0.54	0.37	0.09
+0.61	0.27	0.13
+0.66	0.26	0.07
+0.72	0.24	0.04
+0.61	0.23	0.16
+0.60	0.22	0.17
+0.68	0.28	0.04
+0.55	0.41	0.04
+0.67	0.25	0.08
+0.67	0.27	0.06
+0.60	0.32	0.07
+0.54	0.36	0.10
+0.71	0.24	0.05
+0.50	0.35	0.15
+0.55	0.39	0.07
+0.64	0.24	0.12
+0.61	0.31	0.08
+0.61	0.27	0.13
+0.64	0.23	0.14
+0.61	0.31	0.08
+0.55	0.31	0.14
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.24	0.72	0.05
+0.23	0.57	0.20
+0.34	0.52	0.15
+0.34	0.54	0.13
+0.18	0.64	0.18
+0.40	0.55	0.05
+0.29	0.58	0.13
+0.38	0.56	0.06
+0.34	0.51	0.15
+0.26	0.63	0.11
+0.29	0.56	0.15
+0.21	0.72	0.07
+0.35	0.58	0.06
+0.34	0.48	0.18
+0.28	0.68	0.04
+0.23	0.58	0.19
+0.34	0.52	0.14
+0.24	0.69	0.07
+0.26	0.67	0.07
+0.26	0.56	0.18
+0.37	0.54	0.09
+0.24	0.64	0.12
+0.34	0.62	0.05
+0.30	0.57	0.13
+0.32	0.63	0.05
+0.30	0.64	0.06
+0.36	0.47	0.17
+0.32	0.64	0.03
+0.32	0.64	0.04
+0.23	0.65	0.11
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+		
+0.32	0.25	0.43
+0.25	0.23	0.53
+0.22	0.27	0.50
+0.29	0.24	0.47
+0.23	0.25	0.52
+0.24	0.29	0.47
+0.32	0.16	0.52
+0.23	0.26	0.52
+0.21	0.19	0.60
+0.34	0.25	0.41
+0.20	0.26	0.55
+0.25	0.13	0.62
+0.28	0.25	0.47
+0.23	0.26	0.50
+0.20	0.26	0.54
+0.18	0.23	0.60
+0.24	0.28	0.48
+0.28	0.28	0.44
+0.30	0.15	0.54
+0.31	0.16	0.53
+0.29	0.19	0.52
+0.29	0.18	0.52
+0.36	0.15	0.49
+0.27	0.28	0.46
+0.22	0.29	0.49
+0.24	0.34	0.42
+0.29	0.17	0.54
+0.24	0.20	0.55
+0.20	0.32	0.48
+0.27	0.31	0.42
+
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+#debug
+1541
+#myseed_yield
+8995
+#myseed_survey
+27653
+#myseed_F
+45652
+#myseed_rec_devs
+23441
+#myseed_rec_apport
+70006
+#myseed_rec_index
+40009
+#myseed_survey_age
+600006
+#myseed_catch_age
+455
+#myseed_tag
+50000
