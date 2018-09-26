@@ -5266,7 +5266,7 @@ FUNCTION get_rand_survey_CAA_prop
            }
           if(use_stock_comp_info_survey==1)
            {
-            OBS_survey_prop_overlap(p,j,r,y,z,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
+            OBS_survey_prop_overlap(p,j,r,z,y,a)=SIM_survey_prop_overlap(p,j,r,z,y,a)/SIM_nsurvey_overlap(p,j,r,z);
            }
          }
        }
