@@ -50,7 +50,6 @@ DATA_SECTION
   init_ivector nfleets_survey_OM(1,np_om) //number of fleets in each region by each population
   !! ivector nfs_om=nfleets_survey_OM;
 
-
 ////////////////////////////////////////////////////////////////////////////////////
 //////////////SWITCHES//////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -457,7 +456,8 @@ DATA_SECTION
 //##########################################################################################################################################
 
 // end of file marker
-   init_int debug; 
+   init_int debug;
+
 //##########################################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -924,7 +924,6 @@ PROCEDURE_SECTION
    get_CAA_prop();
    get_tag_recaptures();
    evaluate_the_objective_function();
-
 
 
 ///////BUILD MOVEMENT MATRIX////////
@@ -4738,19 +4737,19 @@ REPORT_SECTION
   {
         report<<"$T_year"<<endl;
         report<<T_year<<endl;
-        report<<"$T_est"<<endl;
-        report<<T<<endl;
         
-        if(npops_OM<=npops){
-        report<<"$T_true"<<endl;
-        report<<T_TRUE<<endl;
-        }
-        
-        if(npops_OM>npops){
-          for (int p=1;p<=npops_OM;p++)
+        for (int p=1;p<=npops;p++)
            {
-        report<<"$T_true"<<p<<endl;
-        report<<T_TRUE[p]<<endl;}}
+           for (int r=1;r<=nregions(p);r++)
+               {
+        report<<"$T_est"<<p<<"_"<<r<<endl;
+        report<<T[p][r]<<endl;}}
+        
+        for (int p=1;p<=npops_OM;p++)
+           {for (int r=1;r<=nregions_OM(p);r++)
+               {
+        report<<"$T_true"<<p<<"_"<<r<<endl;
+        report<<T_TRUE[p][r]<<endl;}}
         
         report<<"$EST_survey_prop"<<endl;
         report<<survey_at_age_fleet_prop<<endl;
