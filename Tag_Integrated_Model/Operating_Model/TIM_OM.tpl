@@ -263,6 +263,7 @@ DATA_SECTION
   init_matrix A(1,np,1,nreg) //used with move_switch==8
   init_matrix DD_residency(1,np,1,nreg) //used with move_switch==8
 
+ 
 /////////////
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
@@ -275,6 +276,7 @@ DATA_SECTION
   init_vector amplitude(1,np) //amplitude of periodic recruitment in % of R_ave 
   init_vector freq(1,np) //frequency of recruitment in years (ie 10 for peak every 10 years)
   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)  //movement matrix
+
   init_5darray input_T_year(1,np,1,nreg,1,ny,1,np,1,nreg)  //movement matrix
   init_matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
   init_3darray input_residency(1,np,1,nreg,1,na) //
@@ -297,7 +299,6 @@ DATA_SECTION
   init_vector sigma_recruit(1,np)
   init_vector sigma_rec_prop(1,np) //error around recruit apportionment
   init_3darray sigma_F(1,np,1,nreg,1,nf)
-
 
 //##########################################################################################################################################
 //#########################################################################################################################################
@@ -493,7 +494,6 @@ DATA_SECTION
   init_vector return_probability_EM(1,np_em)
   init_vector spawn_return_prob_EM(1,np_em)
 
-
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
@@ -607,6 +607,7 @@ DATA_SECTION
   init_4darray OBS_survey_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray OBS_catch_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nf_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray tag_N_EM(1,np_em,1,nreg_em,1,ny_rel,1,na)
+
   //summing tag prop array
 
   !! int xn=na*ny;
