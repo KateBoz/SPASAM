@@ -150,7 +150,11 @@ if (file.exists(cor.name) && out$dummy<0) {
 }
 
 
+std.name<-paste0(EM_name,".std")
+
+if (file.exists(std.name)) {
 std<-readRep(EM_name, suffix=".std", global=FALSE)
+}
 
 
 
@@ -1141,9 +1145,8 @@ if(npops==npops_OM && npops>1){
 pull<-out[grep("T_est", names(out), value = TRUE)]
 pull.t<-out[grep("T_true", names(out), value = TRUE)]
 
-T_est<-data.frame(do.call("rbind",pull))
-T_true<-data.frame(do.call("rbind",pull.t))
-
+T_true<-data.frame(matrix(unlist(pull.t),na*nyrs*npops,npops,byrow=T)) #just setting the
+T_est<-data.frame(matrix(unlist(pull),na*nyrs*npops,npops,byrow=T)) #just setting the
 
 if(resid.switch==1){
   T_resid<-(T_true-T_est)}
@@ -1273,7 +1276,7 @@ if(nreg==1 && nreg_OM>1){
 
 #metamictic to metapop
 if(npops>1 && npops_OM==1 && nreg>1){
-  T.temp<-data.frame(Year=rep(years,nreg*na), Reg=rep(c(1:nreg),each=nyrs*na),Age=rep(c(1:na),each=nyrs))
+  T.temp<-data.frame(Year=rep(years,each=na,times=nreg_OM), Reg=rep(c(1:nreg_OM),each=na*nyrs),Age=rep(c(1:na),nreg_OM*nyrs))
 }
 
 
@@ -2150,7 +2153,8 @@ dev.off()
 #take the values off the log scale
 #std[,3:4]<-exp(std[,3:4])
 
-
+if (file.exists(std.name)) {
+  
 std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 10),rows = NULL)
 
 std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
@@ -2185,6 +2189,7 @@ ml<-marrangeGrob(grobs=gl, ncol=1, nrow=1, top="Standard Errors (log scale)")
 
 grid.draw(ml)
 dev.off()
+}
 
 
 ####################################
