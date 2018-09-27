@@ -62,20 +62,24 @@ load_libraries()
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-1
+diag.run<-0
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
 # if running the diagnostic run set residual switch for different values plotted
 
-resid.switch=2
+resid.switch<-2
    # ==1 straight residual (TRUE-ESTIMATED; not % of true)
    # ==2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
 
+#2) Do you want to run simulations?
+run.sims<-0
+   # ==0 DO NOT run simulation experiment. This was completed already at an earlier time
+   # ==1 Run simulation experiement
 
-
-#2) Set number of simulations to perform
+#Set number of simulations to perform
 nsim <-50
+
 
 #########################################
 ### setting up the directories
@@ -96,11 +100,11 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=9
+folder.num=1
 i=folder.num
 
-#run.sims<-function(i=folder.num,nsim=nsim,direct_master=direct_master){
-#run the whole code
+
+#run the simulation experiment
 { 
   
 #if running the several folders use the loop - This will come later
@@ -159,6 +163,7 @@ invisible(file.rename(from=paste0(EM_direct,"\\output.txt",sep=""),to=paste0(dia
 }
 
 
+if(run.sims==1){
 
 ############################################################
 ############## RUN SIMULATIONS #############################
@@ -319,7 +324,14 @@ write.csv(file="Sim_Stats.csv",Sim.Stats)
 
 
 }  # end of simulations and summary save
+  
+} #end run.sims
 
-}
+} #end full simulation experiement
+
+
+
+
+
   
 
