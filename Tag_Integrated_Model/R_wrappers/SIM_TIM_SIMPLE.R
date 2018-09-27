@@ -75,8 +75,7 @@ resid.switch=2
 
 
 #2) Set number of simulations to perform
-nsim <-1
-
+nsim <-50
 
 #########################################
 ### setting up the directories
@@ -88,24 +87,22 @@ nsim <-1
 
 
 #3) set master file with holding the runs 
-
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SIMS_TEST_2\\CAPAM_RUNS\\"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch\\CAPAM_RUNS\\"
 setwd(direct_master)
 
-#list files in the directory
+#list files in the directory to choose the correct one
 files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
 
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=10
-
+folder.num=9
 i=folder.num
 
-##run.sims<-function(folder.num=i){
+#run.sims<-function(i=folder.num,nsim=nsim,direct_master=direct_master){
 #run the whole code
 { 
-
+  
 #if running the several folders use the loop - This will come later
 #for(i in 1:3){
 
@@ -324,5 +321,5 @@ write.csv(file="Sim_Stats.csv",Sim.Stats)
 }  # end of simulations and summary save
 
 }
-
+  
 
