@@ -81,7 +81,7 @@ run.sims<-0
 nsim <-50
 
 #3) Do you want to save important values from the runs?
-save.values<-1
+save.values<-0
   # ==0 DO NOT save values from the sims run
   # ==1 SAVE values from the sims run
 
@@ -114,7 +114,7 @@ keep.all<-1
 
 
 #4) set master file with holding the runs 
-direct_master<-"F:\\Mismatch\\CAPAM_RUNS"
+direct_master<-"E:\\Mismatch\\CAPAM_RUNS"
 setwd(direct_master)
 
 #list files in the directory to choose the correct one
@@ -123,16 +123,16 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-#folder.num=1
-#i=folder.num
+folder.num=12
+i=folder.num
 
 ####################################################
 #run the simulation experiment
 ####################################################
-#{ #GO!
+{ #GO!
   
 #if running the several folders use the loop - This will come later
-for(i in 4:4){
+#for(i in 4:4){
 
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
@@ -367,7 +367,12 @@ if(save.values==1){
   Sim_Stats<-read.csv(paste0(diag_direct,'\\Sim_Stats.csv'))
   
   #create a vector for converged runs to calculate bias and create plots
+  #if(keep.all==1){
+  #  conv.runs<-seq(1:nsim)}
+  
+  #if(keep.all==0){
   conv.runs<-which(Sim_Stats$Converged==1)
+  #}
 
   #pull dimensions for building data frames for plotting
   out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
@@ -903,6 +908,20 @@ if(npops>npops_OM){
 }
 
 
+if(npops<npops_OM){
+  Rave_est<-data.frame(melt(t(R_ave_df_est)))
+  Rave_est<-cbind(Rave_est,data.frame(melt(t(colSums(R_ave_df_sim))[3])))
+  names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
+  Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+  
+  #calc medians
+  #calculate the sum across areas 
+  rave.long<-melt(Rave_est, id=c("Reg","Nsim"))
+  rave.long$Reg<-as.character(rave.long$Reg)
+  
+  median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+  
+}
 
 #plot
 rave.plot.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_est, group=Reg)) +
@@ -936,7 +955,7 @@ write.csv(median_R_ave,"Rave_medians.csv")
 #build data.frame
 
 #for matching population types
-if(npops_OM==npops&&nreg_OM==nreg){
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
 rec.data<-data.frame(Dat=c(rep("SIM",nrow(rec_df_sim)),rep("EST",nrow(rec_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
 rec.data<-cbind(rec.data,rbind(rec_df_sim,rec_df_est))
 rec.long<-melt(rec.data, id=c("Dat","Years","Reg"))
@@ -949,7 +968,7 @@ rec.long<-rbind(rec.long,total.rec)
 }
 
 #For metamictic/Metapop to panmictic
-if(npops_OM==npops&&nreg_OM>nreg){
+if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
   
   #aggregating simulation recruitment
   rec.data<-data.frame(Dat=rep("SIM",nrow(rec_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
@@ -1026,7 +1045,7 @@ write.csv(rec.est.med,"Rec_Bias.csv")
 #build data.frame
 
 #for matching population types
-if(npops_OM==npops&&nreg_OM==nreg){
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
 ssb.data<-data.frame(Dat=c(rep("SIM",nrow(ssb_df_sim)),rep("EST",nrow(ssb_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
 
 ssb.data<-cbind(ssb.data,rbind(ssb_df_sim,ssb_df_est))
@@ -1041,7 +1060,7 @@ ssb.long<-rbind(total.ssb,ssb.long)
 }
 
 # Metamictic/Metapop to Panmictic
-if(npops_OM==npops&&nreg_OM>nreg){
+if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
   ssb.data<-data.frame(Dat=rep("SIM",nrow(ssb_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
   ssb.data<-cbind(ssb.data,rbind(ssb_df_sim))
   ssb.long.sim<-melt(ssb.data, id=c("Dat","Years","Reg"))
@@ -1115,7 +1134,7 @@ write.csv(ssb.est.med,"SSB_Bias.csv")
 #F plots
 
 #matching population types
-if(npops_OM==npops&&nreg_OM==nreg){
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
 #build data.frame
 fmax.data.sim<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
 fmax.data.est<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
@@ -1134,7 +1153,7 @@ fmax.long<-rbind(total.fmax,fmax.long)
 }
 
 #Spatial to panmictic
-if(npops_OM==npops&&nreg_OM>nreg){
+if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
 
  fmax.data.sim.t<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
   fmax.data.est.t<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
@@ -1214,8 +1233,8 @@ write.csv(fmax.est.med,"Fmax_Bias.csv")
 
 #Movement
 
-#matching population types
-if(npops_OM==npops&&nreg_OM==nreg){
+#Matching Metamictic
+if(npops_OM==npops&&nreg_OM==nreg && npops==1){
   
 movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
   
@@ -1229,12 +1248,46 @@ move.long$Reg_from<-as.character(move.long$Reg_from)
 move.long$Reg_to<-as.character(move.long$Reg_to)
 }
 
-#for spatial to panmictic
+
+#Matching Metapop
+if(npops_OM==npops&&nreg_OM==nreg && npops>1){
+  
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
+  
+  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
+  
+  
+  movement.data<-rbind(movement.data.sim,movement.data.est)
+  movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
+  
+  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
+  move.long$Reg_from<-as.character(move.long$Reg_from)
+  move.long$Reg_to<-as.character(move.long$Reg_to)
+}
+
+#Metapop OM with metamictic
+if(npops_OM>1&&npops==1&&nreg>1){
+  
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
+  
+  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
+  
+  movement.data.est.t<-cbind(movement.data.est,move_df_est)
+  movement.data.sim.t<-cbind(movement.data.sim,move_df_sim)
+  movement.data<-rbind(movement.data.est.t,movement.data.sim.t)
+  
+  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
+  move.long$Reg_from<-as.character(move.long$Reg_from)
+  move.long$Reg_to<-as.character(move.long$Reg_to)
+}
+
+
+#for Metamictic to panmictic
 if(npops_OM==npops&&nreg_OM>nreg){
   
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,each=nyrs*na,times=nreg_OM),Age=rep(1:na,times=nyrs*nreg_OM*nreg_OM))
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
   
-  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,each=nyrs*na,times=nreg_OM),Age=rep(1:na,times=nyrs*nreg_OM*nreg_OM))
+  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
   
   movement.sim<-cbind(movement.data.sim,move_df_sim)
 
@@ -1249,7 +1302,6 @@ if(npops_OM==npops&&nreg_OM>nreg){
       {pan.move[k]=0}
     }
   
-  
  movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
   
   movement.data<-rbind(movement.sim,movement.est)
@@ -1260,9 +1312,43 @@ if(npops_OM==npops&&nreg_OM>nreg){
   move.long$Reg_to<-as.character(move.long$Reg_to)
 }
 
+
+#Metapop to panmictic
+if((npops_OM>npops&&npops==1&&nreg==1)){
+
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg_OM,times=nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
+  
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg_OM,times=nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
+  
+  movement.sim<-cbind(movement.data.sim,move_df_sim)
+  
+  #fill a matrix of NA's for estimatated
+  pan.move<-rep(NA,dim(move_df_sim)[1])
+  for(k in 1:length(pan.move)){
+    
+    if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
+    {pan.move[k]=1}
+    
+    if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
+    {pan.move[k]=0}
+  }
+  
+  movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
+  
+  movement.data<-rbind(movement.sim,movement.est)
+  #movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
+  
+  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
+  move.long$Reg_from<-as.character(move.long$Reg_from)
+  move.long$Reg_to<-as.character(move.long$Reg_to)
+}
+
+#organize the data
+move.long.t <- move.long %>% group_by(Dat,Year,Age,Reg_from,Reg_to,Year)%>%summarise(value=median(value))%>%arrange(desc(Dat,Year,Reg_from,Reg_to,Age))
+
 #separate again for plotting
-move.est<-move.long[move.long$Dat=="EST",]
-move.sim<-move.long[move.long$Dat=="SIM",]
+move.est<-move.long.t[move.long.t$Dat=="EST",]
+move.sim<-move.long.t[move.long.t$Dat=="SIM",]
 
 
 #calculate the percent bias
@@ -1279,7 +1365,7 @@ move.meds <- move.est %>% group_by(Age,Reg_from,Reg_to) %>%
   mutate(med = median(value),med.true=median(val.true))
 
 
-if(npops_OM==npops&&nreg_OM>nreg){
+if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
 move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
   geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   #geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
@@ -1297,7 +1383,7 @@ move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), grou
   my_theme
 }
 
-if(npops_OM==npops&&nreg_OM==nreg){
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
 move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
   geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
@@ -1459,15 +1545,13 @@ dev.off()
 #movement plots
 ########################################
 
-pdf("Movement_Plot.pdf",paper='a4r',width=11,height=8) 
+pdf("Movement_Plot.pdf",paper='special',width=14,height=11) 
 #T matrix plots
 grid.arrange(ncol = 1,
              top="Movement",
              move.plot.gg, move.bias.gg)
 
 dev.off()
-
-
 
 } #end of make plots code
 
