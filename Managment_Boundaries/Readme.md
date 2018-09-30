@@ -1,1 +1,1 @@
-This folder contains code and information for the SPASAM ecological boundaries vs management boundaries manuscript.
+This folder contains code and information for the SPASAM project ecological boundaries vs management boundaries manuscript.
