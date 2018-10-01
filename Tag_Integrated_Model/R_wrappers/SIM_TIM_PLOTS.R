@@ -123,7 +123,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=12
+folder.num=11
 i=folder.num
 
 ####################################################
@@ -1183,6 +1183,9 @@ fmax.est$val.true<-fmax.sim$value
 fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
 #fmax.est$bias=((fmax.est$val.true-fmax.est$value))
 
+#removing the top and bottom 1% for the plots...
+fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
+
 #calc medians table
 fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
   summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
@@ -1191,6 +1194,8 @@ fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
 fmax.meds <- fmax.est %>% group_by(Reg) %>%
   mutate(med = median(value),med.true=median(val.true))
 
+#incase there are crazy outlier values
+#fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
 
 #generate fmax Plot
 fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
@@ -1204,6 +1209,7 @@ fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
   xlab("Year")+
   facet_grid(Reg~.)+
   #ylim(-5,5)+
+  #ylim(quantile(fmax.est$bias, c(.01,.99)))+
   my_theme
 
 
@@ -1218,7 +1224,6 @@ fmax.bias.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  #ylim(quantile(fmax.est$bias, c(.05,.95)))+
   my_theme
 
 
