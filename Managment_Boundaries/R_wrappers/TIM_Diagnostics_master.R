@@ -121,6 +121,7 @@ to<-paste0(EM_direct,"\\",EM_name,".dat")
 setwd(EM_direct)
 
 #remove exsisting cor and std files
+
 cor.name<-paste0(EM_name,".cor")
 std.name<-paste0(EM_name,".std")
 
@@ -176,10 +177,11 @@ if (file.exists(cor.name) && out$dummy<0) {
   cor<-readRep(EM_name, suffix=(".cor"), global=FALSE)
 }
 
+std.name<-paste0(EM_name,".std")
 
-std<-readRep(EM_name, suffix=".std", global=FALSE)
-
-
+if (file.exists(std.name)) {
+  std<-readRep(EM_name, suffix=".std", global=FALSE)
+}
 
 #pull info about the model
 na<-out$nages
@@ -1743,42 +1745,46 @@ dev.off()
 #take the values off the log scale
 #std[,3:4]<-exp(std[,3:4])
 
+#take the values off the log scale
+#std[,3:4]<-exp(std[,3:4])
 
-std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 10),rows = NULL)
-
-std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                            t = 2, b = nrow(std_params), l = 1, r = ncol(std_params)) 
-std_params <-gtable_add_grob(std_params,
-                     grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
-                     t = 1, l = 1, r = ncol(std_params))
-                             
-#h.st <- grobHeight(std_params)
-#title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
-#                       vjust=0, gp=gpar(fontsize=12))
-#gt_std <- gTree(children=gList(std_params, title_std))
-
-
-#print over many pages
-fullheight <- convertHeight(sum(std_params$heights), "cm", valueOnly = TRUE)
-margin <- unit(0.61,"in")
-margin_cm <- convertHeight(margin, "cm", valueOnly = TRUE)
-a4height <- 29.7 - margin_cm
-nrows <- nrow(std_params)
-npages <- ceiling(fullheight / a4height)
-
-heights <- convertHeight(std_params$heights, "cm", valueOnly = TRUE) 
-rows <- cut(cumsum(heights), include.lowest = FALSE,
-            breaks = c(0, cumsum(rep(a4height, npages))))
-groups <- split(seq_len(nrows), rows)
-gl <- lapply(groups, function(id) std_params[id,])
-
-
-pdf("Standard_Error_table.pdf", paper = "a4", width = 0, height = 0)
-ml<-marrangeGrob(grobs=gl, ncol=1, nrow=1, top="Standard Errors (log scale)")
-
-grid.draw(ml)
-dev.off()
-
+if (file.exists(std.name)) {
+  
+  std_params<-tableGrob(std,theme = ttheme_minimal(base_size = 10),rows = NULL)
+  
+  std_params<-gtable_add_grob(std_params,grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                              t = 2, b = nrow(std_params), l = 1, r = ncol(std_params)) 
+  std_params <-gtable_add_grob(std_params,
+                               grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+                               t = 1, l = 1, r = ncol(std_params))
+  
+  #h.st <- grobHeight(std_params)
+  #title_std <- textGrob("Standard Errors (log scale)", y=unit(0.5,"npc") + 1.25*h.st, 
+  #                       vjust=0, gp=gpar(fontsize=12))
+  #gt_std <- gTree(children=gList(std_params, title_std))
+  
+  
+  #print over many pages
+  fullheight <- convertHeight(sum(std_params$heights), "cm", valueOnly = TRUE)
+  margin <- unit(0.61,"in")
+  margin_cm <- convertHeight(margin, "cm", valueOnly = TRUE)
+  a4height <- 29.7 - margin_cm
+  nrows <- nrow(std_params)
+  npages <- ceiling(fullheight / a4height)
+  
+  heights <- convertHeight(std_params$heights, "cm", valueOnly = TRUE) 
+  rows <- cut(cumsum(heights), include.lowest = FALSE,
+              breaks = c(0, cumsum(rep(a4height, npages))))
+  groups <- split(seq_len(nrows), rows)
+  gl <- lapply(groups, function(id) std_params[id,])
+  
+  
+  pdf("Standard_Error_table.pdf", paper = "a4", width = 0, height = 0)
+  ml<-marrangeGrob(grobs=gl, ncol=1, nrow=1, top="Standard Errors (log scale)")
+  
+  grid.draw(ml)
+  dev.off()
+}
 
 ####################################
 #save all the outputs to a text file
