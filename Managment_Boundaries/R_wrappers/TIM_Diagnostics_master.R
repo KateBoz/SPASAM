@@ -3,12 +3,6 @@
 # Created by: Katelyn Bosley
 ####################################################
 
-# Manually make changes in the OM .dat and run both OM and EM together
-
-#remove junk from workspace
-rm(list=(ls()))
-
-
 #load libraries
 load_libraries<-function() {
   library(PBSmodelling)
@@ -68,37 +62,35 @@ resid.switch=1
   
 #name OPERATING MODEL of the .exe
 #OM_name<-OM_name #name of the OM you are wanting to run
-OM_name<-"MB_OM" 
+#OM_name<-"MB_OM" 
 #OM_name<-"TIM_OM" 
 
 #name ESTIMATION MODEL of the .exe
 #EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
-EM_name<-"MB_EM" 
+#EM_name<-"MB_EM" 
 #EM_name<-"TIM_EM" 
 
 
 #set the directory where the runs are held, make sure that each folder has the OM and EM folders with .tpl, .exe, .dat configured as desired
 
 # master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Managment_Boundaries"
-#direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch"
-
+#direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\SPASAM-master\\Managment_Boundaries"
 
 #list files in the directory
-files<-list.files(direct_master)
+#files<-list.files(direct_master)
 
 #select the file you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-i=3
+#i=3
   
 #if running the whole master folder
  #for(i in 1:length(files)){
 
 #OM Location
-  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+#  OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
 
 #EM Location
-  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
+#  EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
 
 ###########################################################################
   
@@ -1924,20 +1916,5 @@ make.plots()
 
 #} #end loops if doing many runs
 
-
-################################################################################
-################################################################################
-#to make things simple and fast just run these pieces of code consecutively when editing
-
-{
-time.elapsed<-run.model()
-make.plots()
-}
-
-#for checking individual things
-out<-readList(paste(EM_direct,paste0(EM_name,".rep"),sep="\\")) #read in .rep file
-
-setwd(OM_direct)
-
-  
+ 
 
