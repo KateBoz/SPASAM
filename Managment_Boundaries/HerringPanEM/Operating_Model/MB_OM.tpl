@@ -5718,7 +5718,7 @@ REPORT_SECTION
             //JJD - for mgngmt boundary work; take different proportion of obs age comp from each region; for catch-weighted report values
             for (int x=1;x<=nregions(j);x++)
             {
-            OBS_catch_prop_temp1_mb(j,a,y,x,z)=OBS_catch_prop(j,x,y,z,a)*obs_misallocate(j,r);
+            OBS_catch_prop_temp1_mb(j,a,y,x,z)=OBS_catch_prop(j,x,y,z,a)*obs_misallocate(j,x);
             OBS_catch_prop_temp1a_mb(j,a,y,x)=sum(OBS_catch_prop_temp1_mb(j,a,y,x));
             } //close x
             OBS_catch_prop_temp1a_pop(a,y,j)=sum(OBS_catch_prop_temp1a_mb(j,a,y));
