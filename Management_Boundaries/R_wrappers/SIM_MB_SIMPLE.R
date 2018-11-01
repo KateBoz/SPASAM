@@ -120,7 +120,7 @@ keep.all<-1
 
 #8) set master file with holding the runs 
 
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MB_test\\Managment_Boundaries"
+direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MB_test\\Management_Boundaries"
 setwd(direct_master)
 
 #list files in the directory
