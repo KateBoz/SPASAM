@@ -84,7 +84,7 @@ run.sims<-1
 # ==1 Run simulation experiement
 
 #4) Set number of simulations to perform
-nsim <-50
+nsim <-20
 
 #5) Do you want to save important values from the runs?
 save.values<-1
@@ -92,7 +92,7 @@ save.values<-1
 # ==1 SAVE values from the sims run
 
 #6) Do you want to make plots with summary of the run?
-make.plots<-1
+draw.plots<-1
 # ==0 DO NOT create summary document
 # ==1 Create summary document with graphs and run statistics
 
@@ -130,7 +130,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
 
-folder.num=1
+folder.num=2
 
 i=folder.num
 
@@ -594,7 +594,7 @@ if(save.values==1){
 ###################################################
 # 
 
-if(make.plots==1){
+if(draw.plots==1){
   
   #pull dimensions for building data frames for plots
   out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
