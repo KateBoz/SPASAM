@@ -1,2 +1,0 @@
-This folder runs 20 stochastic iterations with
-run.index = 1-20
