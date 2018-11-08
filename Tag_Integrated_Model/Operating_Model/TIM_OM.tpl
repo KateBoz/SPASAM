@@ -113,7 +113,9 @@ DATA_SECTION
   //==6 natal return, based on age of return and return probability (certain fraction of fish make return migration to natal population eg ontogenetic migration)
   //==7 larvae stay in the population that they move to (i.e., for overlap, do not return to natal population if adult movement==0...otherwise with natal
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
-  //==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  //==8 proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  //// uses use_input_Bstar switch
+  //==9 invers proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
   //// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
   //==21 use input T_year to allow T to vary by year
@@ -255,7 +257,7 @@ DATA_SECTION
   init_number myseed_prob_tag //just the seed for RNG
   init_3darray report_rate_TRUE(1,np,1,ny_rel,1,nreg) //tag reporting rate (assume constant for all recaptures within a given release cohort, but can be variable across populations or regions)...could switch to allow variation across fleets instead
 //reporting rate is assumed to be function of release event and recap location (not a function of recap year...could expand to this, but not priority at momement)
-
+ 
 ///////////
 ///////Density-dependent movement parameters
   init_3darray input_Bstar(1,np,1,nreg,1,na) //used with move_switch==8
@@ -263,7 +265,6 @@ DATA_SECTION
   init_matrix A(1,np,1,nreg) //used with move_switch==8
   init_matrix DD_residency(1,np,1,nreg) //used with move_switch==8
 
- 
 /////////////
   init_number return_age // used if move_swith ==6
   init_vector return_probability(1,np) // used if move_swith==6
@@ -276,7 +277,6 @@ DATA_SECTION
   init_vector amplitude(1,np) //amplitude of periodic recruitment in % of R_ave 
   init_vector freq(1,np) //frequency of recruitment in years (ie 10 for peak every 10 years)
   init_5darray input_T(1,np,1,nreg,1,na,1,np,1,nreg)  //movement matrix
-
   init_5darray input_T_year(1,np,1,nreg,1,ny,1,np,1,nreg)  //movement matrix
   init_matrix input_residency_larval(1,np,1,nreg)  //larval residency probability
   init_3darray input_residency(1,np,1,nreg,1,na) //
@@ -494,6 +494,7 @@ DATA_SECTION
   init_vector return_probability_EM(1,np_em)
   init_vector spawn_return_prob_EM(1,np_em)
 
+
   init_int do_tag_EM
   init_int do_tag_mult //if==0 assume neg binomial, if==1 assume multinomial (same as OM)
 
@@ -607,7 +608,6 @@ DATA_SECTION
   init_4darray OBS_survey_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray OBS_catch_prop_N_EM(1,np_em,1,nreg_em,1,ny,1,nf_em) //cannot exceed 2000, otherwise change dimension of temp vector below
   init_4darray tag_N_EM(1,np_em,1,nreg_em,1,ny_rel,1,na)
-
   //summing tag prop array
 
   !! int xn=na*ny;
@@ -1774,8 +1774,9 @@ FUNCTION get_DD_move_parameters
  ///////////////////////DD Movement///////////////////////////////////////////////////////////////////////////////////////////////////
            /// rel_bio gives ratio of biomass in each area weighted by ratio to Bstar, use 1-ratio of bio
             /// because want to weight T and make more fish move to area with lower bio compared to Bstar
-            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there           
-      if(move_switch==8)
+            /// idea is that if B/Bstar<1 then not densely populated and more fish would move there
+            
+      if(move_switch==8|| move_switch==9)
        {
         for (int s=1;s<=npops;s++)
          {
@@ -1803,6 +1804,8 @@ FUNCTION get_DD_move_parameters
          }
         }
        }
+
+ 
 FUNCTION get_abundance
 
 
@@ -1940,7 +1943,7 @@ FUNCTION get_abundance
                           }
                         }
                     }
-
+                    
                     if(move_switch==8 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
                      {
                       Fract_Move_DD(j,r,y,a)=(1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM(j,r,y)));
@@ -1988,6 +1991,103 @@ FUNCTION get_abundance
                           }
                         }
                     }
+
+
+                   if(move_switch==9 && DD_move_age_switch==1) //DD movement is age based (based on age based biomass not total bio)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n,a);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r,a)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                      }
+
+                    if(move_switch==9 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM(j,r,y))));
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM(s,n,y)/sum(Bstar(s,n));
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM(j,r,y)/sum(Bstar(j,r))); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3361,6 +3461,105 @@ FUNCTION get_abundance
                           }
                         }
                     }
+
+
+                    if(move_switch==9 && DD_move_age_switch==1) //DD movement is age based (based on age based biomass not total bio)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n,a);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r,a)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
+
+                    if(move_switch==9 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_AM(j,r,y-1))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_AM(s,n,y-1)/sum(Bstar(s,n));
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_AM(j,r,y-1)/sum(Bstar(j,r))); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3707,7 +3906,105 @@ FUNCTION get_abundance
                           }
                         }
                     }
- 
+
+
+               if(move_switch==9 && DD_move_age_switch==1) //DD movement is age based (based on age based biomass not total bio)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n,a);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r,a)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
+                 if(move_switch==9 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_AM(j,r,y-1))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_AM(s,n,y-1)/sum(Bstar(s,n));
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_AM(j,r,y-1)/sum(Bstar(j,r))); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                       }
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3969,6 +4266,105 @@ FUNCTION get_abundance
                           }
                         }
                     }
+
+
+                  if(move_switch==9 && DD_move_age_switch==1) //DD movement is age based (based on age based biomass not total bio)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n,a);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r,a)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
+                    if(move_switch==9 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_AM(j,r,y-1))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_AM(s,n,y-1)/sum(Bstar(s,n));
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_AM(j,r,y-1)/sum(Bstar(j,r))); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                      }
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -4227,6 +4623,104 @@ FUNCTION get_abundance
                           }
                         }
                     }
+
+
+            if(move_switch==9 && DD_move_age_switch==1) //DD movement is age based (based on age based biomass not total bio)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_BM_age(j,r,y,a))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_BM_age(s,n,y,a)/Bstar(s,n,a);
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_BM_age(j,r,y,a)/Bstar(j,r,a)); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                    }
+
+                    if(move_switch==9 && DD_move_age_switch==0) //DD movement is not age based (based on total bio not bio at age)
+                     {
+                      Fract_Move_DD(j,r,y,a)=1-((1-DD_residency(j,r))/(1+A(j,r)*mfexp(c(j,r)*biomass_AM(j,r,y-1))));
+       
+                      biomass_BM_temp=0;
+                      biomass_BM_temp2=0;
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {       
+                           biomass_BM_temp(s,n)=biomass_AM(s,n,y-1)/sum(Bstar(s,n));
+                          }
+                        }
+                       biomass_BM_temp2=sum(biomass_BM_temp)-(biomass_AM(j,r,y-1)/sum(Bstar(j,r))); //do not include population/region moving from in summation
+                        for (int s=1;s<=npops;s++)
+                         {
+                          for (int n=1;n<=nregions(s);n++)
+                           {
+                            if(j==s && r==n) //do not include current pop/region in calcs (residency is already defined)
+                             {
+                              rel_bio(j,r,y,a,s,n)=0;  //rel bio defined for movement out of pop j region r as suitability of destination population s, region n
+                             }
+                            if(j!=s || r!=n) 
+                             {
+                              rel_bio(j,r,y,a,s,n)=1-((biomass_BM_temp(s,n))/(biomass_BM_temp2));
+                             }
+                            if(sum(nregions)==2)
+                             {
+                              rel_bio(j,r,y,a,s,n)=1;
+                             }
+                            }
+                           }                          
+                       for (int s=1;s<=npops;s++)
+                        {
+                         for (int n=1;n<=nregions(s);n++)
+                          {
+                           if(j==s && r==n) 
+                            {
+                             T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
+                            }
+                           if(j!=s || r!=n) 
+                            {
+                             T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
+                            }
+                          }
+                        }
+                      }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
