@@ -626,6 +626,7 @@ PARAMETER_SECTION
 
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr)
+ 3darray recruits_BM_misallocate(1,nps,1,nr,1,nyr) //JJD
  3darray recruits_AM(1,nps,1,nr,1,nyr)
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
@@ -763,6 +764,7 @@ PARAMETER_SECTION
  3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
  matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr)
+ 3darray SSB_region_misallocate(1,nps,1,nr,1,nyr) //JJD
  matrix SSB_population(1,nps,1,nyr)
  vector SSB_total(1,nyr)
  3darray abundance_population(1,nps,1,nyr,1,nag)
@@ -5739,6 +5741,9 @@ REPORT_SECTION
     {
     for (int r=1;r<=nregions(p);r++)
       {
+      //For mngmt boundary work, we need the recruits and SSB from the "assessed area"; e.g., (2+1b)  //JJD
+      recruits_BM_misallocate(p,r,y)=recruits_BM(p,r,y)*obs_misallocate(p,r);
+      SSB_region_misallocate(p,r,y)=SSB_region(p,r,y)*obs_misallocate(p,r);
       for (int z=1;z<=nfleets(p);z++)
         {
          for(int a=1;a<=nages;a++)
@@ -5747,7 +5752,6 @@ REPORT_SECTION
         abund_frac_region_year(p,r,y)=sum(abundance_at_age_AM(p,r,y))/sum(abundance_total(y));
         abund_frac_region(p,r)=sum(abund_frac_region_year(p,r))/nyrs;//average of all years    
         }}}}}
-        
  
  //Aggregating OBS values and vitals for panmictic EM
  if(EM_structure==0 && OM_structure>0){ 
@@ -6250,6 +6254,8 @@ REPORT_SECTION
   report<<Rec_Prop<<endl;
   report<<"#recruits_BM"<<endl;
   report<<recruits_BM<<endl;
+  report<<"#recruits_BM_misallocated_data"<<endl; //JJD
+  report<<recruits_BM_misallocate<<endl;
   report<<"#F"<<endl;
   report<<F<<endl;
   report<<"#Fyear"<<endl;
@@ -6276,6 +6282,8 @@ REPORT_SECTION
   report<<depletion_region<<endl;
   report<<"#SSB_region"<<endl;
   report<<SSB_region<<endl;
+  report<<"#SSB_region_misallocate"<<endl; //JJD
+  report<<SSB_region_misallocate<<endl;
   report<<"#Bratio_population"<<endl;
   report<<Bratio_population<<endl;
   report<<"#T_year"<<endl;
