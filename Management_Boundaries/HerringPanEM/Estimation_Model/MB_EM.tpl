@@ -321,6 +321,7 @@ DATA_SECTION
   init_matrix rec_devs_TRUE(1,np_om,1,ny)
   init_3darray Rec_Prop_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray recruits_BM_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix recruits_BM_misallocate_TRUE(1,np,1,ny)
   init_4darray F_TRUE(1,np_om,1,nreg_om,1,ny,1,na)
   init_4darray F_year_TRUE(1,np_om,1,nreg_om,1,ny,1,nfs_om)
   init_3darray biomass_AM_TRUE(1,np_om,1,nreg_om,1,ny)
@@ -337,6 +338,7 @@ DATA_SECTION
   init_3darray harvest_rate_region_bio_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray depletion_region_TRUE(1,np_om,1,nreg_om,1,ny)
   init_3darray SSB_region_TRUE(1,np_om,1,nreg_om,1,ny)
+  init_matrix SSB_region_misallocate_TRUE(1,np,1,ny)
   init_matrix Bratio_population_TRUE(1,np_om,1,ny)
   init_5darray T_year_TRUE(1,np_om,1,nreg_om,1,ny,1,np_om,1,nreg_om)
 
@@ -4024,6 +4026,11 @@ REPORT_SECTION
   report<<SSB_region_TRUE<<endl;
   report<<"$Bratio_population_TRUE"<<endl;
   report<<Bratio_population_TRUE<<endl;
+  report<<"$SSB_misallocate_TRUE"<<endl;
+  report<<SSB_region_misallocate_TRUE<<endl;
+  report<<"$recruits_BM_misallocate_TRUE"<<endl;
+  report<<recruits_BM_misallocate_TRUE<<endl;
+  
 
 //OBS simulated data for lower dimensional arrays
   if(diagnostics_switch==1){
