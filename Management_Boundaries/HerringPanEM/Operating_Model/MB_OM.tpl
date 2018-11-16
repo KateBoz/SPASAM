@@ -626,7 +626,9 @@ PARAMETER_SECTION
 
 //recruitment 
  3darray recruits_BM(1,nps,1,nr,1,nyr)
- 3darray recruits_BM_misallocate(1,nps,1,nr,1,nyr) //JJD
+ 3darray recruits_BM_misallocate_region(1,nps,1,nr,1,nyr) //JJD
+ 3darray recruits_BM_misallocate_region_temp(1,nps,1,nyr,1,nr)//KB
+ matrix  recruits_BM_misallocate_pan(1,nps,1,nyr) //KB
  3darray recruits_AM(1,nps,1,nr,1,nyr)
  3darray Rec_Prop(1,nps,1,nr,1,nyr)
  3darray Rec_prop_temp1(1,nps,1,nyr,1,nr)
@@ -704,7 +706,6 @@ PARAMETER_SECTION
  6darray true_survey_fleet_overlap_age(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  6darray survey_at_age_region_fleet_overlap_prop(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  6darray SIM_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
- //6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nfls,1,nyr,1,nag)
  6darray OBS_survey_prop_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag) //**fixed KB now matches dims for EM
  6darray true_survey_fleet_overlap_age_bio(1,nps,1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray true_survey_fleet_bio_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
@@ -727,7 +728,6 @@ PARAMETER_SECTION
 
  5darray survey_at_age_fleet_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  5darray SIM_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
- //5darray OBS_survey_prop(1,nps,1,nr,1,nfls,1,nyr,1,nag)
  5darray OBS_survey_prop(1,nps,1,nr,1,nyr,1,nfls,1,nag) //fixed **KB
  5darray true_survey_fleet_age_bio(1,nps,1,nr,1,nyr,1,nfls,1,nag)
  4darray true_survey_fleet_bio(1,nps,1,nr,1,nyr,1,nfls)
@@ -764,7 +764,10 @@ PARAMETER_SECTION
  3darray catch_at_age_population_prop(1,nps,1,nyr,1,nag)
  matrix yield_population(1,nps,1,nyr)
  3darray SSB_region(1,nps,1,nr,1,nyr)
- 3darray SSB_region_misallocate(1,nps,1,nr,1,nyr) //JJD
+ 3darray SSB_region_misallocate_region(1,nps,1,nr,1,nyr) //JJD
+ 3darray SSB_region_misallocate_region_temp(1,nps,1,nyr,1,nr) //JJD
+ matrix SSB_region_misallocate_pan(1,nps,1,nyr) //JJD
+ 
  matrix SSB_population(1,nps,1,nyr)
  vector SSB_total(1,nyr)
  3darray abundance_population(1,nps,1,nyr,1,nag)
@@ -5742,8 +5745,14 @@ REPORT_SECTION
     for (int r=1;r<=nregions(p);r++)
       {
       //For mngmt boundary work, we need the recruits and SSB from the "assessed area"; e.g., (2+1b)  //JJD
-      recruits_BM_misallocate(p,r,y)=recruits_BM(p,r,y)*obs_misallocate(p,r);
-      SSB_region_misallocate(p,r,y)=SSB_region(p,r,y)*obs_misallocate(p,r);
+      recruits_BM_misallocate_region(p,r,y)=recruits_BM(p,r,y)*obs_misallocate(p,r);
+      recruits_BM_misallocate_region_temp(p,y,r)=recruits_BM_misallocate_region(p,r,y);
+      recruits_BM_misallocate_pan(p,y)=sum(recruits_BM_misallocate_region_temp(p,y));
+
+      SSB_region_misallocate_region(p,r,y)=SSB_region(p,r,y)*obs_misallocate(p,r);
+      SSB_region_misallocate_region_temp(p,y,r)=SSB_region_misallocate_region(p,r,y);
+      SSB_region_misallocate_pan(p,y)=sum(SSB_region_misallocate_region_temp(p,y));
+      
       for (int z=1;z<=nfleets(p);z++)
         {
          for(int a=1;a<=nages;a++)
@@ -6202,10 +6211,6 @@ REPORT_SECTION
       }
 
 
-///////////
-// panmictic to spatial will go here eventually
-/////////
-
 //Additional inputs for EM specified in OM .dat
   report<<"#input_M_EM"<<endl;
   report<<input_M_EM<<endl;
@@ -6255,7 +6260,7 @@ REPORT_SECTION
   report<<"#recruits_BM"<<endl;
   report<<recruits_BM<<endl;
   report<<"#recruits_BM_misallocated_data"<<endl; //JJD
-  report<<recruits_BM_misallocate<<endl;
+  report<<recruits_BM_misallocate_pan<<endl;
   report<<"#F"<<endl;
   report<<F<<endl;
   report<<"#Fyear"<<endl;
@@ -6283,7 +6288,7 @@ REPORT_SECTION
   report<<"#SSB_region"<<endl;
   report<<SSB_region<<endl;
   report<<"#SSB_region_misallocate"<<endl; //JJD
-  report<<SSB_region_misallocate<<endl;
+  report<<SSB_region_misallocate_pan<<endl;
   report<<"#Bratio_population"<<endl;
   report<<Bratio_population<<endl;
   report<<"#T_year"<<endl;
@@ -6321,34 +6326,6 @@ REPORT_SECTION
   report<<"#debug"<<endl;
   report<<debug<<endl;
 
-
-//to get abundance after movement for init abund
-// report<<"#Abund_BM"<<endl;
-// report<<abundance_at_age_BM<<endl;
-// report<<"#Abund_AM"<<endl;
-// report<<abundance_at_age_AM<<endl;
-
- // Some stuff for looking at tag calculations 
-  /*
-  report<<"#OBS_tag_prop_final"<<endl;
-  report<<OBS_tag_prop_final(1,1,1)<<endl;
-  report<<"nt"<<endl;
-  report<<"true_survey_population_bio"<<true_survey_population_bio<<endl;
-  report<<"true_survey_region_bio"<<true_survey_region_bio<<endl;
-  report<<"abundance_total"<<abundance_total<<endl<<"abundance_population"<<abundance_population<<endl;
-  report<<"true fleet_age"<<true_survey_fleet_age<<endl;
-  report<<"survey_abundance"<<endl<<true_survey_region_abundance<<endl;
-  report<<"temp_fleet_age"<<endl<<true_survey_fleet_age_temp<<endl;
-
-
-  report<<"ntags(1,1,1,1)"<<endl<<ntags(1,1,1,9)<<endl<<"ntags_total(x)"<<endl<<ntags_total(1)<<endl;
-  report<<"true_survey_population_abundance(xx,i,a)"<<endl<<true_survey_population_abundance(1,1,9)<<endl;
-  report<<"true_survey_total_abundance(xx,a)"<<endl<<sum(true_survey_total_abundance(1))<<endl;
-  report<<"true_survey_region_abundance(i,xx,n,a)"<<endl<<true_survey_region_abundance(1,1,1,9)<<endl;
-  report<<"true_survey_population_abundance(xx,i,a)"<<endl<<true_survey_population_abundance(1,1,9)<<endl;
-  report<<"survey_selectivity(i,n,xx,a,1)"<<endl<<survey_selectivity(1,1,1,9,1)<<endl;
-  report<<"sum(survey_selectivity_temp(i,n,xx,1)))"<<endl<<sum(survey_selectivity_temp(1,1,1,1))<<endl;
- */
 
 RUNTIME_SECTION
   convergence_criteria .001,.0001, 1.0e-4, 1.0e-7
