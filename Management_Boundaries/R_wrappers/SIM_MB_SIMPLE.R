@@ -12,8 +12,7 @@
 # This "simple" version is one that only runs the sims and saves a 
 # overall report of the runs (convergence rates/etc).
 # It will also run the diagnostics code which is a one-off of the model
-# to see 
-# if there was major failure and provide clues of the cause. 
+# to see if there was major failure and provide clues of the cause. 
 # Good Luck and Enjoy!
 #
 ############################################################################
@@ -67,7 +66,7 @@ EM_name<-"MB_EM" ###name of .dat, .tpl., .rep, etc.
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-1
+diag.run<-0
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
@@ -91,7 +90,7 @@ save.values<-1
 # ==0 DO NOT save values from the sims run
 # ==1 SAVE values from the sims run
 
-#6) Do you want to make plots with summary of the run?
+#6) Do you want to build a document with summary plots of the run?
 draw.plots<-1
 # ==0 DO NOT create summary document
 # ==1 Create summary document with graphs and run statistics
@@ -113,29 +112,30 @@ keep.all<-1
 ### setting up the directories
 #########################################
 
-# To run this simulation a folder for each scenario will need to be placed in the master directory. Each scenario folder will need separate folders named 'Operating_Model' and 'Estimation_model' with the .exe files and .dat for the OM only. The code will do the rest. 
+# To run this simulation, a folder for each scenario will need to be placed in the master directory. Each scenario folder will need separate folders named 'Operating_Model' and 'Estimation_model' each with the the .exe for the appropriate model. You will need the .dat for OM only. Thish code will do the rest. 
 
-#If the diagnostic switch ==1 the TIM_diagnostics_SIM.R code will also have to be in the master directory.
+##NOTE##
+#If the diagnostic switch ==1 (above) the TIM_diagnostics_SIM.R code will also have to be in the master directory.
 
 
-#8) set master file with holding the runs 
-
-direct_master<-"C:\\Users\\katelyn.bosley.NMFS\\Desktop\\MB_test\\Management_Boundaries"
+#8) set master directory holding the files with each run.
+direct_master<-"F:\\MB_testing"
 setwd(direct_master)
 
-#list files in the directory
+# Create a list of files in the directory
 files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
 
-#select the file with the scenario you want to run
+#select the file from the list with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-
+#fror one run
 folder.num=2
-
 i=folder.num
 
+#for looping through all the folders
 ##run.sims<-function(folder.num=i){
 #run the whole code
+
 { #GO!
 
 #if running the several folders use the loop - This will come later
@@ -418,6 +418,7 @@ if(save.values==1){
     
     #Save Rec Total
     rec_sim_temp<-data.table(Rec_Sim = c(t(out$recruits_BM_TRUE)))
+    rec_sim_mis_temp<-data.table(Rec_Sim_mis= c(t(out$recruits_BM_misallocate_TRUE)))
     rec_est_temp<-data.table(Rec_Est= c(t(out$recruits_BM)))
     
     #Save Rec deviations
@@ -430,6 +431,7 @@ if(save.values==1){
     
     #Save SSB
     ssb_sim_temp<-data.table(SSB_Sim = c(t(out$SSB_region_TRUE)))
+    ssb_sim_mis_temp<-data.table(SSB_Sim_mis = c(t(out$SSB_misallocate_TRUE)))
     ssb_est_temp<-data.table(SSB_Est = c(t(out$SSB_region)))
     
     #Save Bio
@@ -525,12 +527,14 @@ if(save.values==1){
                 apport_sim=apport_sim_temp,
                 apport_est=apport_est_temp,
                 rec_sim=rec_sim_temp,
+                rec_sim_mis=rec_sim_mis_temp,
                 rec_est=rec_est_temp,
                 rec_devs_sim=rec_devs_sim_temp,
                 rec_devs_est=rec_devs_est_temp,
                 init_abund_sim=init_abund_sim_temp,
                 init_abund_est=init_abund_est_temp,
                 ssb_sim=ssb_sim_temp,
+                ssb_sim_mis=ssb_sim_mis_temp,
                 ssb_est=ssb_est_temp,
                 bio_sim=bio_sim_temp,
                 bio_est=bio_est_temp,
@@ -677,7 +681,8 @@ if(keep.all==1){
     #rr_df_est<-matrix(NA,nrel*nreg,nconv)
     
     #Recruitment
-    rec_df_sim<-matrix(NA,nyrs*nreg_OM,nconv)
+    rec_df_sim<-matrix(NA,nyrs*nreg_OM,nconv) # this is the true # of recr
+    rec_df_sim_mis<-matrix(NA,nyrs*nreg,nconv) # true misalighned
     rec_df_est<-matrix(NA,nyrs*nreg,nconv)
     
     #Recruitment deviations
@@ -690,6 +695,7 @@ if(keep.all==1){
     
     #SSB
     ssb_df_sim<-matrix(NA,nyrs*nreg_OM,nconv)
+    ssb_df_sim_mis<-matrix(NA,nyrs*nreg,nconv)
     ssb_df_est<-matrix(NA,nyrs*nreg,nconv)
     
     #Biomass
@@ -752,12 +758,14 @@ for(i in 1:nconv){
       #rr_df_sim[,i]<-unlist(Sim_Results["rr_sim",i])
       #rr_df_est[,i]<-unlist(Sim_Results["rr_est",i])
       rec_df_sim[,i]<-unlist(Sim_Results["rec_sim",i])
+      rec_df_sim_mis[,i]<-unlist(Sim_Results["rec_sim_mis",i])
       rec_df_est[,i]<-unlist(Sim_Results["rec_est",i])
       rec_devs_df_sim[,i]=unlist(Sim_Results["rec_devs_sim",i])
       rec_devs_df_est[,i]=unlist(Sim_Results["rec_devs_est",i])
       init_abund_df_sim[,i]=unlist(Sim_Results["init_abund_sim",i])
       init_abund_df_est[,i]=unlist(Sim_Results["init_abund_est",i])
       ssb_df_sim[,i]<-unlist(Sim_Results["ssb_sim",i])
+      ssb_df_sim_mis[,i]<-unlist(Sim_Results["ssb_sim_mis",i])
       ssb_df_est[,i]<-unlist(Sim_Results["ssb_est",i])
       bio_df_sim[,i]<-unlist(Sim_Results["bio_sim",i])
       bio_df_est[,i]<-unlist(Sim_Results["bio_est",i])
@@ -1042,6 +1050,75 @@ rec.meds <- rec.est %>% group_by(Reg) %>%
     #save rec bias calcs
     write.csv(rec.est.med,"Rec_Bias.csv")
     
+    
+    
+#########################################
+#Add misallocated bias plot
+#########################################
+
+rec.data.mis<-data.frame(Dat=rep("SIM",nrow(rec_df_sim_mis)),Years=rep(years))
+rec.data.mis<-cbind(rec.data.mis,rec_df_sim_mis)
+rec.long.sim.mis<-melt(rec.data.mis, id=c("Dat","Years"))
+rec.long.mis<-rbind(rec.long.est,rec.long.sim.mis)
+
+
+#separate again for plotting
+rec.est.mis<-rec.long.mis[rec.long.mis$Dat=="EST",]
+rec.sim.mis<-rec.long.mis[rec.long.mis$Dat=="SIM",]
+
+
+#calculate the percent bias
+rec.est.mis$val.true<-rec.sim.mis$value
+rec.est.mis$bias=((rec.est.mis$val.true-rec.est.mis$value)/rec.est.mis$val.true)*100
+
+
+#calc medians table
+rec.est.med.mis <- rec.est.mis %>% group_by(Years) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+  
+      rec.plot.mis.gg<-ggplot(rec.est.mis, aes(x=as.factor(Years), y=value)) +
+        #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+        geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
+        geom_point(data = rec.est.med.mis, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+        geom_line(data = rec.est.med.mis, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
+        geom_point(data = rec.est.med.mis, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
+        scale_x_discrete(breaks=seq(0,nyrs,5))+
+        ggtitle("Total Recruitment: Misaligned")+
+        ylab("Recruitment")+
+        xlab("Year")+
+        #facet_grid(Reg~.)+
+        my_theme
+   
+rec.bias.mis.gg<-ggplot(rec.est.mis, aes(x=as.factor(Years), y=bias)) +
+        geom_hline(aes(yintercept = 0), colour = 'red',size=0.5,lty=2)+
+        geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
+        geom_line(data = rec.est.med.mis, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
+        geom_point(data = rec.est.med.mis, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) +
+        scale_x_discrete(breaks=seq(0,nyrs,5))+
+        ggtitle("Recruitment Bias: Misaligned")+
+        ylab("Relative % Difference")+
+        xlab("Year")+
+        #facet_grid(Reg~.,scales="free")+
+        #ylim(quantile(rec.est$bias, c(.05,.95)))+
+        my_theme
+      
+      #save rec bias calcs
+      write.csv(rec.est.med.mis,"Rec_Bias_misaligned.csv")  
+
+ 
+#plot the 1:1 to visualize the bias     
+      
+    rec.bias.mis.line.gg<-ggplot(rec.est.med.mis, aes(x=med.sim, y=med.est)) +
+        geom_abline(slope=1, intercept=0, colour = 'red',size=0.5,lty=2)+
+        geom_point(fill=median.col, shape=21,size=3) +
+        #scale_x_discrete(breaks=seq(0,nyrs,5))+
+        ggtitle("Recruitment Bias: Misaligned")+
+        ylab("Median Estimated recruitment")+
+        xlab("True Simulated Recruitment")+
+        #facet_grid(Reg~.,scales="free")+
+        #ylim(quantile(rec.est$bias, c(.05,.95)))+
+        my_theme
+      
 #####################################################
 #SSB plot
     
@@ -1131,6 +1208,73 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
     
     #save rec bias calcs
     write.csv(ssb.est.med,"SSB_Bias.csv")
+    
+    
+##########################################################
+# SSB misaligned plots
+#########################################################
+    
+    ssb.data.mis<-data.frame(Dat=rep("SIM",nrow(ssb_df_sim_mis)),Years=rep(years))
+    ssb.data.mis<-cbind(ssb.data.mis,ssb_df_sim_mis)
+    ssb.long.sim.mis<-melt(ssb.data.mis, id=c("Dat","Years"))
+    ssb.long.mis<-rbind(ssb.long.est,ssb.long.sim.mis)
+    
+    
+    #separate again for plotting
+    ssb.est.mis<-ssb.long.mis[ssb.long.mis$Dat=="EST",]
+    ssb.sim.mis<-ssb.long.mis[ssb.long.mis$Dat=="SIM",]
+    
+    
+    #calculate the percent bias
+    ssb.est.mis$val.true<-ssb.sim.mis$value
+    ssb.est.mis$bias=((ssb.est.mis$val.true-ssb.est.mis$value)/ssb.est.mis$val.true)*100
+    
+    
+    #calc medians table
+    ssb.est.med.mis <- ssb.est.mis %>% group_by(Years) %>%
+      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+    
+    ssb.plot.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=value)) +
+      #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
+      geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
+      geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
+      geom_line(data =   ssb.est.med.mis, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
+      geom_point(data =   ssb.est.med.mis, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
+      scale_x_discrete(breaks=seq(0,nyrs,5))+
+      ggtitle("Total SSB: Misaligned")+
+      ylab("SSB")+
+      xlab("Year")+
+      #facet_grid(Reg~.)+
+      my_theme
+    
+    ssb.bias.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=bias)) +
+      geom_hline(aes(yintercept = 0), colour = 'red',size=0.5,lty=2)+
+      geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
+      geom_line(data = ssb.est.med.mis, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
+      geom_point(data = ssb.est.med.mis, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) +
+      scale_x_discrete(breaks=seq(0,nyrs,5))+
+      ggtitle("SSB Bias: Misaligned")+
+      ylab("Relative % Difference")+
+      xlab("Year")+
+      #facet_grid(Reg~.,scales="free")+
+      #ylim(quantile(ssb.est$bias, c(.05,.95)))+
+      my_theme
+    
+    #save ssb bias calcs
+    write.csv(ssb.est.med.mis,"ssb_Bias_misaligned.csv")  
+    
+    
+    #plot the 1:1 to visualize the bias     
+    
+    ssb.bias.mis.line.gg<-ggplot(ssb.est.med.mis, aes(x=med.sim, y=med.est)) +
+      geom_abline(slope=1, intercept=0, colour = 'red',size=0.5,lty=2)+
+      geom_point(fill=median.col, shape=21,size=3) +
+      #scale_x_discrete(breaks=seq(0,nyrs,5))+
+      ggtitle("SSB Bias: Misaligned")+
+      ylab("Median Estimated SSB")+
+      xlab("True Simulated SSB")+
+      my_theme
+    
     
     
     ####################################
@@ -1314,13 +1458,23 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
     
     
     grid.arrange(ncol = 1,
-                 top="Recruitment Estimation",
+                 top="Recruitment",
                  rec.plot.gg, rec.bias.gg)
+    
+    
+    grid.arrange(ncol = 1,
+                 top="Recruitment: Misaligned",
+                 rec.plot.mis.gg, rec.bias.mis.gg, rec.bias.mis.line.gg)
+    
     
     #Biomass plots
     grid.arrange(ncol = 1,
                  top="SSB",
                  ssb.plot.gg, ssb.bias.gg)
+    
+    grid.arrange(ncol = 1,
+                 top="SSB: Misaligned",
+                 ssb.plot.mis.gg, ssb.bias.mis.gg, ssb.bias.mis.line.gg)
     
     #Add fmax plots
     grid.arrange(ncol = 1,
@@ -1360,6 +1514,17 @@ fmax.table<-spread(fmax.long, key = variable, value = value)
 write.csv(ssb.table,"ssb_table.csv")
 write.csv(rec.table,"rec_table.csv")
 write.csv(fmax.table,"fmax_table.csv")
+
+#save png files
+#ssb
+ggsave("ssb_misalign_ts.png",ssb.plot.mis.gg,device="png")
+ggsave("ssb_misalign_bias.png",ssb.bias.mis.gg,device="png")
+ggsave("ssb_misalign_biasline.png",ssb.bias.mis.line.gg,device="png")
+
+#rec
+ggsave("rec_misalign_ts.png",rec.plot.mis.gg,device="png")
+ggsave("rec_misalign_bias.png",rec.bias.mis.gg,device="png")
+ggsave("rec_misalign_biasline.png",rec.bias.mis.line.gg,device="png")
 
 
 } #end of plots code 
