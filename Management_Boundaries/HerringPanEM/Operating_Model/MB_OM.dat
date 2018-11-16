@@ -568,7 +568,7 @@
 ###These values would apply to all data: catch, survey, age comps, etc.;  all 1's would be no misreporting or misallocation.
 ### init_matrix obs_misallocate(1,np,1,nreg)  //JJD  cannot all =1; if you want all 1s use 0.999
 0.99
-0.99
+0.25
 
 ################################################################################################################
 ################################################################################################################
