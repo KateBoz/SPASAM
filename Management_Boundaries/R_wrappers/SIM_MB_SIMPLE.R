@@ -101,6 +101,10 @@ vio.col<-"lightskyblue3"
 # select color for median points
 median.col<-"grey95"
 
+#set quantile range for .csv report
+upper<-0.90
+lower<-0.10
+
 
 #7) Do you want to plot non-converged runs? This will be needed/useful for MISMATCH
 keep.all<-1
@@ -120,28 +124,27 @@ keep.all<-1
 
 #8) set master directory holding the files with each run.
 direct_master<-"F:\\MB_testing"
-setwd(direct_master)
 
 # Create a list of files in the directory
 files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
 
 #select the file from the list with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
+##COMMENT OUT THESE THREE LINES IF LOOPING
+#folder.num=3
+#i=folder.num
+#{ #run code
 
-#fror one run
-folder.num=2
-i=folder.num
 
-#for looping through all the folders
-##run.sims<-function(folder.num=i){
-#run the whole code
+######### IF RUNNING A LOOP ACROSS MANY FOLDERS UNCOMMENT OUT THIS SECTION ############### 
+#if running the several folders use the loop
+for(i in 2:3){
+#########################################################################################
 
-{ #GO!
+setwd(direct_master)
 
-#if running the several folders use the loop - This will come later
-#for(i in 1:3){
 
-##############################################################
+##################################################
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
 #OM_name<-"MB_OM" #name of the OM you are wanting to run
@@ -733,8 +736,8 @@ if(keep.all==1){
 for(i in 1:nconv){
       R_ave_df_sim[,i]<-unlist(Sim_Results["meanR_sim",i])
       R_ave_df_est[,i]<-unlist(Sim_Results["meanR_est",i])
-      #R_apport_df_sim[,i]<-unlist(Sim_Results["apport_sim",i])
-      #R_apport_df_est[,i]<-unlist(Sim_Results["apport_est",i])
+      R_apport_df_sim[,i]<-unlist(Sim_Results["apport_sim",i])
+      R_apport_df_est[,i]<-unlist(Sim_Results["apport_est",i])
       q_df_sim[,i]<-unlist(Sim_Results["q_sim",i])
       q_df_est[,i]<-unlist(Sim_Results["q_est",i])
       sel_beta1_df_sim[,i]<-unlist(Sim_Results["sel_beta1_sim",i])
@@ -829,12 +832,6 @@ conv<-round(sum(Sim_Stats$Converged)/nsim,3)
     
 #Q_ave
     
-#for matching population types
-if(nreg_OM==nreg){
-      q_est<-data.frame(melt(t(q_df_est)))
-      q_est<-cbind(q_est,data.frame(melt(t(q_df_sim))[3]))
-    }
-    
 # Spatial to panmictic
     if(nreg_OM>nreg){
       q_est<-data.frame(melt(t(q_df_est)))
@@ -850,8 +847,7 @@ if(nreg_OM==nreg){
     q.long<-melt(q_est, id=c("Reg","Nsim"))
     q.long$Reg<-as.character(q.long$Reg)
     
-    median_q<-data.frame(q.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
-    
+    median_q<-data.frame(q.long%>% group_by(Reg,variable) %>% summarise(med=median(value),lower=quantile(value,c(lower)),upper=quantile(value,c(upper))))
     
     
 #plot
@@ -880,8 +876,7 @@ q.bias.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_bias, group=Reg)) +
     
 write.csv(median_q,"q_medians.csv")
     
-    
-    
+  
     
 ###############################
 #Recruitment Params
@@ -899,7 +894,7 @@ if(npops==npops_OM){
       rave.long<-melt(Rave_est, id=c("Reg","Nsim"))
       rave.long$Reg<-as.character(rave.long$Reg)
       
-      median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+      median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),lower=quantile(value,c(lower)),upper=quantile(value,c(upper))))
       
     }
     
@@ -930,7 +925,7 @@ if(npops==npops_OM){
       rave.long<-melt(Rave_est, id=c("Reg","Nsim"))
       rave.long$Reg<-as.character(rave.long$Reg)
       
-      median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),min=min(value),max=max(value)))
+      median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=median(value),lower=quantile(value,c(lower)),upper=quantile(value,c(upper))))
       
     }
     
@@ -960,23 +955,11 @@ if(npops==npops_OM){
     
     write.csv(median_R_ave,"Rave_medians.csv")
     
-########################
+#######################
 #Rec timeseries
+#######################
 
 #build data.frame
-    
-    #for matching population types
-    if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
-      rec.data<-data.frame(Dat=c(rep("SIM",nrow(rec_df_sim)),rep("EST",nrow(rec_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
-      rec.data<-cbind(rec.data,rbind(rec_df_sim,rec_df_est))
-      rec.long<-melt(rec.data, id=c("Dat","Years","Reg"))
-      rec.long$Reg<-as.factor(as.character(rec.data$Reg))
-      
-      #calculate the sum across areas 
-      total.rec<-data.frame(rec.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
-      total.rec$Reg<-rep("System",nrow(total.rec))
-      rec.long<-rbind(rec.long,total.rec)
-    }
     
     #For metamictic/Metapop to panmictic
     if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
@@ -985,15 +968,18 @@ if(npops==npops_OM){
       rec.data<-data.frame(Dat=rep("SIM",nrow(rec_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
       rec.data<-cbind(rec.data,rbind(rec_df_sim))
       rec.long.sim<-melt(rec.data, id=c("Dat","Years","Reg"))
-      total.rec.sim<-data.frame(rec.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=sum(value)))
+      #total.rec.sim<-data.frame(rec.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=sum(value)))
       
       #adding Estimated recruitment  
-      rec.data.est<-data.frame(Dat=rep("EST",nrow(rec_df_est)),Years=rep(years,nreg))
-      rec.data.est<-cbind(rec.data.est,rbind(rec_df_est))
-      rec.long.est<-melt(rec.data.est, id=c("Dat","Years"))
+      rec.data.est<-data.frame(Dat=rep("EST",nrow(rec_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
+      #repeating for both areas
+      rec.data.est<-cbind(rec.data.est,rbind(rec_df_est,rec_df_est))
+      rec.long.est<-melt(rec.data.est, id=c("Dat","Years","Reg"))
+     
       
-      rec.long<-rbind(rec.long.est,total.rec.sim)
-      rec.long$Reg<-"System"
+      #rec.long<-rbind(rec.long.est,total.rec.sim)
+      rec.long<-rbind(rec.long.est,rec.long.sim)
+      #rec.long$Reg<-"System"
       rec.long$Reg<-as.factor(as.character(rec.long$Reg))
     }
     
@@ -1010,7 +996,7 @@ rec.est$bias=((rec.est$val.true-rec.est$value)/rec.est$val.true)*100
     
 #calc medians table
 rec.est.med <- rec.est %>% group_by(Reg,Years) %>%
-      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
     
 #calc vals for plots
 rec.meds <- rec.est %>% group_by(Reg) %>%
@@ -1056,10 +1042,14 @@ rec.meds <- rec.est %>% group_by(Reg) %>%
 #Add misallocated bias plot
 #########################################
 
+#adjusting the estimated for plotting
+rec.long.est.mis<-rec.long.est[rec.long.est$Reg==1,]
+rec.long.est.mis<-rec.long.est.mis[,-3]   
+
 rec.data.mis<-data.frame(Dat=rep("SIM",nrow(rec_df_sim_mis)),Years=rep(years))
 rec.data.mis<-cbind(rec.data.mis,rec_df_sim_mis)
 rec.long.sim.mis<-melt(rec.data.mis, id=c("Dat","Years"))
-rec.long.mis<-rbind(rec.long.est,rec.long.sim.mis)
+rec.long.mis<-rbind(rec.long.est.mis,rec.long.sim.mis)
 
 
 #separate again for plotting
@@ -1074,9 +1064,9 @@ rec.est.mis$bias=((rec.est.mis$val.true-rec.est.mis$value)/rec.est.mis$val.true)
 
 #calc medians table
 rec.est.med.mis <- rec.est.mis %>% group_by(Years) %>%
-  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
   
-      rec.plot.mis.gg<-ggplot(rec.est.mis, aes(x=as.factor(Years), y=value)) +
+  rec.plot.mis.gg<-ggplot(rec.est.mis, aes(x=as.factor(Years), y=value)) +
         #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
         geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
         geom_point(data = rec.est.med.mis, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
@@ -1109,6 +1099,7 @@ rec.bias.mis.gg<-ggplot(rec.est.mis, aes(x=as.factor(Years), y=bias)) +
 #plot the 1:1 to visualize the bias     
       
     rec.bias.mis.line.gg<-ggplot(rec.est.med.mis, aes(x=med.sim, y=med.est)) +
+        geom_smooth(method = "lm", se = FALSE)+
         geom_abline(slope=1, intercept=0, colour = 'red',size=0.5,lty=2)+
         geom_point(fill=median.col, shape=21,size=3) +
         #scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -1144,40 +1135,40 @@ if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
 ssb.data<-data.frame(Dat=rep("SIM",nrow(ssb_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
 ssb.data<-cbind(ssb.data,rbind(ssb_df_sim))
 ssb.long.sim<-melt(ssb.data, id=c("Dat","Years","Reg"))
-total.ssb.sim<-data.frame(ssb.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=sum(value)))
+#total.ssb.sim<-data.frame(ssb.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=sum(value)))
       
 #adding Estimated ssb  
-ssb.data.est<-data.frame(Dat=rep("EST",nrow(ssb_df_est)),Years=rep(years,nreg))
+ssb.data.est<-data.frame(Dat=rep("EST",nrow(ssb_df_est)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
+#ssb.data.est<-data.frame(Dat=rep("EST",nrow(ssb_df_est)),Years=rep(years,nreg))
 ssb.data.est<-cbind(ssb.data.est,rbind(ssb_df_est))
-ssb.long.est<-melt(ssb.data.est, id=c("Dat","Years"))
+ssb.long.est<-melt(ssb.data.est, id=c("Dat","Years","Reg"))
       
-ssb.long<-rbind(ssb.long.est,total.ssb.sim)
-ssb.long$Reg<-"System"
+ssb.long<-rbind(ssb.long.est,ssb.long.sim)
+#ssb.long$Reg<-"System"
 ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
 }
     
     
-    
-    #separate again for plotting
-    ssb.est<-ssb.long[ssb.long$Dat=="EST",]
-    ssb.sim<-ssb.long[ssb.long$Dat=="SIM",]
-    
-    
-    #calculate the percent bias
-    ssb.est$val.true<-ssb.sim$value
-    ssb.est$bias=((ssb.est$val.true-ssb.est$value)/ssb.est$val.true)*100
-    
-    #calc medians table
-    ssb.est.med <- ssb.est %>% group_by(Reg,Years) %>%
-      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
-    
-    #calc vals for plots
-    ssb.meds <- ssb.est %>% group_by(Reg) %>%
-      mutate(med = median(value),med.true=median(val.true))
+#separate again for plotting
+ ssb.est<-ssb.long[ssb.long$Dat=="EST",]
+ ssb.sim<-ssb.long[ssb.long$Dat=="SIM",]
     
     
-    #generate ssb Plot
-    ssb.plot.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=value)) +
+#calculate the percent bias
+  ssb.est$val.true<-ssb.sim$value
+  ssb.est$bias=((ssb.est$val.true-ssb.est$value)/ssb.est$val.true)*100
+    
+#calc medians table
+  ssb.est.med <- ssb.est %>% group_by(Reg,Years) %>%
+  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
+    
+#calc vals for plots
+  ssb.meds <- ssb.est %>% group_by(Reg) %>%
+  mutate(med = median(value),med.true=median(val.true))
+    
+    
+#generate ssb Plot
+  ssb.plot.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=value)) +
       geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
       geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
       geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
@@ -1192,7 +1183,7 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
     
     
     #generate Rec bias plot
-    ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
+ ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
       geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
       geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
       geom_line(data = ssb.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
@@ -1214,27 +1205,31 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
 # SSB misaligned plots
 #########################################################
     
-    ssb.data.mis<-data.frame(Dat=rep("SIM",nrow(ssb_df_sim_mis)),Years=rep(years))
-    ssb.data.mis<-cbind(ssb.data.mis,ssb_df_sim_mis)
-    ssb.long.sim.mis<-melt(ssb.data.mis, id=c("Dat","Years"))
-    ssb.long.mis<-rbind(ssb.long.est,ssb.long.sim.mis)
+#adjusting the estimated for plotting
+ssb.long.est.mis<-ssb.long.est[ssb.long.est$Reg==1,]
+ssb.long.est.mis<-ssb.long.est.mis[,-3]   
+    
+ssb.data.mis<-data.frame(Dat=rep("SIM",nrow(ssb_df_sim_mis)),Years=rep(years))
+ssb.data.mis<-cbind(ssb.data.mis,ssb_df_sim_mis)
+ssb.long.sim.mis<-melt(ssb.data.mis, id=c("Dat","Years"))
+ssb.long.mis<-rbind(ssb.long.est.mis,ssb.long.sim.mis)
     
     
-    #separate again for plotting
-    ssb.est.mis<-ssb.long.mis[ssb.long.mis$Dat=="EST",]
-    ssb.sim.mis<-ssb.long.mis[ssb.long.mis$Dat=="SIM",]
+#separate again for plotting
+ssb.est.mis<-ssb.long.mis[ssb.long.mis$Dat=="EST",]
+ssb.sim.mis<-ssb.long.mis[ssb.long.mis$Dat=="SIM",]
     
     
-    #calculate the percent bias
-    ssb.est.mis$val.true<-ssb.sim.mis$value
-    ssb.est.mis$bias=((ssb.est.mis$val.true-ssb.est.mis$value)/ssb.est.mis$val.true)*100
+#calculate the percent bias
+ssb.est.mis$val.true<-ssb.sim.mis$value
+ssb.est.mis$bias=((ssb.est.mis$val.true-ssb.est.mis$value)/ssb.est.mis$val.true)*100
     
     
-    #calc medians table
-    ssb.est.med.mis <- ssb.est.mis %>% group_by(Years) %>%
-      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+#calc medians table
+ssb.est.med.mis <- ssb.est.mis %>% group_by(Years) %>%
+      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
     
-    ssb.plot.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=value)) +
+ssb.plot.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=value)) +
       #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
       geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
       geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
@@ -1247,7 +1242,7 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
       #facet_grid(Reg~.)+
       my_theme
     
-    ssb.bias.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=bias)) +
+ssb.bias.mis.gg<-ggplot(ssb.est.mis, aes(x=as.factor(Years), y=bias)) +
       geom_hline(aes(yintercept = 0), colour = 'red',size=0.5,lty=2)+
       geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
       geom_line(data = ssb.est.med.mis, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
@@ -1260,89 +1255,91 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
       #ylim(quantile(ssb.est$bias, c(.05,.95)))+
       my_theme
     
-    #save ssb bias calcs
-    write.csv(ssb.est.med.mis,"ssb_Bias_misaligned.csv")  
+#save ssb bias calcs
+  write.csv(ssb.est.med.mis,"ssb_Bias_misaligned.csv")  
     
     
-    #plot the 1:1 to visualize the bias     
+#plot the 1:1 to visualize the bias     
     
-    ssb.bias.mis.line.gg<-ggplot(ssb.est.med.mis, aes(x=med.sim, y=med.est)) +
-      geom_abline(slope=1, intercept=0, colour = 'red',size=0.5,lty=2)+
-      geom_point(fill=median.col, shape=21,size=3) +
-      #scale_x_discrete(breaks=seq(0,nyrs,5))+
-      ggtitle("SSB Bias: Misaligned")+
-      ylab("Median Estimated SSB")+
-      xlab("True Simulated SSB")+
-      my_theme
+ssb.bias.mis.line.gg<-ggplot(ssb.est.med.mis, aes(x=med.sim, y=med.est)) +
+  geom_smooth(method = "lm", se = FALSE)+
+  geom_abline(slope=1, intercept=0, colour = 'red',size=0.5,lty=2)+
+  geom_point(fill=median.col, shape=21,size=3) +
+  #scale_x_discrete(breaks=seq(0,nyrs,5))+
+  ggtitle("SSB Bias: Misaligned")+
+  ylab("Median Estimated SSB")+
+  xlab("True Simulated SSB")+
+  my_theme
     
     
     
-    ####################################
-    #F plots
-    
-    #matching population types
-    if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
-      #build data.frame
-      fmax.data.sim<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
-      fmax.data.est<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+####################################
+#F plots
+#matching population types
+
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+  #build data.frame
+   fmax.data.sim<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+   fmax.data.est<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
       
-      fmax.data<-rbind(fmax.data.sim,fmax.data.est)
+   fmax.data<-rbind(fmax.data.sim,fmax.data.est)
       
-      fmax.data<-cbind(fmax.data,rbind(fmax_df_sim,fmax_df_est))
-      fmax.long<-melt(fmax.data, id=c("Dat","Years","Reg"))
-      fmax.long$Reg<-as.character(fmax.data$Reg)
+   fmax.data<-cbind(fmax.data,rbind(fmax_df_sim,fmax_df_est))
+   fmax.long<-melt(fmax.data, id=c("Dat","Years","Reg"))
+   fmax.long$Reg<-as.character(fmax.data$Reg)
       
-      #calculate the sum across areas 
-      total.fmax<-data.frame(fmax.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
+  #calculate the sum across areas 
+   total.fmax<-data.frame(fmax.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
       
-      total.fmax$Reg<-rep("System",nrow(total.fmax))
-      fmax.long<-rbind(total.fmax,fmax.long)
+   total.fmax$Reg<-rep("System",nrow(total.fmax))
+   fmax.long<-rbind(total.fmax,fmax.long)
     }
     
-    #Spatial to panmictic
-    if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
+#Spatial to panmictic
+  if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
       
-      fmax.data.sim.t<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
-      fmax.data.est.t<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+  fmax.data.sim.t<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
+  fmax.data.est.t<-data.frame(Dat=rep("EST",nrow(fmax_df_sim)),Years=rep(years,nreg_OM),Reg=rep(1:nreg_OM,each=nyrs))
       
-      #aggregating the values for panmictic
-      fmax.data.sim<-cbind(fmax.data.sim.t,rbind(fmax_df_sim))
-      fmax.long.sim<-melt(fmax.data.sim, id=c("Dat","Years","Reg"))
-      total.fmax.sim<-data.frame(fmax.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=mean(value)))
-      total.fmax.sim$Reg<-"System"
+#aggregating the values for panmictic
+  fmax.data.sim<-cbind(fmax.data.sim.t,rbind(fmax_df_sim))
+  fmax.long.sim<-melt(fmax.data.sim, id=c("Dat","Years","Reg"))
+  #total.fmax.sim<-data.frame(fmax.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=mean(value)))
+  #total.fmax.sim$Reg<-"System"
       
-      #setting up the estimatated values
-      fmax.data.est<-cbind(fmax.data.est.t,rbind(fmax_df_est))
-      fmax.long.est<-melt(fmax.data.est, id=c("Dat","Years","Reg"))
-      total.fmax.est<-data.frame(fmax.long.est %>% group_by(Dat,variable, Years) %>% summarise(value=mean(value)))
-      total.fmax.est$Reg<-"System"
+  #setting up the estimatated values
+  fmax.data.est<-cbind(fmax.data.est.t,rbind(fmax_df_est,fmax_df_est))
+  fmax.long.est<-melt(fmax.data.est, id=c("Dat","Years","Reg"))
+  #total.fmax.est<-data.frame(fmax.long.est %>% group_by(Dat,variable, Years) %>% summarise(value=mean(value)))
+  #total.fmax.est$Reg<-"System"
       
-      fmax.long<-rbind(total.fmax.est,total.fmax.sim)
+  #fmax.long<-rbind(total.fmax.est,total.fmax.sim)
+  fmax.long<-rbind(fmax.long.est,fmax.long.sim)
     }
     
-    #separate again for plotting
-    fmax.est<-fmax.long[fmax.long$Dat=="EST",]
-    fmax.sim<-fmax.long[fmax.long$Dat=="SIM",]
+  #separate again for plotting
+  fmax.est<-fmax.long[fmax.long$Dat=="EST",]
+  fmax.sim<-fmax.long[fmax.long$Dat=="SIM",]
     
     
-    #calculate the percent bias
-    fmax.est$val.true<-fmax.sim$value
-    fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
-    #fmax.est$bias=((fmax.est$val.true-fmax.est$value))
+  #calculate the percent bias
+  fmax.est$val.true<-fmax.sim$value
+  fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
+  #fmax.est$bias=((fmax.est$val.true-fmax.est$value))
     
     #removing the top and bottom 1% for the plots...
-#    fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
+    #fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
     
     #calc medians table
     fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
-      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
+      summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
     
     #calc vals for plots
     fmax.meds <- fmax.est %>% group_by(Reg) %>%
       mutate(med = median(value),med.true=median(val.true))
     
     #incase there are crazy outlier values
-    #fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
+    fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
     
     #generate fmax Plot
     fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
@@ -1506,14 +1503,19 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
   } # end of the code
   
 
-#Pulling out the SSB values and creating a csv
+#Pulling out the values and creating a csv
 ssb.table<-spread(ssb.long, key = variable, value = value)
+ssb.table.mis<-spread(ssb.long.mis, key = variable, value = value)
 rec.table<-spread(rec.long, key = variable, value = value)
+rec.table.mis<-spread(rec.long.mis, key = variable, value = value)
 fmax.table<-spread(fmax.long, key = variable, value = value)
 
 write.csv(ssb.table,"ssb_table.csv")
+write.csv(ssb.table.mis,"ssb_table.mis.csv")
 write.csv(rec.table,"rec_table.csv")
+write.csv(rec.table.mis,"rec_table.mis.csv")
 write.csv(fmax.table,"fmax_table.csv")
+
 
 #save png files
 #ssb
@@ -1526,9 +1528,15 @@ ggsave("rec_misalign_ts.png",rec.plot.mis.gg,device="png")
 ggsave("rec_misalign_bias.png",rec.bias.mis.gg,device="png")
 ggsave("rec_misalign_biasline.png",rec.bias.mis.line.gg,device="png")
 
+ggsave("F_by_area_ts.png",fmax.plot.gg,device="png")
+ggsave("F_by_area_bias.png",fmax.bias.gg,device="png")
+
 
 } #end of plots code 
   
 #######################
+
+
+
 
 
