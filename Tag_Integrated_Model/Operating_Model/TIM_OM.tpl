@@ -115,7 +115,7 @@ DATA_SECTION
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   //==8 proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
-  //==9 invers proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  //==9 inverse proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
   //// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
   //==21 use input T_year to allow T to vary by year
@@ -163,6 +163,10 @@ DATA_SECTION
   //==6 overall F (FMSY) is split evenly among fleets
   //==7 F devs about input F based on sigma_F
   //==8 random walk in F
+
+  init_number F_uniform
+  //==0 allow random variaion in fishing acros areas, fleets, regions etc
+  //==1 allow fishing to vary only by year and is uniform amoung areas, fleets, populations
   
   init_number recruit_devs_switch
   //==0 use stock-recruit relationphip directly
@@ -1026,6 +1030,7 @@ PARAMETER_SECTION
  4darray survey_RN(1,nps,1,nr,1,nyr,1,nfls)
  5darray survey_RN_overlap(1,nps,1,nps,1,nr,1,nyr,1,nfls)
  4darray F_RN(1,nps,1,nr,1,nyr,1,nfl)
+ vector F_RN_YR(1,nyr)
  matrix rec_devs_RN(1,nps,1,nyr)
  3darray Rec_apport_RN(1,nps,1,nyr-1,1,nr)
  3darray rec_index_RN(1,nps,1,nr,1,nyr)
@@ -1197,6 +1202,8 @@ FUNCTION get_random_numbers
        {       
         for (int y=1;y<=nyrs;y++)
          {
+         F_RN_YR(y)=randn(myrand_F);//random number generator for F by year only for uniform model
+         
           for (int z=1;z<=nfleets(j);z++)
            {
             for (int x=1;x<=nfleets_survey(j);x++)
@@ -1220,6 +1227,28 @@ FUNCTION get_random_numbers
   }
  }
 
+
+
+///if fishing mortality is to the same across areas using the Dunce Cap method select F_uniform==1
+ if(F_uniform==1){
+ 
+  for (int p=1;p<=npops;p++)
+   {
+    for (int j=1;j<=npops;j++)
+     {  
+      for (int r=1;r<=nregions(j);r++)   
+       {       
+         for (int z=1;z<=nfleets(j);z++)
+           {
+            for (int y=1;y<=nyrs;y++)
+            {
+           F_RN(j,r,y,z)=0;
+           F_RN(j,r,y,z)=F_RN_YR(y);
+         
+         }}}}}}
+
+
+
     for (int j=1;j<=npops;j++)
      {
       for (int y=1;y<=nyrs-1;y++)
@@ -1238,6 +1267,7 @@ FUNCTION get_random_numbers
        }
      }
     }
+    
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
 
@@ -7586,10 +7616,10 @@ REPORT_SECTION
 
 
 //to get abundance after movement for init abund
-// report<<"#Abund_BM"<<endl;
-// report<<abundance_at_age_BM<<endl;
-// report<<"#Abund_AM"<<endl;
-// report<<abundance_at_age_AM<<endl;
+// report<<"#SSB_region_temp"<<endl;
+// report<<SSB_region_temp<<endl;
+ //report<<"#Abund_AM"<<endl;
+ //report<<abundance_at_age_AM<<endl;
 
  // Some stuff for looking at tag calculations 
   /*
