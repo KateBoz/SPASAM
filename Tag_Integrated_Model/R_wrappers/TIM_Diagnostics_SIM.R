@@ -16,10 +16,7 @@ load_libraries<-function() {
   library(colorspace)
   library(RColorBrewer)
   library(dplyr)
-  library(data.table)
   library(matrixStats) 
-  library(gridExtra)
-  library(grid)
   library(PBSadmb)
   library(gtable)
   library(corrplot)
@@ -249,12 +246,12 @@ rec1<-ggplot(rec.total.plot,aes(Year,value))+
 
 if(resid.switch==1){
   #calculate the resids as Relative % Diff
-  rec.total$resids<-(rec.total$Rec_True-rec.total$Rec_Est)
+  rec.total$resids<-(rec.total$Rec_Est-rec.total$Rec_True)
 }
 
 if(resid.switch==2){
   #calculate the resids as Relative % Diff
-  rec.total$resids<-((rec.total$Rec_True-rec.total$Rec_Est)/rec.total$Rec_True)*100
+  rec.total$resids<-((rec.total$Rec_Est-rec.total$Rec_True)/rec.total$Rec_True)*100
 }
 
 #preparing for plotting
@@ -407,13 +404,13 @@ if(npops==1 && npops_OM>1){
 
   if(resid.switch==1){
     #calculate the resids as Relative % Diff
-    rec.devs$resids<-(rec.devs$Rec_Dev_True-rec.devs$Rec_Dev_Est)
+    rec.devs$resids<-(rec.devs$Rec_Dev_Est-rec.devs$Rec_Dev_True)
   }
   
 
   if(resid.switch==2){
     #calculate the resids as Relative % Diff
-    rec.devs$resids<-((rec.devs$Rec_Dev_True-rec.devs$Rec_Dev_Est)/rec.devs$Rec_Dev_True)*100
+    rec.devs$resids<-((rec.devs$Rec_Dev_Est-rec.devs$Rec_Dev_True)/rec.devs$Rec_Dev_True)*100
   }
   
 
@@ -494,12 +491,12 @@ rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
 #resids  
   if(resid.switch==1){
     #calculate the resids as Relative % Diff
-    rec.apport$resids<-(rec.apport$Rec_Prop_True-rec.apport$Rec_Prop_Est)
+    rec.apport$resids<-(rec.apport$Rec_Prop_Est-rec.apport$Rec_Prop_True)
   }
   
   if(resid.switch==2){
     #calculate the resids as Relative % Diff
-    rec.apport$resids<-((rec.apport$Rec_Prop_True-rec.apport$Rec_Prop_Est)/rec.apport$Rec_Prop_True)*100
+    rec.apport$resids<-((rec.apport$Rec_Prop_Est-rec.apport$Rec_Prop_True)/rec.apport$Rec_Prop_True)*100
   }
   
   #preparing for plotting
@@ -556,11 +553,11 @@ if(npops<npops_OM){
 #calc resids
   if(resid.switch==1){
     #calculate the resids as Relative % Diff
-    m.plot$resid=(m.plot$M_T-m.plot$M.ave)
+    m.plot$resid=(m.plot$M.ave-m.plot$M_T)
   }
   
   if(resid.switch==2){
-    m.plot$resid=((m.plot$M_T-m.plot$M.ave)/(m.plot$M_T))*100
+    m.plot$resid=((m.plot$M.ave-m.plot$M_T)/(m.plot$M_T))*100
   }
   
 m.plot.p<-melt(m.plot,id=c("Age","Reg"))
@@ -635,12 +632,12 @@ rr.p<-ggplot(rr.plot,aes(Rel_year, value))+
 #calc resids
 if(resid.switch==1){
   #calculate the resids as Relative % Diff
-  tag.rep.rate$resid<-(tag.rep.rate$RR_true-tag.rep.rate$RR_est)
+  tag.rep.rate$resid<-(tag.rep.rate$RR_est-tag.rep.rate$RR_true)
 }
 
 if(resid.switch==2){
   #calculate the resids as Relative % Diff
-  tag.rep.rate$resid<-((tag.rep.rate$RR_true-tag.rep.rate$RR_est)/tag.rep.rate$RR_true)*100
+  tag.rep.rate$resid<-((tag.rep.rate$RR_est-tag.rep.rate$RR_true)/tag.rep.rate$RR_true)*100
 }
 
 tag.rep.resid<-tag.rep.rate[,c(1,2,5)]
@@ -759,11 +756,11 @@ if(npops>1&npops_OM==1&&nreg_OM>1){
  #Init Abundance residuals 
 
 if(resid.switch==1){
-  init.abund$resids<-(init.abund$In_ab_True-init.abund$In_ab_Est)
+  init.abund$resids<-(init.abund$In_ab_Est-init.abund$In_ab_True)
 }
   
 if(resid.switch==2){
-  init.abund$resids<-((init.abund$In_ab_True-init.abund$In_ab_Est)/init.abund$In_ab_True)*100
+  init.abund$resids<-((init.abund$In_ab_Est-init.abund$In_ab_True)/init.abund$In_ab_True)*100
 }
   
   
@@ -814,11 +811,11 @@ bio.dat<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyrs),Bio_est =
 #calculate resids
   
 if(resid.switch==1){ 
-    bio.dat$resid<-(bio.dat$Bio_True-bio.dat$Bio_est)
+    bio.dat$resid<-(bio.dat$Bio_est-bio.dat$Bio_True)
 }
   
 if(resid.switch==2){ 
-  bio.dat$resid<-((bio.dat$Bio_True-bio.dat$Bio_est)/bio.dat$Bio_True)*100
+  bio.dat$resid<-((bio.dat$Bio_est-bio.dat$Bio_True)/bio.dat$Bio_True)*100
 }
   
 
@@ -870,11 +867,11 @@ ssb.p<-ggplot(ssb.plot,aes(Year,value))+
 #SSB residual plot
 
 if(resid.switch==1){ 
-ssb.dat$resid<-(ssb.dat$SSB_True-ssb.dat$SSB_est)
+ssb.dat$resid<-(ssb.dat$SSB_est-ssb.dat$SSB_True)
 }
 
 if(resid.switch==2){
-  ssb.dat$resid<-((ssb.dat$SSB_True-ssb.dat$SSB_est)/ssb.dat$SSB_True)*100
+  ssb.dat$resid<-((ssb.dat$SSB_est-ssb.dat$SSB_True)/ssb.dat$SSB_True)*100
 }
 
 ssb.resid.plot<-melt(ssb.dat[,c(1,2,5)],id=c("Reg","Year"))
@@ -941,11 +938,11 @@ f.select.p<-ggplot(f.select.plot,aes(Age, value))+
 
 #fishery selectivity resid
 if(resid.switch==1){
-  f.select$resid<-(f.select$Select_T-f.select$Select_Est)
+  f.select$resid<-(f.select$Select_Est-f.select$Select_T)
 }
 
 if(resid.switch==2){
-f.select$resid<-((f.select$Select_T-f.select$Select_Est)/f.select$Select_T)*100
+f.select$resid<-((f.select$Select_Est-f.select$Select_T)/f.select$Select_T)*100
 }
 
 f.select.resid.plot<-melt(f.select[,c(1,2,5)],id=c("Reg","Age"))
@@ -998,11 +995,11 @@ s.select.p<-ggplot(s.select.plot,aes(Age, value))+
 
 # survey selectivity resids plot
 if(resid.switch==1){
-  s.select$resid<-(s.select$Select_T-s.select$Select_Est)
+  s.select$resid<-(s.select$Select_Est-s.select$Select_T)
 }
 
 if(resid.switch==2){
-  s.select$resid<-((s.select$Select_T-s.select$Select_Est)/s.select$Select_T)*100
+  s.select$resid<-((s.select$Select_Est-s.select$Select_T)/s.select$Select_T)*100
 }
 
 s.select.resid.plot<-melt(s.select[,c(1,2,5)],id=c("Reg","Age"))
@@ -1087,10 +1084,10 @@ F.plot.p<-ggplot(F.plot,aes(Year,value))+
 
 #F resids
 if(resid.switch==1){
-F.year$resid<-(F.year$F_year_T-F.year$F_year)}
+F.year$resid<-(F.year$F_year-F.year$F_year_T)}
 
 if(resid.switch==2){
-  F.year$resid<-((F.year$F_year_T-F.year$F_year)/F.year$F_year_T)*100
+  F.year$resid<-((F.year$F_year-F.year$F_year_T)/F.year$F_year_T)*100
 }
 
 
@@ -1149,10 +1146,10 @@ T_true<-data.frame(matrix(unlist(pull.t),na*nyrs*npops,npops,byrow=T)) #just set
 T_est<-data.frame(matrix(unlist(pull),na*nyrs*npops,npops,byrow=T)) #just setting the
 
 if(resid.switch==1){
-  T_resid<-(T_true-T_est)}
+  T_resid<-(T_est-T_true)}
 
 if(resid.switch==2){
-  T_resid<-((T_true-T_est)/T_true)*100}
+  T_resid<-((T_est-T_true)/T_true)*100}
 
   
 for(i in 1:npops){
@@ -1172,10 +1169,10 @@ if(nreg==1 && nreg_OM>1&&npops_OM==1){
   T_true<-data.frame(do.call("rbind",pull.t))
   
   if(resid.switch==1){
-    T_resid<-(T_true-T_est)}
+    T_resid<-(T_est-T_true)}
   
   if(resid.switch==2){
-    T_resid<-((T_true-T_est)/T_true)*100}
+    T_resid<-((T_est-T_true)/T_true)*100}
   
   for(i in 1:nreg_OM){
     names(T_est)[i]<-paste0("Est_",i)
@@ -1219,10 +1216,10 @@ if(npops_OM>1 && nreg>1 && npops==1){
   T_est<-data.frame(do.call("rbind",pull)) #just setting the estimated movement = 1
   
   if(resid.switch==1){
-    T_resid<-(T_true-T_est)}
+    T_resid<-(T_est-T_true)}
   
   if(resid.switch==2){
-    T_resid<-((T_true-T_est)/T_true)*100}
+    T_resid<-((T_est-T_true)/T_true)*100}
   
   
   for(i in 1:npops_OM){
@@ -1244,10 +1241,10 @@ if(npops_OM>1 && nreg==1 && npops==1){
   
   
   if(resid.switch==1){
-    T_resid<-(T_true-T_est)}
+    T_resid<-(T_est-T_true)}
   
   if(resid.switch==2){
-    T_resid<-((T_true-T_est)/T_true)*100}
+    T_resid<-((T_est-T_true)/T_true)*100}
   
   
   for(i in 1:npops_OM){
@@ -1395,7 +1392,7 @@ yield.p<-ggplot(Y.year.plot,aes(Year,value,shape=variable))+
 #  Y.year$resid<-(Y.year$Observed-Y.year$Estimated)}
 
 #if(resid.switch==2){
-Y.year$resid<-((Y.year$Observed-Y.year$Estimated)/Y.year$Observed)*100
+Y.year$resid<-((Y.year$Estimated-Y.year$Observed)/Y.year$Observed)*100
 #}
 
 y.resid.p<-melt(Y.year[,c(1,2,5)],id=c("Reg","Year"))
@@ -1440,7 +1437,7 @@ survey.p<-ggplot(Survey.year.plot,aes(Year,value,shape=variable))+
 #  Survey.year$resid<-(Survey.year$SI_Obs-Survey.year$SI_Est)}
 
 #if(resid.switch==2){
-Survey.year$resid<-((Survey.year$SI_Obs-Survey.year$SI_Est)/Survey.year$SI_Obs)*100
+Survey.year$resid<-((Survey.year$SI_Est-Survey.year$SI_Obs)/Survey.year$SI_Obs)*100
 #}
 
 surv.resid.p<-melt(Survey.year[,c(1,2,5)],id=c("Reg","Year"))
@@ -1528,7 +1525,7 @@ fishery.comps.resid<-data.frame(Year=rep(years,nreg), Reg=rep(c(1:nreg),each=nyr
 
 if(npops==1){
 
-fishery.prop.resid<-data.frame(out$OBS_catch_prop-out$EST_catch_age_fleet_prop)
+fishery.prop.resid<-data.frame(out$EST_catch_age_fleet_prop-out$OBS_catch_prop)
 #    fishery.prop.resid<-data.frame((out$OBS_catch_prop-out$EST_catch_age_fleet_prop)/out$OBS_catch_prop)
 fishery.comps.resid<-cbind(fishery.comps.resid,fishery.prop.resid)
 fishery.long<-melt(fishery.comps.resid,id.vars=c("Year","Reg"))
@@ -1544,7 +1541,7 @@ if(npops>1){
   catch_obs<-data.frame(do.call("rbind",pull.catch.obs))
   catch_est<-data.frame(do.call("rbind",pull.catch.est))
   
-  fishery_resid<-(catch_obs-catch_est)
+  fishery_resid<-(catch_est-catch_obs)
   
   fishery.comps.resid<-cbind(fishery.comps.resid,fishery_resid)
   fishery.long<-melt(fishery.comps.resid,id.vars=c("Year","Reg"))
@@ -1586,7 +1583,7 @@ if(npops==1){
   tags_obs<-out$OBS_tag_prop_final
   #tags_est<-out$TRUE_tag_prop_final
   tags_est<-out$EST_tag_prop_final
-  tag_resid<-(tags_obs-tags_est)
+  tag_resid<-(tags_est-tags_obs)
   tag_resid<-data.frame(tag_resid)
   names(tag_resid)<-colnamesindex
    
@@ -1608,7 +1605,7 @@ if(npops>1){
   tags_est<-do.call(rbind, pull.tags.est)
 
   
-  tag_resid<-(tags_obs-tags_est)
+  tag_resid<-(tags_est-tags_obs)
   tag_resid<-data.frame(tag_resid)
   names(tag_resid)<-colnamesindex
 
