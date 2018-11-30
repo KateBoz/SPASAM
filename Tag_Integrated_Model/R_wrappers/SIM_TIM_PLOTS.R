@@ -40,17 +40,16 @@ load_libraries<-function() {
   library(gtools)
   library(TeachingDemos)
   library(snowfall)
-  library(parallel)
   library(snow)
   library(foreach)
   library(doSNOW)
+  library(parallel)
   library(spatstat)
   library(alphahull)
   library(beanplot)
   library(png)
 }
 load_libraries()
-
 
 
 
@@ -62,7 +61,7 @@ load_libraries()
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-0
+diag.run<-1
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
@@ -73,35 +72,37 @@ resid.switch<-2
    # ==2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
 
 #2) Do you want to run simulations?
-run.sims<-0
+run.sims<-1
    # ==0 DO NOT run simulation experiment. This was completed already at an earlier time
    # ==1 Run simulation experiement
 
 #Set number of simulations to perform
-nsim <-50
+nsim <-16
 
 #3) Do you want to save important values from the runs?
-save.values<-0
+save.values<-1
   # ==0 DO NOT save values from the sims run
   # ==1 SAVE values from the sims run
 
 
 #4) Do you want to make plots with summary of the run?
-make.plots<-1
+build.plots<-1
   # ==0 DO NOT create summary document
   # ==1 Create summary document with graphs and run statistics
 
 # If making plots, Select color for violins
-  vio.col<-"lightskyblue3"
+vio.col<-"lightskyblue3"
 
 # select color for median points
-  median.col<-"grey95"
+median.col<-"grey95"
 
 
 #5) Do you want to plot non-converged runs? This will be needed/useful for MISMATCH
 keep.all<-1
   # ==0 DO NOT plot non converged runs
   # ==1 DO plot non-converged runs
+
+
 
 
 #########################################
@@ -112,9 +113,8 @@ keep.all<-1
 
 #If the diagnostic switch ==1 the TIM_diagnostics_SIM.R code will also have to be in the master directory.
 
-
 #4) set master file with holding the runs 
-direct_master<-"E:\\Mismatch\\CAPAM_RUNS"
+direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\Mismatch\\MS2_RUNS"
 setwd(direct_master)
 
 #list files in the directory to choose the correct one
@@ -123,16 +123,21 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=11
+folder.num=2
 i=folder.num
 
 ####################################################
 #run the simulation experiment
 ####################################################
-{ #GO!
-  
-#if running the several folders use the loop - This will come later
-#for(i in 4:4){
+
+#run.tim<-function(direct_master,i,folder.num){
+
+{
+
+#setwd
+#setwd(direct_master)
+#files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
+
 
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
@@ -367,12 +372,12 @@ if(save.values==1){
   Sim_Stats<-read.csv(paste0(diag_direct,'\\Sim_Stats.csv'))
   
   #create a vector for converged runs to calculate bias and create plots
-  #if(keep.all==1){
-  #  conv.runs<-seq(1:nsim)}
+  if(keep.all==1){
+    conv.runs<-seq(1:nsim)}
   
-  #if(keep.all==0){
+  if(keep.all==0){
   conv.runs<-which(Sim_Stats$Converged==1)
-  #}
+  }
 
   #pull dimensions for building data frames for plotting
   out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
@@ -587,7 +592,7 @@ if(save.values==1){
 # Make plots and output run summaries
 ######################################################################
 
-if(make.plots==1){
+if(build.plots==1){
 
 #pull dimensions for building data frames for plots
 out<-readList(paste0(EM_direct,"\\",EM_name,".rep")) #read in .rep file
@@ -630,7 +635,9 @@ Sim_Stats<-read.csv('Sim_Stats.csv')
 nconv<-length(which(Sim_Stats$Converged==1))
 pconv<-round(nconv/nsim,3)
 
-
+#keep and plot all the runs converged and not converged
+if(keep.all==1){
+  nconv=nsim}
 
 ##############################################
 # Unpacking Results
@@ -667,12 +674,12 @@ sel_beta3_surv_df_est<-matrix(NA,nreg,nconv)
 sel_beta4_surv_df_est<-matrix(NA,nreg,nconv)
 
 #mortality
-M_df_sim<-matrix(NA,na*npops_OM,nconv)
-M_df_est<-matrix(NA,nyrs*npops*nreg*na,nconv)
+#M_df_sim<-matrix(NA,na*npops_OM,nconv)
+#M_df_est<-matrix(NA,nyrs*npops*nreg*na,nconv)
 
 #reporting rate
-rr_df_sim<-matrix(NA,nrel*nreg_OM,nconv)
-rr_df_est<-matrix(NA,nrel*nreg,nconv)
+#rr_df_sim<-matrix(NA,nrel*nreg_OM,nconv)
+#rr_df_est<-matrix(NA,nrel*nreg,nconv)
 
 #Recruitment
 rec_df_sim<-matrix(NA,nyrs*nreg_OM,nconv)
@@ -714,63 +721,63 @@ select_age_survey_df_est<-matrix(NA,na*nreg,nconv)
 
 
 #movement
-move_df_sim<-matrix(NA,nyrs*nreg_OM*nreg_OM*na,nconv)
-move_df_est<-matrix(NA,nyrs*nreg*nreg*na,nconv)
+#move_df_sim<-matrix(NA,nyrs*nreg_OM*nreg_OM*na,nconv)
+#move_df_est<-matrix(NA,nyrs*nreg*nreg*na,nconv)
 
 ###########################################################
 # populate the matrices for plotting
 
-for(i in 1:nconv){
-  R_ave_df_sim[,i]<-unlist(Sim_Results["meanR_sim",i])
-  R_ave_df_est[,i]<-unlist(Sim_Results["meanR_est",i])
-  R_apport_df_sim[,i]<-unlist(Sim_Results["apport_sim",i])
-  R_apport_df_est[,i]<-unlist(Sim_Results["apport_est",i])
-  q_df_sim[,i]<-unlist(Sim_Results["q_sim",i])
-  q_df_est[,i]<-unlist(Sim_Results["q_est",i])
-  sel_beta1_df_sim[,i]<-unlist(Sim_Results["sel_beta1_sim",i])
-  sel_beta2_df_sim[,i]<-unlist(Sim_Results["sel_beta2_sim",i])
-  sel_beta3_df_sim[,i]<-unlist(Sim_Results["sel_beta3_sim",i])
-  sel_beta4_df_sim[,i]<-unlist(Sim_Results["sel_beta4_sim",i])
-  sel_beta1_df_est[,i]<-unlist(Sim_Results["sel_beta1_est",i])
-  sel_beta2_df_est[,i]<-unlist(Sim_Results["sel_beta2_est",i])
-  sel_beta3_df_est[,i]<-unlist(Sim_Results["sel_beta3_est",i])
-  sel_beta4_df_est[,i]<-unlist(Sim_Results["sel_beta4_est",i])
-  sel_beta1_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta1_surv_sim",i])
-  sel_beta2_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta2_surv_sim",i])
-  sel_beta3_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta3_surv_sim",i])
-  sel_beta4_surv_df_sim[,i]<-unlist(Sim_Results["sel_beta4_surv_sim",i])
-  sel_beta1_surv_df_est[,i]<-unlist(Sim_Results["sel_beta1_surv_est",i])
-  sel_beta2_surv_df_est[,i]<-unlist(Sim_Results["sel_beta2_surv_est",i])
-  sel_beta3_surv_df_est[,i]<-unlist(Sim_Results["sel_beta3_surv_est",i])
-  sel_beta4_surv_df_est[,i]<-unlist(Sim_Results["sel_beta4_surv_est",i])
-  M_df_sim[,i]<-unlist(Sim_Results["M_sim",i])
-  M_df_est[,i]<-unlist(Sim_Results["M_est",i])
-  rr_df_sim[,i]<-unlist(Sim_Results["rr_sim",i])
-  rr_df_est[,i]<-unlist(Sim_Results["rr_est",i])
-  rec_df_sim[,i]<-unlist(Sim_Results["rec_sim",i])
-  rec_df_est[,i]<-unlist(Sim_Results["rec_est",i])
-  rec_devs_df_sim[,i]=unlist(Sim_Results["rec_devs_sim",i])
-  rec_devs_df_est[,i]=unlist(Sim_Results["rec_devs_est",i])
-  init_abund_df_sim[,i]=unlist(Sim_Results["init_abund_sim",i])
-  init_abund_df_est[,i]=unlist(Sim_Results["init_abund_est",i])
-  ssb_df_sim[,i]<-unlist(Sim_Results["ssb_sim",i])
-  ssb_df_est[,i]<-unlist(Sim_Results["ssb_est",i])
-  bio_df_sim[,i]<-unlist(Sim_Results["bio_sim",i])
-  bio_df_est[,i]<-unlist(Sim_Results["bio_est",i])
-  catch_df_sim[,i]<-unlist(Sim_Results["yield_sim",i])
-  catch_df_est[,i]<-unlist(Sim_Results["yield_est",i])
-  survey_df_sim[,i]<-unlist(Sim_Results["survey_sim",i])
-  survey_df_est[,i]<-unlist(Sim_Results["survey_est",i])
-  fmax_df_sim[,i]<-unlist(Sim_Results["fmax_sim",i])
-  fmax_df_est[,i]<-unlist(Sim_Results["fmax_est",i])
-  
-  move_df_sim[,i]<-unlist(Sim_Results["movement_sim",i])
-  move_df_est[,i]<-unlist(Sim_Results["movement_est",i])
-  
-  select_age_df_sim[,i]<-unlist(Sim_Results["select_age_sim",i])
-  select_age_df_est[,i]<-unlist(Sim_Results["select_age_est",i])
-  select_age_survey_df_sim[,i]<-unlist(Sim_Results["select_age_survey_sim",i])
-  select_age_survey_df_est[,i]<-unlist(Sim_Results["select_age_survey_est",i])
+#i=1 #for debugging
+
+for(p in 1:nconv){
+  R_ave_df_sim[,p]<-unlist(Sim_Results["meanR_sim",p])
+  R_ave_df_est[,p]<-unlist(Sim_Results["meanR_est",p])
+  #R_apport_df_sim[,p]<-unlist(Sim_Results["apport_sim",p])
+  #R_apport_df_est[,p]<-unlist(Sim_Results["apport_est",p])
+  q_df_sim[,p]<-unlist(Sim_Results["q_sim",p])
+  q_df_est[,p]<-unlist(Sim_Results["q_est",p])
+  sel_beta1_df_sim[,p]<-unlist(Sim_Results["sel_beta1_sim",p])
+  sel_beta2_df_sim[,p]<-unlist(Sim_Results["sel_beta2_sim",p])
+  sel_beta3_df_sim[,p]<-unlist(Sim_Results["sel_beta3_sim",p])
+  sel_beta4_df_sim[,p]<-unlist(Sim_Results["sel_beta4_sim",p])
+  sel_beta1_df_est[,p]<-unlist(Sim_Results["sel_beta1_est",p])
+  sel_beta2_df_est[,p]<-unlist(Sim_Results["sel_beta2_est",p])
+  sel_beta3_df_est[,p]<-unlist(Sim_Results["sel_beta3_est",p])
+  sel_beta4_df_est[,p]<-unlist(Sim_Results["sel_beta4_est",p])
+  sel_beta1_surv_df_sim[,p]<-unlist(Sim_Results["sel_beta1_surv_sim",p])
+  sel_beta2_surv_df_sim[,p]<-unlist(Sim_Results["sel_beta2_surv_sim",p])
+  sel_beta3_surv_df_sim[,p]<-unlist(Sim_Results["sel_beta3_surv_sim",p])
+  sel_beta4_surv_df_sim[,p]<-unlist(Sim_Results["sel_beta4_surv_sim",p])
+  sel_beta1_surv_df_est[,p]<-unlist(Sim_Results["sel_beta1_surv_est",p])
+  sel_beta2_surv_df_est[,p]<-unlist(Sim_Results["sel_beta2_surv_est",p])
+  sel_beta3_surv_df_est[,p]<-unlist(Sim_Results["sel_beta3_surv_est",p])
+  sel_beta4_surv_df_est[,p]<-unlist(Sim_Results["sel_beta4_surv_est",p])
+  #M_df_sim[,p]<-unlist(Sim_Results["M_sim",p])
+  #M_df_est[,p]<-unlist(Sim_Results["M_est",p])
+  #rr_df_sim[,p]<-unlist(Sim_Results["rr_sim",p])
+  #rr_df_est[,p]<-unlist(Sim_Results["rr_est",p])
+  rec_df_sim[,p]<-unlist(Sim_Results["rec_sim",p])
+  rec_df_est[,p]<-unlist(Sim_Results["rec_est",p])
+  rec_devs_df_sim[,p]=unlist(Sim_Results["rec_devs_sim",p])
+  rec_devs_df_est[,p]=unlist(Sim_Results["rec_devs_est",p])
+  init_abund_df_sim[,p]=unlist(Sim_Results["init_abund_sim",p])
+  init_abund_df_est[,p]=unlist(Sim_Results["init_abund_est",p])
+  ssb_df_sim[,p]<-unlist(Sim_Results["ssb_sim",p])
+  ssb_df_est[,p]<-unlist(Sim_Results["ssb_est",p])
+  bio_df_sim[,p]<-unlist(Sim_Results["bio_sim",p])
+  bio_df_est[,p]<-unlist(Sim_Results["bio_est",p])
+  catch_df_sim[,p]<-unlist(Sim_Results["yield_sim",p])
+  catch_df_est[,p]<-unlist(Sim_Results["yield_est",p])
+  survey_df_sim[,p]<-unlist(Sim_Results["survey_sim",p])
+  survey_df_est[,p]<-unlist(Sim_Results["survey_est",p])
+  fmax_df_sim[,p]<-unlist(Sim_Results["fmax_sim",p])
+  fmax_df_est[,p]<-unlist(Sim_Results["fmax_est",p])
+  #move_df_sim[,p]<-unlist(Sim_Results["movement_sim",p])
+  #move_df_est[,p]<-unlist(Sim_Results["movement_est",p])
+  select_age_df_sim[,p]<-unlist(Sim_Results["select_age_sim",p])
+  select_age_df_est[,p]<-unlist(Sim_Results["select_age_est",p])
+  select_age_survey_df_sim[,p]<-unlist(Sim_Results["select_age_survey_sim",p])
+  select_age_survey_df_est[,p]<-unlist(Sim_Results["select_age_survey_est",p])
 }
 
 
@@ -799,8 +806,9 @@ conv<-round(sum(Sim_Stats$Converged)/nsim,3)
 
 Like.hist<-function(j=5){
   #breaks<-(max(Sim_Stats[j])-min(Sim_Stats[j]))/2
+  x<-pull(Sim_Stats[j])
   
-  ggplot(Sim_Stats, aes(x=Sim_Stats[j])) + 
+  ggplot(Sim_Stats, aes(x=x)) + 
     geom_histogram(bins = 15, col="black", fill="grey80")+
     ylab("Frequency")+
     xlab("Likelihood")+
@@ -830,7 +838,7 @@ if(nreg_OM>nreg){
 }
 
 names(q_est)<-c("Nsim","Reg","q_est","q_sim")
-q_est$q_bias<-((q_est$q_sim-q_est$q_est)/q_est$q_sim)*100
+q_est$q_bias<-((q_est$q_est-q_est$q_sim)/q_est$q_sim)*100
 
 #calc medians
 
@@ -881,7 +889,7 @@ if(npops==npops_OM){
 Rave_est<-data.frame(melt(t(R_ave_df_est)))
 Rave_est<-cbind(Rave_est,data.frame(melt(t(R_ave_df_sim))[3]))
 names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
-Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+Rave_est$R_ave_bias<-((Rave_est$R_ave_est-Rave_est$R_ave_sim)/Rave_est$R_ave_sim)*100
 
 #calc medians
 #calculate the sum across areas 
@@ -896,7 +904,7 @@ if(npops>npops_OM){
   Rave_est<-data.frame(melt(t(colSums(R_ave_df_est))))
   Rave_est<-cbind(Rave_est,data.frame(melt(t(R_ave_df_sim))[3]))
   names(Rave_est)<-c("Reg","Nsim","R_ave_est","R_ave_sim")
-  Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+  Rave_est$R_ave_bias<-((Rave_est$R_ave_est-Rave_est$R_ave_sim)/Rave_est$R_ave_sim)*100
   
   #calc medians
   #calculate the sum across areas 
@@ -912,7 +920,7 @@ if(npops<npops_OM){
   Rave_est<-data.frame(melt(t(R_ave_df_est)))
   Rave_est<-cbind(Rave_est,data.frame(melt(t(colSums(R_ave_df_sim))[3])))
   names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
-  Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+  Rave_est$R_ave_bias<-((Rave_est$R_ave_est-Rave_est$R_ave_sim)/Rave_est$R_ave_sim)*100
   
   #calc medians
   #calculate the sum across areas 
@@ -995,7 +1003,7 @@ rec.sim<-rec.long[rec.long$Dat=="SIM",]
 #calculate the percent bias
 rec.est$val.true<-rec.sim$value
 rec.est$bias=((rec.est$val.true-rec.est$value)/rec.est$val.true)*100
-#rec.est$bias=(rec.est$val.true-rec.est$value)
+#rec.est$bias=(rec.est$value-rec.est$val.true)
 
 #calc medians table
 rec.est.med <- rec.est %>% group_by(Reg,Years) %>%
@@ -1085,7 +1093,7 @@ ssb.sim<-ssb.long[ssb.long$Dat=="SIM",]
 
 #calculate the percent bias
 ssb.est$val.true<-ssb.sim$value
-ssb.est$bias=((ssb.est$val.true-ssb.est$value)/ssb.est$val.true)*100
+ssb.est$bias=((ssb.est$value-ssb.est$val.true)/ssb.est$val.true)*100
 
 #calc medians table
 ssb.est.med <- ssb.est %>% group_by(Reg,Years) %>%
@@ -1180,11 +1188,11 @@ fmax.sim<-fmax.long[fmax.long$Dat=="SIM",]
 
 #calculate the percent bias
 fmax.est$val.true<-fmax.sim$value
-fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
-#fmax.est$bias=((fmax.est$val.true-fmax.est$value))
+fmax.est$bias=((fmax.est$value-fmax.est$val.true)/fmax.est$val.true)*100
+#fmax.est$bias=((fmax.est$value-fmax.est$val.true))
 
 #removing the top and bottom 1% for the plots...
-fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
+#fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
 
 #calc medians table
 fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
@@ -1229,201 +1237,6 @@ fmax.bias.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=bias)) +
 
 #save rec bias calcs
 write.csv(fmax.est.med,"Fmax_Bias.csv")
-
-
-
-###############################
-#T - Movement plot
-###############################
-
-#Movement
-
-#Matching Metamictic
-if(npops_OM==npops&&nreg_OM==nreg && npops==1){
-  
-movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
-  
-movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
-
-movement.data<-rbind(movement.data.sim,movement.data.est)
-movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
-
-move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
-move.long$Reg_from<-as.character(move.long$Reg_from)
-move.long$Reg_to<-as.character(move.long$Reg_to)
-}
-
-
-#Matching Metapop
-if(npops_OM==npops&&nreg_OM==nreg && npops>1){
-  
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
-  
-  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
-  
-  
-  movement.data<-rbind(movement.data.sim,movement.data.est)
-  movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
-  
-  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
-  move.long$Reg_from<-as.character(move.long$Reg_from)
-  move.long$Reg_to<-as.character(move.long$Reg_to)
-}
-
-#Metapop OM with metamictic
-if(npops_OM>1&&npops==1&&nreg>1){
-  
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
-  
-  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
-  
-  movement.data.est.t<-cbind(movement.data.est,move_df_est)
-  movement.data.sim.t<-cbind(movement.data.sim,move_df_sim)
-  movement.data<-rbind(movement.data.est.t,movement.data.sim.t)
-  
-  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
-  move.long$Reg_from<-as.character(move.long$Reg_from)
-  move.long$Reg_to<-as.character(move.long$Reg_to)
-}
-
-
-#for Metamictic to panmictic
-if(npops_OM==npops&&nreg_OM>nreg){
-  
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
-  
-  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
-  
-  movement.sim<-cbind(movement.data.sim,move_df_sim)
-
- #fill a matrix of NA's for estimatated
-  pan.move<-rep(NA,dim(move_df_sim)[1])
-  for(k in 1:length(pan.move)){
-    
-    if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
-      {pan.move[k]=1}
-    
-    if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
-      {pan.move[k]=0}
-    }
-  
- movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
-  
-  movement.data<-rbind(movement.sim,movement.est)
-  #movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
-  
-  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
-  move.long$Reg_from<-as.character(move.long$Reg_from)
-  move.long$Reg_to<-as.character(move.long$Reg_to)
-}
-
-
-#Metapop to panmictic
-if((npops_OM>npops&&npops==1&&nreg==1)){
-
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg_OM,times=nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
-  
-  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg_OM,times=nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
-  
-  movement.sim<-cbind(movement.data.sim,move_df_sim)
-  
-  #fill a matrix of NA's for estimatated
-  pan.move<-rep(NA,dim(move_df_sim)[1])
-  for(k in 1:length(pan.move)){
-    
-    if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
-    {pan.move[k]=1}
-    
-    if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
-    {pan.move[k]=0}
-  }
-  
-  movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
-  
-  movement.data<-rbind(movement.sim,movement.est)
-  #movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
-  
-  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
-  move.long$Reg_from<-as.character(move.long$Reg_from)
-  move.long$Reg_to<-as.character(move.long$Reg_to)
-}
-
-#organize the data
-move.long.t <- move.long %>% group_by(Dat,Year,Age,Reg_from,Reg_to,Year)%>%summarise(value=median(value))%>%arrange(desc(Dat,Year,Reg_from,Reg_to,Age))
-
-#separate again for plotting
-move.est<-move.long.t[move.long.t$Dat=="EST",]
-move.sim<-move.long.t[move.long.t$Dat=="SIM",]
-
-
-#calculate the percent bias
-move.est$val.true<-move.sim$value
-move.est$bias=((move.est$val.true-move.est$value)/move.est$val.true)*100
-#move.est$bias=(move.est$val.true-move.est$value)
-
-#calc medians table
-move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Year,Age) %>%
-  summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
-
-#calc vals for plots
-move.meds <- move.est %>% group_by(Age,Reg_from,Reg_to) %>%
-  mutate(med = median(value),med.true=median(val.true))
-
-
-if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
-move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
-  geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
-  #geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
-  #geom_point(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=2.0) + 
-  geom_line(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to),lty=2)+
-  geom_point(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to, fill=Reg_to),position = position_dodge(width=0.8),shape=21,size=1.0) + 
-  scale_color_brewer("Move To",palette = "Set1")+
-  scale_fill_brewer("Move To",palette = "Set1")+
-  ggtitle("Movement")+
-  ylab("Movement Rate")+
-  xlab("Year")+
-  facet_grid(Reg_from~Age)+
-  scale_x_discrete(breaks=seq(0,nyrs,10))+
-  #ylim(-5,5)+
-  my_theme
-}
-
-if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
-move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
-  geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
-  geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
-  geom_point(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=2.0) + 
-  geom_line(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to),lty=2)+
-  geom_point(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to, fill=Reg_to),position = position_dodge(width=0.8),shape=21,size=1.0) + 
-  scale_color_brewer("Move To",palette = "Set1")+
-  scale_fill_brewer("Move To",palette = "Set1")+
-  ggtitle("Movement")+
-  ylab("Movement Rate")+
-  xlab("Year")+
-  facet_grid(Reg_from~Age)+
-  scale_x_discrete(breaks=seq(0,nyrs,10))+
-  #ylim(-5,5)+
-  my_theme
-}
-
-
-move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group=Reg_to) +
-  geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
-  geom_hline(aes(yintercept = 0, group = Reg_to), colour = 'black',size=0.5,lty=2)+
-  geom_line(data = move.est.med, aes(x=Year,y=med.bias, group=Reg_to))+
-  geom_point(data = move.est.med, aes(x=Year,y=med.bias,group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=1.5) + 
-  scale_color_brewer("Move To",palette = "Set1")+
-  scale_fill_brewer("Move To",palette = "Set1")+
-  ggtitle("Movement Bias")+
-  ylab("Relative % Difference")+
-  xlab("Year")+
-  facet_grid(Reg_from~Age)+
-  #ylim(quantile(move.est$bias, c(.05,.95)))+
-  scale_x_discrete(breaks=seq(0,nyrs,10))+
-  my_theme
-
-
-write.csv(move.est.med,"Move_Bias.csv")
 
 
 ################################
@@ -1519,11 +1332,6 @@ write.csv(move.est.med,"Move_Bias.csv")
                top="Fully Selected F",
                fmax.plot.gg, fmax.bias.gg)
   
-#not very good movement plot
-  grid.arrange(ncol = 1,
-               top="Movement",
-               move.plot.gg, move.bias.gg)
-
   
 ##############################
 # Plot Likelihood components
@@ -1546,23 +1354,10 @@ grid.arrange(ncol = 2,nrow=4,
 
 dev.off()
 
-########################################
-#movement plots
-########################################
-
-pdf("Movement_Plot.pdf",paper='special',width=14,height=11) 
-#T matrix plots
-grid.arrange(ncol = 1,
-             top="Movement",
-             move.plot.gg, move.bias.gg)
-
-dev.off()
-
-} #end of make plots code
-
-} # end of loops
-
-###################################################################################
-
+} # end of the code
   
+} #end of function
+
+
+
 

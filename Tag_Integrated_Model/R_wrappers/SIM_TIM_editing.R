@@ -49,13 +49,13 @@ load_libraries()
 
 #1) Do you want to run the diagnostics code before running the sims?
 
-diag.run<-1
+diag.run<-0
 # ==0 NO Do NOT run the diagnostics plots for a single run
 # ==1 YES run the diagnostics plots for a single run
 
 
 #2) Set number of simulations to perform
-nsim <-60
+nsim <-100
 
 ######################
 #plot parameters
@@ -76,7 +76,7 @@ median.col<-"grey95"
 #
 
 #5) set master file with holding the runs 
-direct_master<-"C:\\Users\\katelyn.bosley\\Desktop\\SIMS_EDIT"
+direct_master<-"F:\\NOAA FILES\\Research\\SPASAM\\CAPAM Runs\\simple example"
 setwd(direct_master)
 
 #list files in the directory
@@ -84,7 +84,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
-folder.num=3
+folder.num=1
 
 i=folder.num
 
@@ -99,16 +99,16 @@ i=folder.num
 
 ##############################################################
 #OM Location
-OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+OM_direct<-paste0(direct_master,"\\Operating_Model",sep="")
 OM_name<-"TIM_OM" #name of the OM you are wanting to run
 
 #EM Location
-EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
+EM_direct<-paste0(direct_master,"\\Estimation_Model",sep="") #location of run(s)
 EM_name<-"TIM_EM" ###name of .dat, .tpl., .rep, etc.
 
 #Build diagnostics/results folder
-dir.create(paste0(direct_master,"\\",files[i],"\\Diagnostics",sep=""))
-diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
+dir.create(paste0(direct_master,"\\Diagnostics",sep=""))
+diag_direct<-paste0(direct_master,"\\Diagnostics",sep="")
 
 #Build directories and folders to keep results from run
 
@@ -197,9 +197,9 @@ setwd(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
 SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
 SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=411+j
 SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=1110+j
-SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=2211+j
-SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=3180+j
-SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=4199+j
+#SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=2211+j
+#SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=3180+j
+#SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=4199+j
 SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
 SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
 SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=7157+j
@@ -311,13 +311,13 @@ files<-list.files(direct_master)
 
 #i=folder.num # if you are working only one folder or if you are running this section separate from sims
 
-OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
+OM_direct<-paste0(direct_master,"\\Operating_Model",sep="")
 OM_name<-OM_name #name of the OM you are wanting to run
 
-EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") 
+EM_direct<-paste0(direct_master,"\\Estimation_Model",sep="") 
 EM_name<-EM_name ###name of .dat, .tpl., .rep, etc.
 
-diag_direct<-paste0(direct_master,"\\",files[i],"\\Diagnostics",sep="")
+diag_direct<-paste0(direct_master,"\\Diagnostics",sep="")
 
 
 Sim_Stats<-read.csv(paste0(diag_direct,'\\Sim_Stats.csv'))
@@ -591,8 +591,8 @@ nconv<-length(conv.runs)
 R_ave_df_sim<-matrix(NA,npops,nconv)
 R_ave_df_est<-matrix(NA,npops,nconv)
 
-R_apport_df_sim<-matrix(NA,nyrs*nreg,nconv)
-R_apport_df_est<-matrix(NA,nyrs*nreg,nconv)
+R_apport_df_sim<-matrix(NA,(nyrs-1)*nreg,nconv)
+R_apport_df_est<-matrix(NA,(nyrs-1)*nreg,nconv)
 
 q_df_sim<-matrix(NA,nreg,nconv)
 q_df_est<-matrix(NA,nreg,nconv)
@@ -771,7 +771,7 @@ ggplot(Sim_Stats, aes(x=Sim_Stats[j])) +
 q_est<-data.frame(melt(t(q_df_est)))
 q_est<-cbind(q_est,data.frame(melt(t(q_df_sim))[3]))
 names(q_est)<-c("Nsim","Reg","q_est","q_sim")
-q_est$q_bias<-((q_est$q_sim-q_est$q_est)/q_est$q_sim)*100
+q_est$q_bias<-((q_est$q_est-q_est$q_sim)/q_est$q_sim)*100
 
 #calc medians
 
@@ -786,7 +786,7 @@ median_q<-data.frame(q.long%>% group_by(Reg,variable) %>% summarise(med=median(v
 #plot
 q.plot.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_est, group=Reg)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F, alpha=0.6,bw="SJ")+
   geom_point(data=subset(median_q,variable=="q_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   geom_point(data=subset(median_q,variable=="q_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=1.0) + 
   ggtitle("Survey Catchability")+
@@ -798,14 +798,14 @@ q.plot.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_est, group=Reg)) +
 
 q.bias.gg<-ggplot(q_est, aes(x=as.factor(Reg), y=q_bias, group=Reg)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=T,bw="SJ",alpha=0.6)+
   geom_point(data=subset(median_q,variable=="q_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,1))+
   ggtitle("Survey Catchability Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
-  ylim(quantile(q_est$q_bias, c(.05,.95)))+
+  #ylim(quantile(q_est$q_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_q,"q_medians.csv")
@@ -816,7 +816,7 @@ write.csv(median_q,"q_medians.csv")
 Rave_est<-data.frame(melt(t(R_ave_df_est)))
 Rave_est<-cbind(Rave_est,data.frame(melt(t(R_ave_df_sim))[3]))
 names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
-Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+Rave_est$R_ave_bias<-((Rave_est$R_ave_est-Rave_est$R_ave_sim)/Rave_est$R_ave_sim)*100
 
 #calc medians
 
@@ -831,7 +831,7 @@ median_R_ave<-data.frame(rave.long%>% group_by(Reg,variable) %>% summarise(med=m
 #plot
 rave.plot.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_est, group=Reg)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data=subset(median_R_ave,variable=="R_ave_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   geom_point(data=subset(median_R_ave,variable=="R_ave_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=1.0) + 
   ggtitle("Mean Recruitment")+
@@ -843,14 +843,14 @@ rave.plot.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_est, group=Reg)) +
 
 rave.bias.gg<-ggplot(Rave_est, aes(x=as.factor(Reg), y=R_ave_bias, group=Reg)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_point(data=subset(median_R_ave,variable=="R_ave_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,1))+
   ggtitle("Mean Recruitment Bias")+
   ylab("Relative % Difference")+
   xlab("Area")+
-  ylim(quantile(Rave_est$R_ave_bias, c(.05,.95)))+
+  #ylim(quantile(Rave_est$R_ave_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_R_ave,"Rave_medians.csv")
@@ -859,11 +859,11 @@ write.csv(median_R_ave,"Rave_medians.csv")
 
 ######################################################################
 #R_apport
-R_apport_est<-data.frame(Year=rep(1:nyrs,nreg),Reg=rep(1:nreg,each=nyrs))
+R_apport_est<-data.frame(Year=rep(2:nyrs,nreg),Reg=rep(1:nreg,each=nyrs-1))
 R_apport_est<-cbind(R_apport_est,data.frame(R_apport_df_est))
 R_apport_est_melt<-melt(R_apport_est,id=c("Year","Reg"))
 
-R_apport_sim<-data.frame(Year=rep(1:nyrs,nreg),Reg=rep(1:nreg,each=nyrs))
+R_apport_sim<-data.frame(Year=rep(2:nyrs,nreg),Reg=rep(1:nreg,each=nyrs-1))
 R_apport_sim<-cbind(R_apport_sim,data.frame(R_apport_df_sim))
 R_apport_sim_melt<-melt(R_apport_sim,id=c("Year","Reg"))
 
@@ -880,7 +880,7 @@ median_R_apport<-data.frame(r.apport.long%>% group_by(Reg,variable) %>% summaris
 
 r.apport.plot.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_est, group=Reg)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data=subset(median_R_apport,variable=="R_apport_est"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   geom_point(data=subset(median_R_apport,variable=="R_apport_sim"), aes(x=Reg,y=med), col="black", shape=16,cex=2.0) + 
   ggtitle("Recruitment Apportionment")+
@@ -891,14 +891,14 @@ r.apport.plot.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_est
 
 r.apport.bias.gg<-ggplot(R_apport_est_melt, aes(x=as.factor(Reg), y=R_apport_bias, group=Reg)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_point(data=subset(median_R_apport,variable=="R_apport_bias"), aes(x=Reg,y=med),fill=median.col, shape=21,size=2.0) + 
   #geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,1))+
   ggtitle("Recruitment Apportionment Bias")+
   ylab("Relative % Difference")+
   xlab("Area")+
-  ylim(quantile(R_apport_est_melt$R_apport_bias, c(.05,.95)))+
+  #ylim(quantile(R_apport_est_melt$R_apport_bias, c(.05,.95)))+
   my_theme
 
 write.csv(median_R_apport,"R_apport_medians.csv")
@@ -944,7 +944,7 @@ rec.meds <- rec.est %>% group_by(Reg) %>%
 #generate Rec Plot
 rec.plot.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=value)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = rec.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = rec.est.med, aes(x=Years,y=med.sim),lty=1,lwd=0.5) + 
   geom_point(data = rec.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
@@ -959,7 +959,7 @@ rec.plot.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=value)) +
 #generate Rec bias plot
 rec.bias.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_line(data = rec.est.med, aes(x=Years,y=med.bias),lty=1,lwd=0.5) + 
   geom_point(data = rec.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) +
   scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -967,7 +967,7 @@ rec.bias.gg<-ggplot(rec.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.,scales="free")+
-  ylim(quantile(rec.est$bias, c(.05,.95)))+
+  #ylim(quantile(rec.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1018,7 +1018,7 @@ rec.dev.meds <- rec.dev.est %>% group_by(Reg) %>%
 #generate Rec Plot
 rec.dev.plot.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=value)) +
   #geom_hline(aes(yintercept = med.est, group = Reg), colour = 'darkred', size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = rec.dev.est.med, aes(x=Years-1,y=med.sim),lty=1,lwd=0.5) + 
   geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.sim), fill="black", shape=16,size=1.0) + 
@@ -1034,7 +1034,7 @@ rec.dev.plot.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=value)) +
 #generate Rec bias plot
 rec.dev.bias.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_line(data = rec.dev.est.med, aes(x=Years-1,y=med.bias),lty=1,lwd=0.5) + 
   geom_point(data = rec.dev.est.med, aes(x=as.factor(Years),y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(2,nyrs+1,4))+
@@ -1042,7 +1042,7 @@ rec.dev.bias.gg<-ggplot(rec.dev.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.,scales="free")+
-  ylim(quantile(rec.dev.est$bias, c(.05,.95)))+
+  #ylim(quantile(rec.dev.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1083,7 +1083,7 @@ init.abund.meds<-data.frame(init.abund.est %>% group_by(Age, Reg) %>% summarise(
 
 
 init.abund.plot.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = init.abund.meds, aes(x=Age,y=median.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = init.abund.meds, aes(x=Age,y=median.sim),lty=1, lwd=0.5) + 
   geom_point(data = init.abund.meds, aes(x=Age,y=median.sim), fill="black", shape=16,size=1.0) + 
@@ -1099,7 +1099,7 @@ init.abund.plot.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=value)) +
 #bias
 init.abund.bias.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_line(data = init.abund.meds, aes(x=Age,y=median.bias),lty=1,lwd=0.5) + 
   geom_point(data = init.abund.meds, aes(x=as.factor(Age),y=median.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(2,nyrs+1,4))+
@@ -1107,7 +1107,7 @@ init.abund.bias.gg<-ggplot(init.abund.est, aes(x=as.factor(Age), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(quantile(init.abund.est$bias, c(.05,.95)))+
+  #ylim(quantile(init.abund.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1151,7 +1151,7 @@ ssb.meds <- ssb.est %>% group_by(Reg) %>%
 
 #generate ssb Plot
 ssb.plot.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = ssb.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = ssb.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
   geom_point(data = ssb.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
@@ -1167,7 +1167,7 @@ ssb.plot.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=value)) +
 #generate Rec bias plot
 ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_line(data = ssb.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = ssb.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -1175,7 +1175,7 @@ ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(quantile(ssb.est$bias, c(.05,.95)))+
+  #ylim(quantile(ssb.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1220,7 +1220,7 @@ bio.meds <- bio.est %>% group_by(Reg) %>%
 
 #generate bio Plot
 bio.plot.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = bio.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = bio.est.med, aes(x=Years,y=med.sim),lty=1, lwd=0.5) + 
   geom_point(data = bio.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
@@ -1236,7 +1236,7 @@ bio.plot.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=value)) +
 #generate Rec bias plot
 bio.bias.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_line(data = bio.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = bio.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -1244,7 +1244,7 @@ bio.bias.gg<-ggplot(bio.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(quantile(bio.est$bias, c(.05,.95)))+
+  #ylim(quantile(bio.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1293,7 +1293,7 @@ fmax.meds <- fmax.est %>% group_by(Reg) %>%
 
 #generate fmax Plot
 fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = fmax.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
   geom_line(data = fmax.est.med, aes(x=Years,y=med.sim),lty=1) + 
@@ -1309,7 +1309,7 @@ fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
 #bias plot
 fmax.bias.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ")+
   geom_line(data = fmax.est.med, aes(x=Years,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = fmax.est.med, aes(x=Years,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,5))+
@@ -1317,7 +1317,7 @@ fmax.bias.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=bias)) +
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg~.)+
-  ylim(quantile(fmax.est$bias, c(.05,.95)))+
+  #ylim(quantile(fmax.est$bias, c(.05,.95)))+
   my_theme
 
 
@@ -1356,7 +1356,7 @@ f.select.meds <- f.select.est %>% group_by(Reg) %>%
 
 #generate fmax Plot
 f.select.plot.gg<-ggplot(f.select.est, aes(x=as.factor(Age), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = f.select.est.med, aes(x=Age,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_point(data = f.select.est.med, aes(x=Age,y=med.sim), fill="black", shape=16,size=1.0) + 
   geom_line(data = f.select.est.med, aes(x=Age,y=med.sim),lty=1) + 
@@ -1372,7 +1372,7 @@ f.select.plot.gg<-ggplot(f.select.est, aes(x=as.factor(Age), y=value)) +
 #generate Rec bias plot
 f.select.bias.gg<-ggplot(f.select.est, aes(x=as.factor(Age), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T,alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
   geom_line(data = f.select.est.med, aes(x=Age,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = f.select.est.med, aes(x=Age,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,1))+
@@ -1418,7 +1418,7 @@ s.select.meds <- s.select.est %>% group_by(Reg) %>%
 
 #generate fmax Plot
 s.select.plot.gg<-ggplot(s.select.est, aes(x=as.factor(Age), y=value)) +
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_point(data = s.select.est.med, aes(x=Age,y=med.est), fill=median.col, shape=21,size=2.0) + 
   geom_point(data = s.select.est.med, aes(x=Age,y=med.sim), fill="black", shape=16,size=1.0) + 
   geom_line(data = s.select.est.med, aes(x=Age,y=med.sim),lty=1) + 
@@ -1434,7 +1434,7 @@ s.select.plot.gg<-ggplot(s.select.est, aes(x=as.factor(Age), y=value)) +
 #generate Rec bias plot
 s.select.bias.gg<-ggplot(s.select.est, aes(x=as.factor(Age), y=bias)) +
   geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
-  geom_violin(fill=vio.col,trim=T, alpha=0.6)+
+  geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
   geom_line(data = s.select.est.med, aes(x=Age,y=med.bias),lty=1, lwd=0.5) + 
   geom_point(data = s.select.est.med, aes(x=Age,y=med.bias), fill=median.col, shape=21,size=1.5) + 
   scale_x_discrete(breaks=seq(0,nyrs,1))+
@@ -1489,7 +1489,7 @@ move.meds <- move.est %>% group_by(Reg_from,Reg_to) %>%
 
 
 move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
-  geom_violin(aes(fill=Reg_to),trim=T,position = position_dodge(width=0.8), alpha=0.2)+
+  geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
   geom_point(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=2.0) + 
   geom_line(data = move.est.med, aes(x=Year,y=med.sim, group=Reg_to),lty=2)+
@@ -1506,7 +1506,7 @@ move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), grou
 
 
 move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group=Reg_to) +
-  geom_violin(aes(fill=Reg_to),trim=T,position = position_dodge(width=0.8), alpha=0.2)+
+  geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   geom_hline(aes(yintercept = 0, group = Reg_to), colour = 'black',size=0.5,lty=2)+
   geom_line(data = move.est.med, aes(x=Year,y=med.bias, group=Reg_to))+
   geom_point(data = move.est.med, aes(x=Year,y=med.bias,group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=1.5) + 
@@ -1517,7 +1517,7 @@ move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group
   ylab("Relative % Difference")+
   xlab("Year")+
   facet_grid(Reg_from~.)+
-  ylim(quantile(move.est$bias, c(.05,.95)))+
+  #ylim(quantile(move.est$bias, c(.05,.95)))+
   my_theme
 
 
