@@ -839,7 +839,7 @@ conv<-round(sum(Sim_Stats$Converged)/nsim,3)
     }
     
     names(q_est)<-c("Nsim","Reg","q_est","q_sim")
-    q_est$q_bias<-((q_est$q_sim-q_est$q_est)/q_est$q_sim)*100
+    q_est$q_bias<-((q_est$q_est-q_est$q_sim)/q_est$q_sim)*100
     
 #calc medians
     
@@ -887,7 +887,7 @@ if(npops==npops_OM){
       Rave_est<-data.frame(melt(t(R_ave_df_est)))
       Rave_est<-cbind(Rave_est,data.frame(melt(t(R_ave_df_sim))[3]))
       names(Rave_est)<-c("Nsim","Reg","R_ave_est","R_ave_sim")
-      Rave_est$R_ave_bias<-((Rave_est$R_ave_sim-Rave_est$R_ave_est)/Rave_est$R_ave_sim)*100
+      Rave_est$R_ave_bias<-((Rave_est$R_ave_est-Rave_est$R_ave_sim)/Rave_est$R_ave_sim)*100
       
 #calc medians
 #calculate the sum across areas 
@@ -991,7 +991,7 @@ rec.sim<-rec.long[rec.long$Dat=="SIM",]
     
 #calculate the percent bias
 rec.est$val.true<-rec.sim$value
-rec.est$bias=((rec.est$val.true-rec.est$value)/rec.est$val.true)*100
+rec.est$bias=((rec.est$value-rec.est$val.true)/rec.est$val.true)*100
 #rec.est$bias=(rec.est$val.true-rec.est$value)
     
 #calc medians table
@@ -1059,7 +1059,7 @@ rec.sim.mis<-rec.long.mis[rec.long.mis$Dat=="SIM",]
 
 #calculate the percent bias
 rec.est.mis$val.true<-rec.sim.mis$value
-rec.est.mis$bias=((rec.est.mis$val.true-rec.est.mis$value)/rec.est.mis$val.true)*100
+rec.est.mis$bias=((rec.est.mis$value-rec.est.mis$val.true)/rec.est.mis$val.true)*100
 
 
 #calc medians table
@@ -1156,7 +1156,7 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
     
 #calculate the percent bias
   ssb.est$val.true<-ssb.sim$value
-  ssb.est$bias=((ssb.est$val.true-ssb.est$value)/ssb.est$val.true)*100
+  ssb.est$bias=((ssb.est$value-ssb.est$val.true)/ssb.est$val.true)*100
     
 #calc medians table
   ssb.est.med <- ssb.est %>% group_by(Reg,Years) %>%
@@ -1222,7 +1222,7 @@ ssb.sim.mis<-ssb.long.mis[ssb.long.mis$Dat=="SIM",]
     
 #calculate the percent bias
 ssb.est.mis$val.true<-ssb.sim.mis$value
-ssb.est.mis$bias=((ssb.est.mis$val.true-ssb.est.mis$value)/ssb.est.mis$val.true)*100
+ssb.est.mis$bias=((ssb.est.mis$value-ssb.est.mis$val.true)/ssb.est.mis$val.true)*100
     
     
 #calc medians table
@@ -1324,7 +1324,7 @@ if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
     
   #calculate the percent bias
   fmax.est$val.true<-fmax.sim$value
-  fmax.est$bias=((fmax.est$val.true-fmax.est$value)/fmax.est$val.true)*100
+  fmax.est$bias=((fmax.est$value-fmax.est$val.true)/fmax.est$val.true)*100
   #fmax.est$bias=((fmax.est$val.true-fmax.est$value))
     
     #removing the top and bottom 1% for the plots...
