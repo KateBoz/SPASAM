@@ -47,6 +47,7 @@ load_libraries<-function() {
   library(spatstat)
   library(alphahull)
   library(beanplot)
+  library(tidyr)
   library(png)
 }
 load_libraries()
@@ -61,7 +62,7 @@ load_libraries()
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-1
+diag.run<-0
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
@@ -77,16 +78,16 @@ run.sims<-0
    # ==1 Run simulation experiement
 
 #Set number of simulations to perform
-nsim <-8
+nsim <-16
 
 #3) Do you want to save important values from the runs?
-save.values<-0
+save.values<-1
   # ==0 DO NOT save values from the sims run
   # ==1 SAVE values from the sims run
 
 
 #4) Do you want to make plots with summary of the run?
-build.plots<-0
+build.plots<-1
   # ==0 DO NOT create summary document
   # ==1 Create summary document with graphs and run statistics
 
@@ -104,7 +105,6 @@ keep.all<-1
 
 
 
-
 #########################################
 ### setting up the directories
 #########################################
@@ -114,7 +114,7 @@ keep.all<-1
 #If the diagnostic switch ==1 the TIM_diagnostics_SIM.R code will also have to be in the master directory.
 
 #4) set master file with holding the runs 
-direct_master<-"F:\\Mismatch\\MS2_RUNS"
+direct_master<-"E:\\Mismatch\\MS2_RUNS"
 setwd(direct_master)
 
 #list files in the directory to choose the correct one
@@ -123,7 +123,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=3
+folder.num=1
 i=folder.num
 
 ####################################################
@@ -241,6 +241,8 @@ SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
 SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
 SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=7157+j
 SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=10009+j
+#SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=9403+j
+#SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=34+j
 
 writeLines(SIM.DAT,paste0(OM_name,".dat"))
 
@@ -1468,30 +1470,30 @@ if(npops_OM>1&&npops==1&&nreg>1){
 
 if(npops_OM==npops&&nreg_OM>nreg){
   
-# movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
+movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,each=nyrs*na,times=nreg_OM),Age=rep(1:na,times=nyrs*nreg_OM*nreg_OM))
+
+#just creating a duplicate of the simulated movement for panmictic so it will generate the plot
+movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,each=nyrs*na,times=nreg_OM),Age=rep(1:na,times=nyrs*nreg_OM*nreg_OM))
+
+
+#fill a matrix of NA's for estimatated
+pan.move<-rep(NA,dim(move_df_sim)[1])
+for(k in 1:length(pan.move)){
   
-movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
+  if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
+  {pan.move[k]=1}
   
-movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg_OM*nreg_OM),Reg_from=rep(1:nreg_OM,each=nyrs*nreg_OM*na),Reg_to=rep(1:nreg_OM,nreg_OM,times=na*nyrs),Age=rep(1:na,each=nreg_OM,times=nyrs*nreg_OM))
-  
-  movement.sim<-cbind(movement.data.sim,move_df_sim)
-  
-  #fill a matrix of NA's for estimatated
-  pan.move<-rep(NA,dim(move_df_sim)[1])
-  for(k in 1:length(pan.move)){
-    
-    if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
-    {pan.move[k]=1}
-    
-    if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
-    {pan.move[k]=0}
-  }
-  
-  movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
-  
+  if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
+  {pan.move[k]=0}
+}
+
+movement.est<-cbind(movement.data.est,matrix(pan.move,dim(move_df_sim)[1],nsim, byrow=F))
+
+
+movement.sim<-cbind(movement.data.sim,move_df_sim)
+#movement.est<-cbind(movement.data.est,move_df_sim)
+
   movement.data<-rbind(movement.sim,movement.est)
-  #movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
-  
   move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
   move.long$Reg_from<-as.character(move.long$Reg_from)
   move.long$Reg_to<-as.character(move.long$Reg_to)
@@ -1554,6 +1556,8 @@ move.meds <- move.est %>% group_by(Age,Reg_from,Reg_to) %>%
   mutate(med = median(value),med.true=median(val.true))
 
 
+
+
 if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
   move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
     geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
@@ -1608,6 +1612,18 @@ move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group
 
 
 write.csv(move.est.med,"Move_Bias.csv")
+
+
+
+#Save some results
+
+ssb.table<-spread(ssb.long, key = variable, value = value)
+rec.table<-spread(rec.long, key = variable, value = value)
+fmax.table<-spread(fmax.long, key = variable, value = value)
+
+write.csv(ssb.table,"ssb_table.csv")
+write.csv(rec.table,"rec_table.csv")
+write.csv(fmax.table,"fmax_table.csv")
 
 
 ################################
