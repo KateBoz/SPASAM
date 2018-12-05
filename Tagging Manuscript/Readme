@@ -1,0 +1,3 @@
+Folder containing the final generalized tag-integrated model code used to perform sims for the various CAPAM SI contributions (tagging design, movement estimation, and bigeye sims).
+
+NOTE: This model peeled off from the TIM model in July so it may have discrepancies (missed updates, new features) from the main TIM model. DRG is maintaining this model for future work and may update with various features of the main TIM model.
