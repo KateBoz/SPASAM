@@ -51,8 +51,8 @@ cor.level = 0.4# can change this in the make.plots function below
 
 #set residual switch for different values plotted
 #resid.switch=2
-# =1 straight residual (TRUE-ESTIMATED; not % of true)
-# =2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
+# =1 straight residual (ESTIMATED-TRUE; not % of true)
+# =2 Relative percent difference ((ESTIMATED-TRUE)/TRUE *100)
 
 
 #################################################################################
@@ -264,7 +264,7 @@ R.resid<-ggplot(rec.resids.plot,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("%Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   
@@ -425,7 +425,7 @@ if(npops==1){
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Difference (True-Estimated)")+
+    ylab("Difference (Estimated-True)")+
     diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
     ggtitle("Recruitment Devs Residuals")
@@ -441,7 +441,7 @@ if(npops==1){
       geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
       theme_bw()+
       scale_color_gradient2(low="red",mid="grey",high ="blue")+
-      ylab("Difference (True-Estimated)")+
+      ylab("% Difference (Estimated-True)")+
       facet_wrap(~Reg)+
       diag_theme+
       theme(legend.position = "none", legend.justification = c(1,1))+
@@ -509,7 +509,7 @@ rec.prop<-ggplot( rec.apport.plot,aes(Year,value))+
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Difference (True-Estimated)")+
+    ylab("% Difference (Estimated-True)")+
     facet_wrap(~Reg)+
     diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
@@ -584,7 +584,7 @@ m.resid.p<-ggplot(m.plot.p[m.plot.p$variable=="resid",],aes(x=Age, y=value, grou
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("% Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -650,7 +650,7 @@ rr.resid.p<-ggplot(rr.resid,aes(Rel_year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("% Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Rel_Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -773,7 +773,7 @@ if(resid.switch==2){
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Difference (True-Estimated)")+
+    ylab("% Difference (Estimated-True)")+
     facet_wrap(~Reg)+
     diag_theme+
     theme(legend.position = "none", legend.justification = c(1,1))+
@@ -827,7 +827,7 @@ if(resid.switch==2){
     geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
     theme_bw()+
     scale_color_gradient2(low="red",mid="grey",high ="blue")+
-    ylab("Relative % Difference (True-Estimated)")+
+    ylab("% Difference (Estimated-True)")+
     facet_wrap(~Reg)+
     diag_theme+
     theme(strip.text.x = element_text(size = 10, colour = "black", face="bold"))+
@@ -882,7 +882,7 @@ ssb.resid<-ggplot(ssb.resid.plot,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -955,11 +955,13 @@ f.select.resid<-ggplot(f.select.resid.plot,aes(Age,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
   ggtitle("Fishery Selectivity Residuals")
+
+
 
 
 ########################
@@ -1010,7 +1012,7 @@ s.select.resid<-ggplot(s.select.resid.plot,aes(Age,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Relative % Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1099,7 +1101,7 @@ F.resid.plot<-ggplot(F.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1329,7 +1331,7 @@ T.resid.plot<-ggplot(T.year.resid,aes(Year,value))+
   geom_point(aes(color=value),size=1, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_grid(Reg ~ Age)+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -1404,7 +1406,7 @@ Y.resid.plot<-ggplot(y.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("% Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1449,7 +1451,7 @@ Surv.resid.plot<-ggplot(surv.resid.p,aes(Year,value))+
   geom_point(aes(color=value),size=2, alpha = 0.9, pch=16)+
   theme_bw()+
   scale_color_gradient2(low="red",mid="grey",high ="blue")+
-  ylab("% Difference (True-Estimated)")+
+  ylab("% Difference (Estimated-True)")+
   facet_wrap(~Reg)+
   diag_theme+
   theme(legend.position = "none", legend.justification = c(1,1))+
@@ -1989,10 +1991,10 @@ if(diagnostic==1)
 {text2<-"Diagnostic Run: YES. Uses TRUE values as data inputs"}
 
 if(resid.switch==1)
-{text3<-"\nResidual plots represent STRAIGHT difference; (TRUE-ESTIMATED)"}
+{text3<-"\nResidual plots represent STRAIGHT difference; (ESTIMATED-TRUE)"}
 
 if(resid.switch==2)
-{text3<-"Residual plots represent RELATIVE difference; ((TRUE-ESTIMATED)/TRUE)*100"}
+{text3<-"Residual plots represent RELATIVE difference; ((ESTIMATED-TRUE)/TRUE)*100"}
 
 
 text4<-paste0("\nRun Time of Estimation: ",round((as.vector(time.elapsed)[3]/60),5)," minutes")

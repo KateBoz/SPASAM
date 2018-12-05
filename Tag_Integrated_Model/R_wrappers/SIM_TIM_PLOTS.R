@@ -62,7 +62,7 @@ load_libraries()
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-0
+diag.run<-1
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
@@ -73,7 +73,7 @@ resid.switch<-2
    # ==2 Relative percent difference ((TRUE/ESTIMATED)/TRUE *100)
 
 #2) Do you want to run simulations?
-run.sims<-0
+run.sims<-1
    # ==0 DO NOT run simulation experiment. This was completed already at an earlier time
    # ==1 Run simulation experiement
 
@@ -1480,10 +1480,10 @@ movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_sim)),Year=rep(1:nyrs,e
 pan.move<-rep(NA,dim(move_df_sim)[1])
 for(k in 1:length(pan.move)){
   
-  if(movement.sim$Reg_from[k]==movement.sim$Reg_to[k])
+  if(movement.data.sim$Reg_from[k]==movement.data.sim$Reg_to[k])
   {pan.move[k]=1}
   
-  if(movement.sim$Reg_from[k]!=movement.sim$Reg_to[k])
+  if(movement.data.sim$Reg_from[k]!=movement.data.sim$Reg_to[k])
   {pan.move[k]=0}
 }
 
@@ -1554,8 +1554,6 @@ move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Year,Age) %>%
 #calc vals for plots
 move.meds <- move.est %>% group_by(Age,Reg_from,Reg_to) %>%
   mutate(med = median(value),med.true=median(val.true))
-
-
 
 
 if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
