@@ -19,6 +19,20 @@
 1
 #nfleets_survey
 1
+#max_pops
+3
+#max_regs
+3
+#max_ages
+16
+#max_years
+30
+#max_flts
+1
+#max_survey_flts
+1
+#max_tag_years
+30
 
 #model_type_switch
   #==0 do not use TAC to set F
