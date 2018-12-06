@@ -31,6 +31,7 @@ DATA_SECTION
   init_int nages //number of ages
   init_int nyrs //number of years for simulation
   init_int npops //number of populations
+
 ///////////// Indices for ragged arrays (can't be type init so need to establish as integer)
   !! int np=npops;
   !! int ny=nyrs;
@@ -42,6 +43,17 @@ DATA_SECTION
   !! ivector nf=nfleets;
   init_ivector nfleets_survey(1,np) //number of fleets in each region by each population
   !! ivector nfs=nfleets_survey;
+
+
+ ///adding in additional variables for mismatch experiment so RNG is consistent across scenarios
+// INDICES FOR RNG...use these to input the MAX values across ALL runs/scenarios for a simulation experiment so that always have consistent RNG values
+  init_int max_pops
+  init_int max_regs
+  init_int max_ages
+  init_int max_yrs
+  init_int max_flts
+  init_int max_surv_flts
+  init_int max_tag_yrs
 
 ////////////////////////////////////////////////////////////////////////////////////
 //////////////SWITCHES//////////////////////////////////////////////////////////////
@@ -115,7 +127,7 @@ DATA_SECTION
   //    homing would return to natal population because natal residency is 100% and use natal movement rates (not current population movement rates like with metapopulation/random movement))
   //==8 proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
-  //==9 inverse proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
+  //==9 invers proportional density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
   //// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
   //==21 use input T_year to allow T to vary by year
@@ -505,7 +517,7 @@ DATA_SECTION
   init_5darray input_T_EM(1,np_em,1,nreg_em,1,na,1,np_em,1,nreg_em)// input T matrix for EM
   init_vector input_R_ave_EM(1,np_em)
   init_3darray input_rec_prop_EM(1,np_em,1,nreg_em,1,nyrs-1)//input recruit apportionment for EM
-  
+
 
   init_vector sigma_recruit_EM(1,np_em)
   init_vector input_steep_EM(1,np_em)
@@ -517,7 +529,8 @@ DATA_SECTION
   init_4darray input_survey_selectivity_EM(1,np_em,1,nreg_em,1,na,1,nfs_em)//survey selectivity
   init_matrix input_report_rate_EM(1,np_em,1,nreg_em)
   init_3darray input_q_survey_EM(1,np_em,1,nreg_em,1,nfs_em)
- 
+
+
   init_int ph_lmr
   init_number lb_R_ave
   init_number ub_R_ave
@@ -606,6 +619,7 @@ DATA_SECTION
   init_number wt_move_pen
   init_number Tpen
   init_number Tpen2
+
  //error for the EM
   init_4darray OBS_survey_fleet_bio_se_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em)
   init_4darray OBS_yield_fleet_se_EM(1,np_em,1,nreg_em,1,ny,1,nf_em)
@@ -616,6 +630,7 @@ DATA_SECTION
 
   !! int xn=na*ny;
   init_5darray T_Full_Input(1,np,1,nreg,1,xn,1,np,1,nreg)
+
 
 //###################################################################################################################################
  //###################################################################################################################################
@@ -684,9 +699,13 @@ DATA_SECTION
 
 //Add counters to enumerate the regions for the report out section for 6d arrays
   int region_counter
+
+
  !! cout << "debug = " << debug << endl;
  !! cout << "If debug != 1541 then .dat file not setup correctly" << endl;
  !! cout << "input read" << endl;
+
+
 
  
 PARAMETER_SECTION
@@ -1125,23 +1144,18 @@ matrix OBS_tag_prop_pan_final_no_age(1,nyr_rel,1,max_life_tags+1)//set up a new 
  3darray frac_natal_true(1,nps,1,nps,1,nr)
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////
-//Temporary (reorganized) 6d arrary parameters 
-//Reorganize so that region is the second dimension. 
-//////////////////////////////////////////////////////////////////////////////////////////////
-//survey index  
- //6darray ro_true_survey_fleet_overlap_age(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
- //6darray ro_survey_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag) 
-// 6darray ro_SIM_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
-// 6darray ro_OBS_survey_prop_overlap(1,nps,1,nr,1,nps,1,nfls,1,nyr,1,nag)
-// 6darray ro_true_survey_fleet_overlap_age_bio(1,nps,1,nr,1,nps,1,nyr,1,nfls,1,nag) 
-
-
-//yield & BRP calcs 
-// 6darray ro_catch_at_age_region_fleet_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
-// 6darray ro_catch_at_age_region_fleet_overlap_prop(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag)
-// 6darray ro_SIM_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
-// 6darray ro_OBS_catch_prop_overlap(1,nps,1,nr,1,nps,1,nfl,1,nyr,1,nag) 
+ //Parameters for Random number generator
+ 4darray yield_RN_temp(1,max_pops,1,max_regs,1,max_yrs,1,max_flts)
+ 5darray yield_RN_temp_overlap(1,max_pops,1,max_pops,1,max_regs,1,max_yrs,1,max_flts)
+ 4darray survey_RN_temp(1,max_pops,1,max_regs,1,max_yrs,1,max_surv_flts)
+ 5darray survey_RN_temp_overlap(1,max_pops,1,max_pops,1,max_regs,1,max_yrs,1,max_surv_flts)
+ 4darray F_RN_temp(1,max_pops,1,max_regs,1,max_yrs,1,max_flts)
+ vector F_RN_YR_temp(1,max_yrs)
+ matrix rec_devs_RN_temp(1,max_pops,1,max_yrs)
+ 3darray Rec_apport_RN_temp(1,max_pops,1,max_yrs,1,max_regs)
+ 3darray rec_index_RN_temp(1,max_pops,1,max_regs,1,max_yrs)
+ 3darray prob_tag_RN_temp(1,max_pops,1,max_regs,1,max_tag_yrs)
+ 3darray ntags_RN_temp(1,max_pops,1,max_regs,1,max_tag_yrs)
 
 
   objective_function_value f
@@ -1179,6 +1193,7 @@ PROCEDURE_SECTION
 
   evaluate_the_objective_function();
 
+
 FUNCTION get_random_numbers
 
  // NOTE THAT IT APPEARS THE RNG JUST CONTINUES A SINGLE SET OF RANDOM NUMBERS WITHIN A DATA OBJECT
@@ -1194,6 +1209,61 @@ FUNCTION get_random_numbers
    random_number_generator myrand_ntags(myseed_ntags);
    random_number_generator myrand_prob_tag(myseed_prob_tag);
 
+ //to avoid issues of varying RNGs across scenarios/runs (due to different input index lengths) we generate the RNG
+ //and put them into temp arrays that using fixed index legnths meant to be greater than the maximum possible
+ //values that would be used for a given index (note that there is no error protection built in so that if someone
+ //uses a higher index than hardcoded here, then RNGs will repeat)
+ //the values from the temp arrays are then read into the actual RN arrays
+ //this way if one run has a different index it will have the same RNGs up until the new dimension (e.g., if one run
+ //has 3 fleets and another has 4, the one with 4 fleets with have the same RNGs for the first 3 fleets, then will
+ //keep reading the RNG string for the 4th fleet)
+ 
+  for (int p=1;p<=max_pops;p++)
+   {
+    for (int j=1;j<=max_pops;j++)
+     {  
+      for (int r=1;r<=max_regs;r++)   
+       {       
+        for (int y=1;y<=max_yrs;y++)
+         {
+         F_RN_YR_temp(y)=randn(myrand_F);//random number generator for F by year only for uniform model
+          for (int z=1;z<=max_flts;z++)
+           {
+            for (int x=1;x<=max_surv_flts;x++)
+             {
+             for(int s=1; s<=max_tag_yrs; s++)
+               {
+                 yield_RN_temp_overlap(p,j,r,y,z)=randn(myrand_yield);
+                 survey_RN_temp_overlap(p,j,r,y,x)=randn(myrand_survey);
+                 yield_RN_temp(j,r,y,z)=randn(myrand_yield);
+                 survey_RN_temp(j,r,y,x)=randn(myrand_survey);
+                 F_RN_temp(j,r,y,z)=randn(myrand_F);
+                 rec_devs_RN_temp(j,y)=randn(myrand_rec_devs);
+                 rec_index_RN_temp(j,r,y)=randn(myrand_rec_index);
+                 ntags_RN_temp(j,r,s)=randu(myrand_ntags);
+                 prob_tag_RN_temp(j,r,s)=randu(myrand_prob_tag);
+                 
+               if(apportionment_type==3)//completely random apportionment
+                {
+                 Rec_apport_RN_temp(j,y,r)=randu(myrand_rec_apport);//generate a positive random number bw 0-1
+                }
+               if(apportionment_type==4)//completely random apportionment
+                {
+                 Rec_apport_RN_temp(j,y,r)=randn(myrand_rec_apport);//generate a positive random number bw 0-1
+               }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+   
+
+ //once RNGs are created they are now input into the actual RN arrays used in the calculations based on the true
+ //index lengths (
+ //*******NOTE*********
+ //if index length > hardcoded associated value in previous loop then will have issues with repeating RNGs
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -1202,36 +1272,41 @@ FUNCTION get_random_numbers
        {       
         for (int y=1;y<=nyrs;y++)
          {
-         F_RN_YR(y)=randn(myrand_F);//random number generator for F by year only for uniform model
-         
           for (int z=1;z<=nfleets(j);z++)
            {
             for (int x=1;x<=nfleets_survey(j);x++)
              {
               for(int s=1; s<=nyrs_release; s++)
                {
-                 yield_RN(j,r,y,z)=randn(myrand_yield);
-                 yield_RN_overlap(p,j,r,y,z)=randn(myrand_yield);
-                 survey_RN(j,r,y,x)=randn(myrand_survey);
-                 survey_RN_overlap(p,j,r,y,x)=randn(myrand_survey);
-                 F_RN(j,r,y,z)=randn(myrand_F);
-                 rec_devs_RN(j,y)=randn(myrand_rec_devs);
-                 rec_index_RN(j,r,y)=randn(myrand_rec_index);
-                 ntags_RN(j,r,s)=randu(myrand_ntags);
-                 prob_tag_RN(j,r,s)=randu(myrand_prob_tag);
+                 yield_RN(j,r,y,z)=yield_RN_temp(j,r,y,z);
+                 yield_RN_overlap(p,j,r,y,z)=yield_RN_temp_overlap(p,j,r,y,z);
+                 survey_RN(j,r,y,x)=survey_RN_temp(j,r,y,x);
+                 survey_RN_overlap(p,j,r,y,x)=survey_RN_temp_overlap(p,j,r,y,x);
+                 F_RN(j,r,y,z)=F_RN_temp(j,r,y,z);
+                 rec_devs_RN(j,y)=rec_devs_RN_temp(j,y);
+                 rec_index_RN(j,r,y)=rec_index_RN_temp(j,r,y);
+                 ntags_RN(j,r,s)=ntags_RN_temp(j,r,s);
+                 prob_tag_RN(j,r,s)=prob_tag_RN_temp(j,r,s);
+             if(y>1) //rec apport is of length nyrs-1, so need to make sure y>1
+              {
+               if(apportionment_type==3)//completely random apportionment
+                {
+                 Rec_apport_RN(j,y-1,r)=Rec_apport_RN_temp(j,y-1,r);//generate a positive random number bw 0-1
+                }
+               if(apportionment_type==4)//completely random apportionment
+                {
+                 Rec_apport_RN(j,y-1,r)=Rec_apport_RN_temp(j,y-1,r);//generate a positive random number bw 0-1
+               }
+         }
+        }
        }
       }
      }
     }
    }
   }
- }
 
-
-
-///if fishing mortality is to the same across areas using the Dunce Cap method select F_uniform==1
  if(F_uniform==1){
- 
   for (int p=1;p<=npops;p++)
    {
     for (int j=1;j<=npops;j++)
@@ -1242,31 +1317,11 @@ FUNCTION get_random_numbers
            {
             for (int y=1;y<=nyrs;y++)
             {
-           F_RN(j,r,y,z)=0;
-           F_RN(j,r,y,z)=F_RN_YR(y);
+           F_RN(j,r,y,z)=1;
+           F_RN(j,r,y,z)=F_RN_YR_temp(y);
          
          }}}}}}
 
-
-
-    for (int j=1;j<=npops;j++)
-     {
-      for (int y=1;y<=nyrs-1;y++)
-       {
-        for (int r=1;r<=nregions(j);r++)   
-         {       
-
-               if(apportionment_type==3)//completely random apportionment
-                {
-                 Rec_apport_RN(j,y,r)=randu(myrand_rec_apport);//generate a positive random number bw 0-1
-                }
-               if(apportionment_type==4)//completely random apportionment
-                {
-                 Rec_apport_RN(j,y,r)=randn(myrand_rec_apport);//generate a positive random number bw 0-1
-               }
-       }
-     }
-    }
     
 ///////BUILD MOVEMENT MATRIX////////
 FUNCTION get_movement
