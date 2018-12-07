@@ -114,7 +114,7 @@ keep.all<-1
 #If the diagnostic switch ==1 the TIM_diagnostics_SIM.R code will also have to be in the master directory.
 
 #4) set master file with holding the runs 
-direct_master<-"E:\\Mismatch\\MS2_RUNS"
+direct_master<-"F:\\Mismatch\\MS2_RUNS"
 setwd(direct_master)
 
 #list files in the directory to choose the correct one
@@ -123,7 +123,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 
-folder.num=1
+folder.num=3
 i=folder.num
 
 ####################################################
@@ -241,8 +241,8 @@ SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
 SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
 SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=7157+j
 SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=10009+j
-#SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=9403+j
-#SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=34+j
+#SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=899
+#SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=34
 
 writeLines(SIM.DAT,paste0(OM_name,".dat"))
 
@@ -491,6 +491,7 @@ if(save.values==1){
     select_age_survey_sim_temp<-data.table(out$survey_selectivity_age_TRUE)
     select_age_survey_est_temp<-data.table(out$survey_selectivity_age)
     
+    abund_frac_year_temp<-data.table(out$abund_frac_year_OM)
     
     #Save Movement
     pull.t<-unlist(out[grep("T_true", names(out), value = TRUE)])
@@ -571,7 +572,8 @@ if(save.values==1){
                 surv_comp_sim=surv_sim_temp,
                 surv_comp_est=surv_est_temp,
                 catch_comp_sim=catch_sim_temp,
-                catch_comp_est=catch_est_temp
+                catch_comp_est=catch_est_temp,
+                abund_frac_year_reg=abund_frac_year_temp
                 
     ))
     
@@ -587,7 +589,6 @@ if(save.values==1){
   saveRDS(vg, file="Sim_data.RData")
   
 } #end save values
-
 
 
 ######################################################################
@@ -692,8 +693,8 @@ rec_devs_df_sim<-matrix(NA,nyrs*nreg_OM,nconv)
 rec_devs_df_est<-matrix(NA,(nyrs-1)*nreg,nconv)
 
 #Init Abundance
-init_abund_df_sim<-matrix(NA,nreg_OM*nreg_OM*na,nconv)
-init_abund_df_est<-matrix(NA,nreg*nreg*na,nconv)
+init_abund_df_sim<-matrix(NA,npops_OM*nreg_OM*na,nconv)
+init_abund_df_est<-matrix(NA,npops*nreg*na,nconv)
 
 #SSB
 ssb_df_sim<-matrix(NA,nyrs*nreg_OM,nconv)
@@ -724,6 +725,11 @@ select_age_survey_df_est<-matrix(NA,na*nreg,nconv)
 #movement
 move_df_sim<-matrix(NA,nyrs*nreg_OM*nreg_OM*na,nconv)
 move_df_est<-matrix(NA,nyrs*nreg*nreg*na,nconv)
+
+#annual abundance fraction from OM
+abund_frac_reg_df<-matrix(NA,nyrs*nreg_OM,nconv)
+
+
 
 ###########################################################
 # populate the matrices for plotting
@@ -779,8 +785,8 @@ for(p in 1:nconv){
   select_age_df_est[,p]<-unlist(Sim_Results["select_age_est",p])
   select_age_survey_df_sim[,p]<-unlist(Sim_Results["select_age_survey_sim",p])
   select_age_survey_df_est[,p]<-unlist(Sim_Results["select_age_survey_est",p])
+  abund_frac_reg_df[,p]<-unlist(Sim_Results["abund_frac_year_reg",p])
 }
-
 
 #######################################
 # Building a ggplot theme
@@ -965,8 +971,8 @@ write.csv(median_R_ave,"Rave_medians.csv")
 
 #build data.frame
 
-#for matching population types
-if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+#for matching population types or Metamictic to metapop
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)||(npops_OM==1&&npops>1)){
 rec.data<-data.frame(Dat=c(rep("SIM",nrow(rec_df_sim)),rep("EST",nrow(rec_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
 rec.data<-cbind(rec.data,rbind(rec_df_sim,rec_df_est))
 rec.long<-melt(rec.data, id=c("Dat","Years","Reg"))
@@ -1121,9 +1127,9 @@ write.csv(rec.est.med,"Rec_Bias.csv")
 # Initial Abundance
 ####################
 
-#Matching population structures
-if(nreg_OM==nreg){
-init.abund.data<-data.frame(Dat=c(rep("SIM",nrow(init_abund_df_est)),rep("EST",nrow(init_abund_df_est))),Age=rep(1:na,(nreg*nreg)*2),Reg=rep(1:nreg,each=na*nreg))
+#Metamictic matching
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+init.abund.data<-data.frame(Dat=c(rep("SIM",nrow(init_abund_df_sim)),rep("EST",nrow(init_abund_df_est))),Age=rep(1:na,(nreg*nreg)*2),Reg=rep(1:nreg,each=na*nreg))
 
 init.abund.data<-cbind(init.abund.data,rbind(init_abund_df_sim,init_abund_df_est))
 init.abund.melt<-melt(init.abund.data, id=c("Dat","Age","Reg"))
@@ -1141,32 +1147,58 @@ total.init.abund<-rbind(total.init.abund,total.init.abund2)
 init.abund.data<-rbind(init.abund.melt,total.init.abund2)
 }
 
+#Metamictic to metapop
+if(npops_OM==1&&npops>1){
+  
+init.abund.data.sim.t<-data.frame(Dat=rep("SIM",nrow(init_abund_df_sim)),Age=rep(1:na,nreg_OM),Reg=rep(1:nreg_OM,each=na))
+
+init.abund.data.est.t<-data.frame(Dat=rep("EST",nrow(init_abund_df_est)),Age=rep(1:na,nreg*nreg),Reg=rep(1:nreg,each=na*nreg))
+
+init.abund.data.sim<-cbind(init.abund.data.sim.t,init_abund_df_sim)
+init.abund.data.est<-cbind(init.abund.data.est.t,init_abund_df_est)
+
+#calc total by area 
+init.abund.melt.sim<-melt(init.abund.data.sim, id=c("Dat","Age","Reg"))
+total.init.abund.sim<-data.frame(init.abund.melt.sim %>% group_by(Dat,variable,Age) %>% summarise(value=sum(value)))
+total.init.abund.sim$Reg="System"
+
+init.abund.melt.est<-melt(init.abund.data.est, id=c("Dat","Age","Reg"))
+region.init.abund.est<-data.frame(init.abund.melt.est %>% group_by(Dat,Reg,variable,Age) %>% summarise(value=sum(value)))
+
+total.init.abund.est<-data.frame(region.init.abund.est %>% group_by(Dat,variable,Age) %>% summarise(value=sum(value)))
+total.init.abund.est$Reg<-"System"
+
+#final data frame
+init.abund.data<-rbind(init.abund.melt.sim,total.init.abund.sim,region.init.abund.est,total.init.abund.est)
+
+}
+
 
 ###Spatial to panmictic
 if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
   
   #simulated
   init.abund.data.sim<-data.frame(Dat=rep("SIM",nrow(init_abund_df_sim)),Age=rep(ages,nreg_OM),Reg=rep(1:nreg_OM,each=na))
-  
   init.abund.data.sim<-cbind(init.abund.data.sim,rbind(init_abund_df_sim))
   init.abund.melt.sim<-melt(init.abund.data.sim, id=c("Dat","Age","Reg"))
   
   #calculate the sum across areas 
-  total.init.abund<-data.frame(init.abund.melt.sim %>% group_by(Dat, Age, Reg,variable) %>% summarise(value=sum(value)))
+  total.init.abund<-data.frame(init.abund.melt.sim %>% group_by(Dat,Reg,variable,Age) %>% summarise(value=sum(value)))
   
   #add the system
-  total.init.abund2<-data.frame(total.init.abund %>% group_by(Dat, variable,Age) %>% summarise(value=median(value)))
+  total.init.abund2<-data.frame(total.init.abund %>% group_by(Dat,variable,Age) %>% summarise(value=sum(value)))
   total.init.abund2$Reg<-"System"
 
   #estimated
   init.abund.data.est<-data.frame(Dat=rep("EST",nrow(init_abund_df_est)),Age=rep(ages,nreg),Reg=rep(1:nreg,each=na))
   
-  init.abund.data.est<-cbind(init.abund.data.est,rbind(init_abund_df_est))
+  init.abund.data.est<-cbind(init.abund.data.est,init_abund_df_est)
   init.abund.melt.est<-melt(init.abund.data.est, id=c("Dat","Age","Reg"))
   init.abund.melt.est$Reg="System"
   
   init.abund.data<-rbind(init.abund.melt.est,total.init.abund2)
 }
+
 
 #calculate the bias
 init.abund.est<-subset(init.abund.data,Dat=="EST")
@@ -1219,8 +1251,8 @@ write.csv(init.abund.meds,"Initial_abund_medians.csv")
 
 #build data.frame
 
-#for matching population types
-if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+#for spatial to spatial
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)||(npops_OM==1&&npops>1)){
 ssb.data<-data.frame(Dat=c(rep("SIM",nrow(ssb_df_sim)),rep("EST",nrow(ssb_df_est))),Years=rep(years,nreg*2),Reg=rep(1:nreg,each=nyrs))
 
 ssb.data<-cbind(ssb.data,rbind(ssb_df_sim,ssb_df_est))
@@ -1310,7 +1342,7 @@ write.csv(ssb.est.med,"SSB_Bias.csv")
 ####################################
 
 #matching population types
-if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)||(npops_OM==1&&npops>1)){
 #build data.frame
 fmax.data.sim<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
 fmax.data.est<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
@@ -1321,8 +1353,8 @@ fmax.data<-cbind(fmax.data,rbind(fmax_df_sim,fmax_df_est))
 fmax.long<-melt(fmax.data, id=c("Dat","Years","Reg"))
 fmax.long$Reg<-as.character(fmax.data$Reg)
 
-#calculate the sum across areas 
-total.fmax<-data.frame(fmax.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum(value)))
+#calculate the average across areas 
+total.fmax<-data.frame(fmax.long %>% group_by(Dat, Years, variable) %>% summarise(value=sum2(value)))
 
 total.fmax$Reg<-rep("System",nrow(total.fmax))
 fmax.long<-rbind(total.fmax,fmax.long)
@@ -1331,13 +1363,14 @@ fmax.long<-rbind(total.fmax,fmax.long)
 #Spatial to panmictic
 if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
 
- fmax.data.sim.t<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
+  fmax.data.sim.t<-data.frame(Dat=rep("SIM",nrow(fmax_df_sim)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
   fmax.data.est.t<-data.frame(Dat=rep("EST",nrow(fmax_df_est)),Years=rep(years,nreg),Reg=rep(1:nreg,each=nyrs))
   
   #aggregating the values for panmictic
-  fmax.data.sim<-cbind(fmax.data.sim.t,rbind(fmax_df_sim))
+  #using yearly abundance weighted average - this helps a lot
+  fmax.data.sim<-cbind(fmax.data.sim.t,rbind(abund_frac_reg_df*fmax_df_sim))
   fmax.long.sim<-melt(fmax.data.sim, id=c("Dat","Years","Reg"))
-  total.fmax.sim<-data.frame(fmax.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=mean(value)))
+  total.fmax.sim<-data.frame(fmax.long.sim %>% group_by(Dat,variable, Years) %>% summarise(value=sum(value)))
   total.fmax.sim$Reg<-"System"
   
   #setting up the estimatated values
@@ -1444,6 +1477,29 @@ if(npops_OM==npops&&nreg_OM==nreg && npops>1){
   move.long$Reg_from<-as.character(move.long$Reg_from)
   move.long$Reg_to<-as.character(move.long$Reg_to)
 }
+
+
+#metamictic with metapop EM
+
+if((npops_OM==1&&npops>1)){
+  movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na,times=nreg*nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,each=nyrs*na,times=nreg),Age=rep(1:na,times=nyrs*nreg*nreg))
+  
+  movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na*nreg,times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,nreg,times=na*nyrs),Age=rep(1:na,each=nreg,times=nyrs*nreg))
+  
+  movement.data<-rbind(movement.data.sim,movement.data.est)
+  movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
+  
+  move.long<-melt(movement.data, id=c("Dat","Year","Age","Reg_from","Reg_to"))
+  move.long$Reg_from<-as.character(move.long$Reg_from)
+  move.long$Reg_to<-as.character(move.long$Reg_to)
+}
+
+
+
+
+
+
+
 
 #Metapop OM with metamictic
 if(npops_OM>1&&npops==1&&nreg>1){
@@ -1574,7 +1630,8 @@ if((npops_OM==npops&&nreg_OM>nreg)||(npops_OM>npops&&npops==1&&nreg==1)){
     my_theme
 }
 
-if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
+
+if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)||(npops_OM==1&&npops>1)){
   move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
     geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
     geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
