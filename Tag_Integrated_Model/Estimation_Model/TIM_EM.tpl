@@ -650,6 +650,7 @@ PARAMETER_SECTION
  //###############################################################################################################################
  //###################################################################################################################################
   matrix init_abund_age(1,nps,1,nages)
+  matrix abund_devs(1,nps,1,nages-1)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
@@ -1827,18 +1828,21 @@ FUNCTION get_vitals
       for (int j=1;j<=npops;j++)
        {
         for (int a=1;a<=nages;a++)
-         {
+         {   
           if(a==1)
           {
            init_abund_age(j,a)=R_ave(j); //use R_ave as age-1 abund in year 1 to avoid overparametrization
           }
           if(a>1)
           {
-          init_abund_age(j,a)=mfexp(ln_init_abund(j,a-1)); //age based abund devs by population
+          abund_devs(j,a-1)=mfexp(ln_init_abund(j,a-1));
+          init_abund_age(j,a)=abund_devs(j,a-1); //age based abund devs by population
+       
           }
          }
        }
-  
+
+
  if(est_dist_init_abund==(-2)) //use input_dist_init_abund specified for EM (can differ from true)
   {
          for (int j=1;j<=npops;j++)
@@ -2040,6 +2044,8 @@ FUNCTION get_SPR
       }
     }
 
+
+
 FUNCTION get_abundance
 
        for (int y=1;y<=nyrs;y++)
@@ -2081,6 +2087,20 @@ FUNCTION get_abundance
                    {
                      //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                   }
+                  }
+
+               if(init_abund_switch==2) //assume an exponential decay from R_ave for init abundance
+                  {
+                   if(ph_init_abund>0)
+                   {
+                    if(a==1){
+                     init_abund(p,j,r,a)=R_ave(p)*frac_natal(p,j,r);
+                     }
+                     if(a>1){
+                     init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a-1)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                     }
+                     //init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                    }
                   }
 
