@@ -1,14 +1,14 @@
 ##################################################
 ###################################################
-# SIMPLE SIMS CODE FOR SPASAM MODELS
+# SIMPLE SIMS CODE FOR Model Boundary Paper
 # Created by: Katelyn Bosley
-# Updated 10/2/2018
+# Updated: 4/15/2019
 ###################################################
 
 
 ##############################################################################
 #
-# This code will run a simulation experiment for the SPASAM models. 
+# This code will run a simulation experiment for the SPASAM MB model. 
 # This "simple" version is one that only runs the sims and saves a 
 # overall report of the runs (convergence rates/etc).
 # It will also run the diagnostics code which is a one-off of the model
@@ -66,7 +66,7 @@ EM_name<-"MB_EM" ###name of .dat, .tpl., .rep, etc.
 
 # if diagnostic code is run before the sims, the par file from the diagnostic run will be used create a pin for simulation runs.
 
-diag.run<-0
+diag.run<-1
    # ==0 NO Do NOT run the diagnostics plots for a single run before the sims
    # ==1 YES run the diagnostics plots for a single run
 
@@ -78,12 +78,22 @@ resid.switch=2
 
 
 #3) Do you want to run simulations?
+
 run.sims<-1
 # ==0 DO NOT run simulation experiment. This was completed already at an earlier time
 # ==1 Run simulation experiement
 
 #4) Set number of simulations to perform
-nsim <-20
+nsim <-16
+
+Rec.error<-1
+# ==0 No process error across sims - Recruit devs are identical for each 
+# ==1 include process error across sims  - generate different devs for each based on area-specific sigma R
+
+F.error<-1
+# ==0 No process error across sims - F devs are identical for each 
+# ==1 include process error across sims  - generate different devs for each based on area-specific sigma F
+
 
 #5) Do you want to save important values from the runs?
 save.values<-1
@@ -123,7 +133,7 @@ keep.all<-1
 
 
 #8) set master directory holding the files with each run.
-direct_master<-"F:\\MB_testing"
+direct_master<-"C:\\Users\\kaifk\\Desktop\\My files\\MB_test\\Management_Boundaries"
 
 # Create a list of files in the directory
 files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
@@ -131,14 +141,16 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 #select the file from the list with the scenario you want to run
 #if only running 1 folder set i to the number corresponding to the folder you want to run
 ##COMMENT OUT THESE THREE LINES IF LOOPING
-#folder.num=3
+#folder.num=1
 #i=folder.num
 #{ #run code
 
 
-######### IF RUNNING A LOOP ACROSS MANY FOLDERS UNCOMMENT OUT THIS SECTION ############### 
+######### IF RUNNING A LOOP ACROSS MANY FOLDERS UNCOMMENT THE FOR STATEMENT (LINE 145) ############### 
 #if running the several folders use the loop
-for(i in 2:3){
+#
+for(i in 1:2){
+
 #########################################################################################
 
 setwd(direct_master)
@@ -147,11 +159,9 @@ setwd(direct_master)
 ##################################################
 #OM Location
 OM_direct<-paste0(direct_master,"\\",files[i],"\\Operating_Model",sep="")
-#OM_name<-"MB_OM" #name of the OM you are wanting to run
 
 #EM Location
 EM_direct<-paste0(direct_master,"\\",files[i],"\\Estimation_Model",sep="") #location of run(s)
-#EM_name<-"MB_EM" ###name of .dat, .tpl., .rep, etc.
 
 #Build diagnostics/results folder
 dir.create(paste0(direct_master,"\\",files[i],"\\Diagnostics",sep=""))
@@ -240,12 +250,23 @@ ls=foreach(j=1:nsim,.options.snow = opts,.combine='rbind',.packages =c('PBSmodel
 setwd(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
       
 SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
+
+#generate new data set for observations
 SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=411+j
 SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=1110+j
 SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
 SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
 SIM.DAT[(grep("myseed_catch_age",SIM.DAT)+1)]=7157+j
 SIM.DAT[(grep("myseed_tag",SIM.DAT)+1)]=10009+j
+
+#generate new deviations for process error
+if(Rec.error==1){
+SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=12009+j
+} else {SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=12009}
+
+if(F.error==1){
+SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=14009+j} else {
+  SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=14009}
 
 writeLines(SIM.DAT,paste0(OM_name,".dat"))
 
@@ -810,19 +831,21 @@ for(p in 1:nconv){
 conv<-round(sum(Sim_Stats$Converged)/nsim,3)
     
 #how many bins for the number of simulations
-#bins<-round(nsim*0.75,0)
-    
+bins<-round(nsim*0.75,0)
+   
     Like.hist<-function(j=5){
       #breaks<-(max(Sim_Stats[j])-min(Sim_Stats[j]))/2
-      
-      ggplot(Sim_Stats, aes(x=Sim_Stats[j])) + 
-        geom_histogram(bins = 15, col="black", fill="grey80")+
+      ggplot(Sim_Stats, aes(x=as.vector(Sim_Stats[,j]))) + 
+        geom_histogram(bins = bins, col="black", fill="grey80")+
         ylab("Frequency")+
         xlab("Likelihood")+
         ggtitle(colnames(Sim_Stats[j]))+
         my_theme
       
     }
+  
+    
+
     
 ################################################
 #plot from runs...ONLY the important ones for now
@@ -1182,7 +1205,7 @@ ssb.long$Reg<-as.factor(as.character(ssb.long$Reg))
       my_theme
     
     
-    #generate Rec bias plot
+#generate Rec bias plot
  ssb.bias.gg<-ggplot(ssb.est, aes(x=as.factor(Years), y=bias)) +
       geom_hline(aes(yintercept = 0, group = Reg), colour = 'red',size=0.5,lty=2)+
       geom_violin(fill=vio.col,trim=F,bw="SJ",alpha=0.6)+
@@ -1327,11 +1350,11 @@ if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
   fmax.est$bias=((fmax.est$value-fmax.est$val.true)/fmax.est$val.true)*100
   #fmax.est$bias=((fmax.est$val.true-fmax.est$value))
     
-    #removing the top and bottom 1% for the plots...
+  #removing the top and bottom 1% for the plots...
     #fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
     
-    #calc medians table
-    fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
+  #calc medians table
+  fmax.est.med <- fmax.est %>% group_by(Reg,Years) %>%
       summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),lower=quantile(bias,c(lower)),upper=quantile(bias,c(upper)))
     
     #calc vals for plots
@@ -1375,9 +1398,9 @@ if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
     write.csv(fmax.est.med,"Fmax_Bias.csv")
     
     
-    ################################
-    #Build summary document
-    ###############################
+################################
+#Build summary document
+###############################
     
     pdf("Simulation_Summary.pdf",paper="letter",height = 11, width=8)
     par(mar=c(6,6,6,6))
