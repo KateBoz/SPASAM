@@ -177,7 +177,7 @@ nreg_OM<-out$nregions_OM
 nreg<-out$nregions
 years<-seq(1:out$nyrs)
 ages<-seq(1:out$nages)
-
+tag.age.switch<-out$fit_tag_age_switch
 
 #for running the meta pop example. Might need fixing if more complex
 if(npops_OM>1){
@@ -1000,71 +1000,6 @@ if(npops==npops_OM && npops>1){
 
 
 
-# for mismatch metamictic to panmictic
-if(nreg==1 && nreg_OM>1){
-  T_est<-data.frame(matrix(NA,nyrs*nreg_OM,nreg_OM))
-  T_true<-data.frame(out$T_year_TRUE)
-  
-  if(resid.switch==1){
-    T_resid<-(T_est-T_true)}
-  
-  if(resid.switch==2){
-    T_resid<-((T_est-T_true)/T_true)*100}
-  
-  for(i in 1:nreg_OM){
-    names(T_est)[i]<-paste0("Est_",i)
-    names(T_true)[i]<-paste0("True_",i)
-    names(T_resid)[i]<-paste0("Resid_",i)}
-}
-
-#metpop_OM to metamictic
-if(npops_OM>1 && nreg==1){ 
-  
-  #combine movements
-  pull<-out[grep("alt_T", names(out), value = TRUE)]
-  
-  T_est<-data.frame(matrix(unlist(pull),nyrs*npops,npops,byrow=TRUE))
-  T_true<-data.frame(matrix(NA,nyrs*npops,npops,byrow=TRUE)) #just setting the estimated movement = 1
-  
-  if(resid.switch==1){
-    T_resid<-(T_est-T_true)}
-  
-  if(resid.switch==2){
-    T_resid<-((T_est-T_true)/T_true)*100}
-  
-  
-  for(i in 1:npops){
-    names(T_est)[i]<-paste0("Est_",i)
-    names(T_true)[i]<-paste0("True_",i)
-    names(T_resid)[i]<-paste0("Resid_",i)
-    
-  }}
-
-#metamictic to metapop
-if(npops_OM==1 && npops>1){ 
-  
-  #combine movements
-  pull<-out[grep("alt_T", names(out), value = TRUE)]
-  
-  T_est<-data.frame(matrix(unlist(pull),nyrs*npops,npops,byrow=TRUE))
-  T_true<-data.frame(out$T_year_TRUE) #just setting the estimated movement = 1
-  
-  if(resid.switch==1){
-    T_resid<-(T_est-T_true)}
-  
-  if(resid.switch==2){
-    T_resid<-((T_est-T_true)/T_true)*100}
-  
-  
-  for(i in 1:npops){
-    names(T_est)[i]<-paste0("Est_",i)
-    names(T_true)[i]<-paste0("True_",i)
-    names(T_resid)[i]<-paste0("Resid_",i)
-    
-  }}
-
-
-
 
 #build the data frame
 if(nreg_OM==nreg){ 
@@ -1343,7 +1278,7 @@ fishery.comp.plot<-
 
 ############################
 # Fits to Tag data
-
+if(tag.age.switch==0){
 #building the matrix
 tag.prop.resid<-data.frame(Rel_Reg=rep(1:nreg,each=out$nyrs_release*na),Rel_year=rep(1:out$nyrs_release,each = na),Rel_age=rep(1:na,(out$nyrs_release*nreg)))
 
@@ -1418,7 +1353,7 @@ tags.plot<-function(j) {
     panel.spacing = unit(0.05, "lines"))
 
 }
-
+}
 #tags.plot(3)
 
 ##############################################
@@ -1851,13 +1786,13 @@ dev.off()
 #####################
 # Plot Tag residuals
 ######################
-
+if(tag.age.switch==0){
 pdf("Tag_Residuals.pdf",paper='a4r',width=11,height=8) 
 for(k in 1:nreg){
   print(tags.plot(k))}
 
 dev.off()
-
+}
 #############################################
 # Build table of Standard Errors
 #############################################

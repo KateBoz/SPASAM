@@ -6,42 +6,6 @@
 # This code will run a simulation experiment for the SPASAM model
 # 
 
-
-#remove junk from workspace
-#rm(list=(ls()))
-
-
-#load required libraries
-#load_libraries<-function() {
-#  library(PBSmodelling)
-#  library(data.table)
-#  library(ggplot2)
-#  library(reshape2)
-#  library(gridExtra)
-#  library(gplots)
-#  library(colorspace)
-#  library(RColorBrewer)
-#  library(dplyr)
-#  library(matrixStats) 
-#  library(gridExtra)
-#  library(grid)
-#  library(gtools)
-#  library(TeachingDemos)
-#  library(snowfall)
-#  library(parallel)
-#  library(snow)
-#  library(foreach)
-#  library(doSNOW)
-#  library(spatstat)
-#  library(alphahull)
-#  library(beanplot)
-#  library(png)
-#}
-#load_libraries()
-
-
-
-
 ###################################
 #Setting up the simulations
 ##################################
@@ -55,7 +19,7 @@ diag.run<-1
 
 
 #2) Set number of simulations to perform
-nsim <-500
+nsim <-20
 
 ######################
 #plot parameters
@@ -197,8 +161,9 @@ setwd(paste0(runs_dir,"\\Run",j,"\\Operating_Model",sep=""))
 SIM.DAT=readLines(paste0(OM_name,".dat"),n=-1)
 SIM.DAT[(grep("myseed_yield",SIM.DAT)+1)]=411+j
 SIM.DAT[(grep("myseed_survey",SIM.DAT)+1)]=1110+j
-#SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=2211+j
-#SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=3180+j
+SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=45651+j
+SIM.DAT[(grep("myseed_T",SIM.DAT)+1)]=32+j
+SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=23440+j
 #SIM.DAT[(grep("myseed_rec_apport",SIM.DAT)+1)]=4199+j
 SIM.DAT[(grep("myseed_rec_index",SIM.DAT)+1)]=5610+j
 SIM.DAT[(grep("myseed_survey_age",SIM.DAT)+1)]=6831+j
@@ -476,10 +441,12 @@ select_age_survey_est_temp<-data.table(out$survey_selectivity_age)
 
 
 #Save Movement
-movement_year_sim_temp<-data.table(movement_year_Sim=c(out$T_year_TRUE))
 
-pull<-unlist(out[grep("alt", names(out), value = TRUE)])
-movement_year_est_temp<-data.table(movement_year_Est=c(t(pull)))
+pull<-unlist(out[grep("T_est", names(out), value = TRUE)])
+movement_est_temp<-data.table(movement_Est=c(t(pull)))
+
+pull.t<-unlist(out[grep("T_true", names(out), value = TRUE)])
+movement_sim_temp<-data.table(movement_Sim=c(t(pull.t)))
 
 ###################
 #Save age comps
@@ -544,8 +511,8 @@ catch_est_temp<-data.table(do.call("rbind",pull.catch.est))
               select_age_survey_est=select_age_survey_est_temp,
               q_sim=q_sim_temp,
               q_est=q_est_temp,
-              movement_year_sim=movement_year_sim_temp,
-              movement_year_est=movement_year_est_temp,
+              movement_sim=movement_sim_temp,
+              movement_est=movement_est_temp,
               surv_comp_sim=surv_sim_temp,
               surv_comp_est=surv_est_temp,
               catch_comp_sim=catch_sim_temp,
@@ -691,8 +658,8 @@ select_age_survey_df_sim<-matrix(NA,na*nreg,nconv)
 select_age_survey_df_est<-matrix(NA,na*nreg,nconv)
 
 #movement
-move_df_sim<-matrix(NA,nyrs*nreg*nreg,nconv)
-move_df_est<-matrix(NA,nyrs*nreg*nreg,nconv)
+move_df_sim<-matrix(NA,nyrs*nreg*na*nreg,nconv)
+move_df_est<-matrix(NA,nyrs*nreg*na*nreg,nconv)
 
 
 #age comps - eventually?
@@ -739,8 +706,8 @@ survey_df_sim[,i]<-unlist(Sim_Results["survey_sim",i])
 survey_df_est[,i]<-unlist(Sim_Results["survey_est",i])
 fmax_df_sim[,i]<-unlist(Sim_Results["fmax_sim",i])
 fmax_df_est[,i]<-unlist(Sim_Results["fmax_est",i])
-move_df_sim[,i]<-unlist(Sim_Results["movement_year_sim",i])
-move_df_est[,i]<-unlist(Sim_Results["movement_year_est",i])
+move_df_sim[,i]<-unlist(Sim_Results["movement_sim",i])
+move_df_est[,i]<-unlist(Sim_Results["movement_est",i])
 select_age_df_sim[,i]<-unlist(Sim_Results["select_age_sim",i])
 select_age_df_est[,i]<-unlist(Sim_Results["select_age_est",i])
 select_age_survey_df_sim[,i]<-unlist(Sim_Results["select_age_survey_sim",i])
@@ -783,7 +750,7 @@ conv<-round(sum(Sim_Stats$Converged)/nsim,3)
 bins<-round(nsim*0.8,0)
 
 Like.hist<-function(j=5){
-breaks<-(max(Sim_Stats[j])-min(Sim_Stats[j]))/bins
+breaks<-round((max(Sim_Stats[j])-min(Sim_Stats[j]))/bins)
 
 ggplot(Sim_Stats, aes(x=Sim_Stats[j])) + 
   geom_histogram(binwidth = breaks, col="black", fill="grey80")+
@@ -1486,25 +1453,23 @@ write.csv(s.select.est.med,"Surv_select_age_bias.csv")
 
 #Movement
 
-movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg),Reg_to=rep(1:nreg,nyrs*nreg))
+movement.data.sim<-data.frame(Dat=rep("SIM",nrow(move_df_sim)),Year=rep(1:nyrs,each=na*nreg, times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,times=nyrs*nreg*na),
+                              Age=rep(1:na,each=nreg,times=nyrs*nreg))
 
-movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg),Reg_to=rep(1:nreg,nyrs*nreg))                                
-                                
-
+movement.data.est<-data.frame(Dat=rep("EST",nrow(move_df_est)),Year=rep(1:nyrs,each=na*nreg, times=nreg),Reg_from=rep(1:nreg,each=nyrs*nreg*na),Reg_to=rep(1:nreg,times=nyrs*nreg*na),
+                              Age=rep(1:na,each=nreg,times=nyrs*nreg))
 
 movement.data<-rbind(movement.data.sim,movement.data.est)
 movement.data<-cbind(movement.data,rbind(move_df_sim,move_df_est))
 
-move.long<-melt(movement.data, id=c("Dat","Year","Reg_from","Reg_to"))
+move.long<-melt(movement.data, id=c("Dat","Year","Reg_from","Reg_to","Age"))
 move.long$Reg_from<-as.character(move.long$Reg_from)
 move.long$Reg_to<-as.character(move.long$Reg_to)
-
-
+move.long$Age<-as.character(move.long$Age)
 
 #separate again for plotting
 move.est<-move.long[move.long$Dat=="EST",]
 move.sim<-move.long[move.long$Dat=="SIM",]
-
 
 #calculate the percent bias
 move.est$val.true<-move.sim$value
@@ -1512,7 +1477,7 @@ move.est$bias=((move.est$value-move.est$val.true)/move.est$val.true)*100
 #move.est$bias=(move.est$val.true-move.est$value)
 
 #calc medians table
-move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Year) %>%
+move.est.med <- move.est %>% group_by(Reg_from,Reg_to,Age,Year) %>%
   summarise(med.est=median(value),med.sim=median(val.true), med.bias = median(bias),max=max(bias),min=min(bias))
 
 
@@ -1521,7 +1486,7 @@ move.meds <- move.est %>% group_by(Reg_from,Reg_to) %>%
   mutate(med = median(value),med.true=median(val.true))
 
 
-move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
+move.plot.gg.alt<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), group=Reg_to) +
   geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   geom_line(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to))+
   geom_point(data = move.est.med, aes(x=Year,y=med.est, group=Reg_to),position = position_dodge(width=0.8), fill=median.col, shape=21,size=2.0) + 
@@ -1533,12 +1498,13 @@ move.plot.gg<-ggplot(move.est, aes(x=as.factor(Year), y=value, col=Reg_to), grou
   ggtitle("Movement")+
   ylab("Movement Rate")+
   xlab("Year")+
-  facet_grid(Reg_from~.)+
+  #facet_grid_paginate(Reg_from~Age, ncol = 2, nrow = 2, page = i)+
+  facet_grid(Reg_from~Age)+
   #ylim(-5,5)+
   my_theme
 
 
-move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group=Reg_to) +
+move.bias.gg.alt<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group=Reg_to) +
   geom_violin(aes(fill=Reg_to),trim=F,bw="SJ",position = position_dodge(width=0.8), alpha=0.2)+
   geom_hline(aes(yintercept = 0, group = Reg_to), colour = 'black',size=0.5,lty=2)+
   geom_line(data = move.est.med, aes(x=Year,y=med.bias, group=Reg_to))+
@@ -1549,7 +1515,7 @@ move.bias.gg<-ggplot(move.est, aes(x=as.factor(Year), y=bias, col=Reg_to), group
   ggtitle("Movement Bias")+
   ylab("Relative % Difference")+
   xlab("Year")+
-  facet_grid(Reg_from~.)+
+  facet_grid(Reg_from~Age)+
   #ylim(quantile(move.est$bias, c(.05,.95)))+
   my_theme
 
@@ -1559,10 +1525,13 @@ write.csv(move.est.med,"Move_Bias.csv")
 ssb.table<-spread(ssb.long, key = variable, value = value)
 rec.table<-spread(rec.long, key = variable, value = value)
 fmax.table<-spread(fmax.long, key = variable, value = value)
+move.table<-spread(move.long, key = variable, value = value)
 
 write.csv(ssb.table,"ssb_table.csv")
 write.csv(rec.table,"rec_table.csv")
 write.csv(fmax.table,"fmax_table.csv")
+write.csv(move.table,"move_table.csv")
+
 }
 
 #######################################
@@ -1654,27 +1623,37 @@ grid.arrange(ncol = 1,
              top="Fishery Selectivity",
              s.select.plot.gg, s.select.bias.gg)
 
-grid.arrange(ncol = 1,
-             top="Movement",
-             move.plot.gg, move.bias.gg)
+#grid.arrange(ncol = 1,
+#             top="Movement",
+#             move.plot.gg, move.bias.gg)
 
+
+#pdf("Simulation_Summary.pdf",paper="letter",height = 11, width=8)
+
+
+for(i in 1:(na/2)){
+ print( move.plot.gg.alt+facet_grid_paginate(Reg_from~Age, ncol = 2, nrow = 2, page = i))
+}
+for(i in 1:(na/2)){
+  print( move.bias.gg.alt+facet_grid_paginate(Reg_from~Age, ncol = 2, nrow = 2, page = i))
+}
 
 ##############################
 # Plot Likelihood components
 ##############################
 
-grid.arrange(ncol = 2,nrow=4,
-             top="Likelihood Components",
-             ggplotGrob(Like.hist(4)),
-             ggplotGrob(Like.hist(5)),
-             ggplotGrob(Like.hist(6)),
-             ggplotGrob(Like.hist(7)),
-             ggplotGrob(Like.hist(8)),             
-             ggplotGrob(Like.hist(9)),
-             ggplotGrob(Like.hist(10)),
+#grid.arrange(ncol = 2,nrow=4,
+#             top="Likelihood Components",
+#             ggplotGrob(Like.hist(4)),
+#             ggplotGrob(Like.hist(5)),
+#             ggplotGrob(Like.hist(6)),
+#             ggplotGrob(Like.hist(7)),
+#             ggplotGrob(Like.hist(8)),             
+#             ggplotGrob(Like.hist(9)),
+#             ggplotGrob(Like.hist(10)),
              #ggplotGrob(Like.hist(11)), #rec penalty
-             ggplotGrob(Like.hist(12))
-             )
+#             ggplotGrob(Like.hist(12))
+#             )
 
 
 
