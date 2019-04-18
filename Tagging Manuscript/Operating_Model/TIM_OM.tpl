@@ -103,6 +103,7 @@ DATA_SECTION
   init_matrix tsurvey(1,np,1,nreg) //time of survey in proportion of year (0,1)
   init_number larval_move_switch
   ///// Changes the type of larval movement pattern (sets age class 1 movements)
+  //==(-1) larval (age-1) movement is determined in same way as other ages (e.g., based on move_switch) 
   //==0 no movement
   //==1 input movement
   //==2 movement within population only based on residency (symmetric)
@@ -124,13 +125,14 @@ DATA_SECTION
   //==8 density dependent movement based on relative biomass among potential destination area/regions, partitions (1-input_residency) based on a logistic function of biomass in current area/region and 'suitability' of destination area/regions
   //// uses use_input_Bstar switch
   //// DD MOVEMENT CAN BE AGE BASED OR CONSTANT ACROSS AGES...FOR AGE BASED MAKE SURE DD_move_age_switch==1, FOR AGE-INVARIANT DD_move_age_switch==0
-  //==21 use input T_year to allow T to vary by year
-  //==22 use T_FUL_Input to input time and age varying T
+  //==9 use input T_year to allow T to vary by year
+  //==10 use T_FUL_Input to input time and age varying T
 
   init_number rand_move
   ///adjust DD movement to include random variation based on input sigma and lognormal random variable
-  //==0 no randomness, just use movement from DD calculations
-  //==1 add randomness to DD calculations (bounded so Fract move cannot exceed 1 or go below 0)
+  //IF move_switch==0 or larval_move_switch==0, then NO RANDOMNESS IS EMPLOYED (I.E., RESIDENCY STAYS AT 100%)
+  //==0 no randomness, just use movement from T calcs
+  //==1 add randomness to T (bounded so Fract move cannot exceed 1 or go below 0)
   
   init_number DD_move_age_switch
   /////// Allow age-based movement when using DD movement (Y/N) (1/0)
@@ -247,6 +249,14 @@ DATA_SECTION
    //==0, fit by age-based cohorts
    //==1, fit by region-based cohorts
 
+   init_number tag_fit_ages_switch_OM
+   //  #DOES NOT WORK WITH TAG MIXING!!!
+   
+   //determines whether OM should use same dynamics as EM when fitting tags by cohort
+   //if ==1 then OM tag dynamics use only fully selected F instead of maintaining age-based dynamics then summing across ages
+   //==0, OM differs from EM (OM maintains age-based dynamics)
+   //==1, OM matches EM and uses only fully selected F to calculate tag recaps (use tag_age_sel to define age of full selection)
+
   init_number sim_tag_mixing_switch
    //determines whether tags have a different F or T in first year of release compared to rest of population (i.e., if there is incomplete mixing)
    //==0 F and T same as rest of pop (complete mixing)
@@ -279,6 +289,8 @@ DATA_SECTION
   init_number opport_tag_prob //cutoff value defining whether uniform RNG represents no tagging(<tag_prob) or tagging (>tag_prob) in a given area
   init_number opport_tag_prob_year //cutoff value defining whether uniform RNG represents no tagging(<tag_prob) or tagging (>tag_prob) in a given year
   init_int max_life_tags //number of years that tag recaptures will be tallied for after release (assume proportional to longevity of the species)...use this to avoid calculating tag recaptures for all remaining model years after release since # recaptures are often extremely limited after a few years after release
+  init_int tag_age_sel //age used to compute tag dynamics (F and T) when fitting by cohort and OM tag dynamics match EM
+  
   init_number SIM_ntag //the ESS used to simulate multinomial tagging dat
   init_number myseed_ntags //just the seed for RNG
   init_number myseed_prob_tag //just the seed for RNG
@@ -595,6 +607,7 @@ DATA_SECTION
   init_int ph_F_rho // if we want random walk F, not implemented
   init_number lb_F_rho
   init_number ub_F_rho
+ // MOVEMENT PARAMETERS ///////////
   init_int phase_T_YR
   init_int phase_T_YR_ALT_FREQ
   init_int T_est_freq
@@ -604,8 +617,15 @@ DATA_SECTION
   init_int phase_T_CNST
   init_int phase_T_CNST_AGE
   init_int phase_T_YR_AGE
+  init_int phase_T_CNST_AGE_no_AG1
+  init_int phase_T_YR_AGE_no_AG1
+  init_int phase_T_YR_AGE_ALT_FREQ_no_AG1
   init_number lb_T
   init_number ub_T
+  init_number T_start  //starting value for T parameters in log space, for 2 pops ==-2 gives ~90% residency, for 3 pops ==-3 gives ~60% residency
+//////////////////////////////////////
+
+ // Tagging Parameters //////////////
   init_int phase_rep_rate_YR
   init_int phase_rep_rate_CNST
   init_number lb_B
@@ -614,8 +634,10 @@ DATA_SECTION
   init_number ph_F_tag
   init_number lb_scalar
   init_number ub_scalar
+ ///////////////////////////
 
   init_int ph_dummy
+ // Likelihood weights //////////
   init_number wt_surv
   init_number wt_catch
   init_number wt_fish_age
@@ -625,6 +647,9 @@ DATA_SECTION
   init_number wt_F_pen
   init_number wt_M_pen
   init_number wt_B_pen
+ /////////////////////////////////////
+
+ // Penalty Function Inputs /////////////////////////////
   init_number report_rate_sigma
   init_number report_rate_ave
   init_number abund_pen_switch // include penalty (norm2) on init_abund_devs?  0==no, 1==yes
@@ -633,6 +658,9 @@ DATA_SECTION
   init_number wt_move_pen
   init_number Tpen
   init_number Tpen2
+  init_number sigma_Tpen_EM 
+ /////////////////////////////////////////////////////////
+
  //error for the EM
   init_4darray OBS_survey_fleet_bio_se_EM(1,np_em,1,nreg_em,1,ny,1,nfs_em)
   init_4darray OBS_yield_fleet_se_EM(1,np_em,1,nreg_em,1,ny,1,nf_em)
@@ -1362,67 +1390,6 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-               if(a==1) // allow different movement from adults
-                {
-                 if(larval_move_switch==0)  //fix at no movement
-                  {
-                   if(j==k && r==n)
-                    {
-                     T(j,r,y,a,k,n)=1;
-                    }
-                   else
-                    {
-                     T(j,r,y,a,k,n)=0;
-                    }
-                   }
-                 if(larval_move_switch==1) // use input movement
-                  {
-                   T(j,r,y,a,k,n)=input_T(j,r,a,k,n);
-                  }
-                 if(larval_move_switch==2) // only allow movement within a population (ie regionp within a population) not across populations based on input residency term
-                  {
-                   if(j==k && r==n)
-                   {
-                    T(j,r,y,a,k,n)=input_residency_larval(j,r);
-                   }
-                   if(j==k && r!=n)
-                   {
-                    T(j,r,y,a,k,n)=(1-input_residency_larval(j,r))/(nregions(j)-1);
-                   }
-                   if(j!=k)
-                   {
-                    T(j,r,y,a,k,n)=0;
-                   }
-                  }
-                 if(larval_move_switch==3) //symmetric movement but only allow movement within a population (ie regionp within a population) not across populations
-                  {
-                   if(j==k)
-                   {
-                    T(j,r,y,a,k,n)=1/(nregions(j));
-                   }
-                   if(j!=k)
-                   {
-                    T(j,r,y,a,k,n)=0;
-                   }
-                  }
-                 if(larval_move_switch==4) //symmetric movement across all populations and regionp
-                  {
-                   T(j,r,y,a,k,n)=1/sum(nregions);
-                  }
-                 if(larval_move_switch==5) // allow movement across all regions and populations, based on population/region specific residency
-                  {
-                   if(j==k && r==n)
-                   {
-                    T(j,r,y,a,k,n)=input_residency_larval(j,r);
-                   }
-                   else
-                   {
-                    T(j,r,y,a,k,n)=(1-input_residency_larval(j,r))/(sum(nregions)-1);
-                   }
-                  }
-                }
-               else
-                {                 
                  if(move_switch==0)  //fix at no movement
                   {
                    if(j==k && r==n)
@@ -1478,7 +1445,82 @@ FUNCTION get_movement
                    {
                     T(j,r,y,a,k,n)=(1-input_residency(j,r,a))/(sum(nregions)-1);
                    }
-                  }              
+                  }
+                 if(move_switch==9) // use input yearly  movement
+                  {
+                   T(j,r,y,a,k,n)=input_T_year(j,r,y,k,n);
+                  }
+
+                 if(move_switch==10) // use input yearly  movement
+                  {
+                   T(j,r,y,a,k,n)=T_Full_Input(j,r,a+(y-1)*nages,k,n);
+                  }
+              if(larval_move_switch>(-1)) //fill in age-1 movement if age-1 movement is different than other ages
+              {
+               if(a==1 && larval_move_switch==0) // allow different movement from adults
+                {
+                   if(j==k && r==n)
+                    {
+                     T(j,r,y,a,k,n)=1;
+                    }
+                   else
+                    {
+                     T(j,r,y,a,k,n)=0;
+                    }
+                  }
+                 if(a==1 && larval_move_switch==1) // use input movement
+                  {
+                   T(j,r,y,a,k,n)=input_T(j,r,a,k,n);
+                  }
+                 if(a==1 && larval_move_switch==2) // only allow movement within a population (ie regionp within a population) not across populations based on input residency term
+                  {
+                   if(j==k && r==n)
+                   {
+                    T(j,r,y,a,k,n)=input_residency_larval(j,r);
+                   }
+                   if(j==k && r!=n)
+                   {
+                    T(j,r,y,a,k,n)=(1-input_residency_larval(j,r))/(nregions(j)-1);
+                   }
+                   if(j!=k)
+                   {
+                    T(j,r,y,a,k,n)=0;
+                   }
+                  }
+                 if(a==1 && larval_move_switch==3) //symmetric movement but only allow movement within a population (ie regionp within a population) not across populations
+                  {
+                   if(j==k)
+                   {
+                    T(j,r,y,a,k,n)=1/(nregions(j));
+                   }
+                   if(j!=k)
+                   {
+                    T(j,r,y,a,k,n)=0;
+                   }
+                  }
+                 if(a==1 && larval_move_switch==4) //symmetric movement across all populations and regionp
+                  {
+                   T(j,r,y,a,k,n)=1/sum(nregions);
+                  }
+                 if(larval_move_switch==5) // allow movement across all regions and populations, based on population/region specific residency
+                  {
+                   if(j==k && r==n)
+                   {
+                    T(j,r,y,a,k,n)=input_residency_larval(j,r);
+                   }
+                   else
+                   {
+                    T(j,r,y,a,k,n)=(1-input_residency_larval(j,r))/(sum(nregions)-1);
+                   }
+                  }
+                 }
+              if(T(j,r,y,a,k,n)>1) //ensure T doesn't exceed bounds
+                {
+                 T(j,r,y,a,k,n)=1;
+                }
+               if(T(j,r,y,a,k,n)<0)
+                {
+                 T(j,r,y,a,k,n)=0;
                 }
        }
       } 
@@ -1487,7 +1529,8 @@ FUNCTION get_movement
    }
   }
 
-
+ if(rand_move==1)
+  {
   for (int j=1;j<=npops;j++)
    {
     for (int r=1;r<=nregions(j);r++)
@@ -1500,21 +1543,33 @@ FUNCTION get_movement
            {
             for (int n=1;n<=nregions(k);n++)
              {
-                 if(move_switch==21) // use input yearly  movement
-                  {
-                   T(j,r,y,a,k,n)=input_T_year(j,r,y,k,n);
-                  }
-
-                 if(move_switch==22) // use input yearly  movement
-                  {
-                   T(j,r,y,a,k,n)=T_Full_Input(j,r,a+(y-1)*nages,k,n);
-                  }
+              if((a>1 && move_switch!=0) || (a==1 && larval_move_switch>0) || (a==1 && larval_move_switch==(-1) &&  move_switch!=0)) 
+              {
+               T(j,r,y,a,k,n)*=mfexp(T_RN(j,r,y,a)*sigma_T(j)-0.5*square(sigma_T(j)));
+              }
+               if(move_switch==0)
+                {
+                 T(j,r,y,a,k,n)=T(j,r,y,a,k,n);
+                }
+               if(a==1 && larval_move_switch==0)
+                {
+                 T(j,r,y,a,k,n)=T(j,r,y,a,k,n);
+                }
+               if(T(j,r,y,a,k,n)>1) //ensure T doesn't exceed bounds
+                {
+                 T(j,r,y,a,k,n)=1;
+                }
+               if(T(j,r,y,a,k,n)<0)
+                {
+                 T(j,r,y,a,k,n)=0;
+                }
               }
              }
             }
            }
           }
-         }
+     }
+    }
 
 ///////SELECTIVITY CALCULATIONS///////
 FUNCTION get_selectivity
@@ -1546,25 +1601,23 @@ FUNCTION get_selectivity
                 {
                  selectivity(j,r,y,a,z)=input_selectivity(j,r,a,z);
                 }
-                age_full_selection_temp(a)=selectivity(j,r,y,a,z);
+               // age_full_selection_temp(a)=selectivity(j,r,y,a,z);
                }
               }
-       if(tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
-         {
-         for (int a=1;a<=nages;a++)
-           {
-            for (int z=1;z<=nfleets(j);z++)
-              {
-               if(selectivity(j,r,y,a,z)==max(age_full_selection_temp)); //really only getting max age of last fleet but good enough for now
-                {
-                 age_full_selection(j,r,y)=a;
+   //    if(tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+     //    {
+       //  for (int a=1;a<=nages;a++)
+         //  {
+           // for (int z=1;z<=nfleets(j);z++)
+             // {
+               //if(selectivity(j,r,y,a,z)==max(age_full_selection_temp)); //really only getting max age of last fleet but good enough for now
+                //{
+                 age_full_selection(j,r,y)=tag_age_sel;
                 }
                }
               }
-            }
-          }
-         }
-        }
+
+
 //survey selectivity 
  for (int j=1;j<=npops;j++)
     {
@@ -1681,9 +1734,9 @@ FUNCTION get_F_age
                if(y>=((nyrs-Fstartyr(j,r))/2+Fstartyr(j,r)))
                 {
                  F_year(j,r,y,z)=maxF(j,r)-((y-Fstartyr(j,r))-((nyrs-Fstartyr(j,r))/2))*stepF(j,r)*mfexp(F_RN(j,r,y,z)*sigma_F(j,r,z)-0.5*square(sigma_F(j,r,z)));
-                  if(F_year(j,r,y,z)<0) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
+                  if(F_year(j,r,y,z)<minF(j,r)) //needed because the stepF decrease can be randomly be greater than preceding F, and so F goes negative
                   {
-                  F_year(j,r,y,z)=minF(j,r);
+                  F_year(j,r,y,z)=0.5*minF(j,r);
                   }
                 }
               }
@@ -2048,6 +2101,8 @@ FUNCTION get_abundance
                         {
                          for (int n=1;n<=nregions(s);n++)
                           {
+                          if(a>1 || (a==1 && larval_move_switch!=0))
+                           {
                            if(j==s && r==n) 
                             {
                              T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
@@ -2056,6 +2111,11 @@ FUNCTION get_abundance
                             {
                              T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
                             }
+                           }
+                            if(a==1 && larval_move_switch==0)
+                             {
+                              T(j,r,y,a,s,n)=T(j,r,y,a,s,n);
+                             }
                           }
                         }
                     }
@@ -2107,6 +2167,8 @@ FUNCTION get_abundance
                         {
                          for (int n=1;n<=nregions(s);n++)
                           {
+                          if(a>1 || (a==1 && larval_move_switch!=0))
+                           {
                            if(j==s && r==n) 
                             {
                              T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
@@ -2115,6 +2177,11 @@ FUNCTION get_abundance
                             {
                              T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
                             }
+                           }
+                            if(a==1 && larval_move_switch==0)
+                             {
+                              T(j,r,y,a,s,n)=T(j,r,y,a,s,n);
+                             }
                           }
                         }
                     }
@@ -3443,6 +3510,8 @@ FUNCTION get_abundance
                         {
                          for (int n=1;n<=nregions(s);n++)
                           {
+                          if(a>1 || (a==1 && larval_move_switch!=0))
+                           {
                            if(j==s && r==n) 
                             {
                              T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
@@ -3451,6 +3520,11 @@ FUNCTION get_abundance
                             {
                              T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
                             }
+                           }
+                            if(a==1 && larval_move_switch==0)
+                             {
+                              T(j,r,y,a,s,n)=T(j,r,y,a,s,n);
+                             }
                           }
                         }
                     }
@@ -3502,6 +3576,8 @@ FUNCTION get_abundance
                         {
                          for (int n=1;n<=nregions(s);n++)
                           {
+                          if(a>1 || (a==1 && larval_move_switch!=0))
+                           {
                            if(j==s && r==n) 
                             {
                              T(j,r,y,a,s,n)=1-Fract_Move_DD(j,r,y,a);
@@ -3510,6 +3586,11 @@ FUNCTION get_abundance
                             {
                              T(j,r,y,a,s,n)=rel_bio(j,r,y,a,s,n)*Fract_Move_DD(j,r,y,a);
                             }
+                           }
+                            if(a==1 && larval_move_switch==0)
+                             {
+                              T(j,r,y,a,s,n)=T(j,r,y,a,s,n);
+                             }
                           }
                         }
                     }
@@ -6208,7 +6289,14 @@ FUNCTION get_tag_recaptures
                 if(sim_tag_mixing_switch==0) //assume complete mixing of tagged and untagged fish
                  {
                   tags_avail(i,n,x,a,y,j,r)=ntags(i,n,x,a)*T(i,n,xx,a,j,r); 
-                  recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,a)*(1.-mfexp(-(F(j,r,xx,a)+M(j,r,xx,a))))/(F(j,r,xx,a)+(M(j,r,xx,a)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                                
+                  recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,a)*(1.-mfexp(-(F(j,r,xx,a)+M(j,r,xx,a))))/(F(j,r,xx,a)+(M(j,r,xx,a)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+
+               if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                {
+                 tags_avail(i,n,x,a,y,j,r)=ntags(i,n,x,a)*T(i,n,xx,tag_age_sel,j,r); 
+                 recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,xx,tag_age_sel)*(1.-mfexp(-(F(j,r,xx,tag_age_sel)+M(j,r,xx,tag_age_sel))))/(F(j,r,xx,tag_age_sel)+(M(j,r,xx,tag_age_sel)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                                
+                }
+                
                  }
                 if(sim_tag_mixing_switch==1) //assume incomplete mixing of tagged and untagged fish
                  {
@@ -6259,6 +6347,11 @@ FUNCTION get_tag_recaptures
                  if(natal_homing_switch==0) //if no natal homing
                  {
                   tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }                        
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
@@ -6266,12 +6359,22 @@ FUNCTION get_tag_recaptures
                 //########################################################################################################              
                  if(natal_homing_switch==1) //if natal homing 
                  {
-                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)             
+                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }               
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)   
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),tag_age_sel)*(1.-mfexp(-(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)))))/(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                    }    
                }
              if(sim_tag_mixing_switch==1) //assume incomplete mixing of tagged and untagged fish
               {
@@ -6308,6 +6411,11 @@ FUNCTION get_tag_recaptures
                  if(natal_homing_switch==0) //if no natal homing
                  {
                   tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }                        
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
@@ -6315,12 +6423,22 @@ FUNCTION get_tag_recaptures
                 //########################################################################################################              
                  if(natal_homing_switch==1) //if natal homing 
                  {
-                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)             
+                  tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(i,n,(xx+y-1),min((a+y),nages),j,r)*mfexp(-(F(p,s,(xx+y-2),min(((a+y)-1),nages))+(M(p,s,(xx+y-2),min(((a+y)-1),nages))))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     tags_avail_temp(p,s)=tags_avail(i,n,x,a,y-1,p,s)*T(p,s,(xx+y-1),tag_age_sel,j,r)*mfexp(-(F(p,s,(xx+y-2),tag_age_sel)+(M(p,s,(xx+y-2),tag_age_sel)))); //tags_temp holds all tags moving into population j,region r; min function takes min of true age and max age allowed (plus group)
+                    }
                  }               
                 }
                }
                  tags_avail(i,n,x,a,y,j,r)=sum(tags_avail_temp); //sum across all pops/regs of tags that moved into pop j reg r
-                 recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+
+                   if(tag_fit_ages_switch_OM==1 && tag_fit_ages_switch==1) //need to determine age of full selectivity for tagging data if assuming don't know age of tags
+                    {
+                     recaps(i,n,x,a,y,j,r)=report_rate_TRUE(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),tag_age_sel)*(1.-mfexp(-(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)))))/(F(j,r,(xx+y-1),tag_age_sel)+(M(j,r,(xx+y-1),tag_age_sel)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                    }  
                }
              }
             }
@@ -7060,10 +7178,18 @@ REPORT_SECTION
   report<<phase_T_CNST_AGE<<endl;
   report<<"#phase_T_YR_AGE"<<endl;
   report<<phase_T_YR_AGE<<endl;
+  report<<"#phase_T_CNST_AGE_no_AG1"<<endl;
+  report<<phase_T_CNST_AGE_no_AG1<<endl;
+  report<<"#phase_T_YR_AGE_no_AG1"<<endl;
+  report<<phase_T_YR_AGE_no_AG1<<endl;
+  report<<"#phase_T_YR_AGE_ALT_FREQ_no_AG1"<<endl;
+  report<<phase_T_YR_AGE_ALT_FREQ_no_AG1<<endl;
   report<<"#lb_T"<<endl;
   report<<lb_T<<endl;
   report<<"#ub_T"<<endl;
   report<<ub_T<<endl;
+  report<<"#T_start"<<endl;
+  report<<T_start<<endl;
   report<<"#phase_rep_rate_YR"<<endl;
   report<<phase_rep_rate_YR<<endl;
   report<<"#phase_rep_rate_CNST"<<endl;
@@ -7119,7 +7245,8 @@ REPORT_SECTION
   report<<Tpen<<endl;
   report<<"#Tpen2"<<endl;
   report<<Tpen2<<endl;
-
+  report<<"#sigma_Tpen_EM"<<endl;
+  report<<sigma_Tpen_EM<<endl;
  
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////

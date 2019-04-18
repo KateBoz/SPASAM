@@ -256,8 +256,12 @@ DATA_SECTION
   init_int phase_T_CNST
   init_int phase_T_CNST_AGE
   init_int phase_T_YR_AGE
+  init_int phase_T_CNST_AGE_no_AG1
+  init_int phase_T_YR_AGE_no_AG1
+  init_int phase_T_YR_AGE_ALT_FREQ_no_AG1
   init_number lb_T
   init_number ub_T
+  init_number T_start
   init_int phase_rep_rate_YR
   init_int phase_rep_rate_CNST
   init_number lb_B
@@ -295,6 +299,7 @@ DATA_SECTION
    init_number wt_T_pen
    init_number Tpen
    init_number Tpen2
+   init_number sigma_Tpen_EM
 //###########READ BIO DATA###############################################################################################################################
 //#########################################################################################################################################
 //##########################################################################################################################################
@@ -514,6 +519,15 @@ DATA_SECTION
   int d
   int xx
   int tag_age_sel
+  int T_lgth_YR_AGE_ALT_FREQ2
+  int T_lgth2
+  int T_lgth_YR2
+  int T_lgth_YR_ALT_FREQ2
+  int T_lgth_AGE2
+  int T_lgth_YR_AGE2
+  int T_lgth_AGE2_no_AG1
+  int T_lgth_YR_AGE2_no_AG1
+  int T_lgth_YR_AGE_ALT_FREQ2_no_AG1
 
   int region_counter
   number rd_T
@@ -552,6 +566,9 @@ PARAMETER_SECTION
    !! int T_lgth_YR_AGE_ALT_FREQ=sum(nr)*floor(((nyrs-1)/T_est_freq)+1)*floor(((nages-1)/T_est_age_freq)+1);
    !! int T_lgth_AGE=sum(nr)*nag;
    !! int T_lgth_YR_AGE=sum(nr)*nag*nyr;
+   !! int T_lgth_YR_AGE_ALT_FREQ_no_AG1=sum(nr)*floor(((nyrs-1)/T_est_freq)+1)*floor(((nages-2)/T_est_age_freq)+1);
+   !! int T_lgth_AGE_no_AG1=sum(nr)*(nag-1);
+   !! int T_lgth_YR_AGE_no_AG1=sum(nr)*(nag-1)*nyr;
    !! int YR_APP=nps*nyr;
    !! int F_lgth=sum(nr)*nyr;
    !! int sel_lgth=sum(nr);
@@ -593,8 +610,11 @@ PARAMETER_SECTION
    init_bounded_matrix ln_T_YR_ALT_FREQ(1,T_lgth_YR_ALT_FREQ,1,T_lgth-1,lb_T,ub_T,phase_T_YR_ALT_FREQ);
    init_bounded_matrix ln_T_YR_AGE_ALT_FREQ(1,T_lgth_YR_AGE_ALT_FREQ,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE_ALT_FREQ);
    init_bounded_matrix ln_T_CNST_AGE(1,T_lgth_AGE,1,T_lgth-1,lb_T,ub_T,phase_T_CNST_AGE);
-   init_bounded_matrix ln_T_YR_AGE(1,T_lgth_YR_AGE,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE);  
+   init_bounded_matrix ln_T_YR_AGE(1,T_lgth_YR_AGE,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE);
    init_bounded_matrix ln_T_CNST(1,T_lgth,1,T_lgth-1,lb_T,ub_T,phase_T_CNST);
+   init_bounded_matrix ln_T_YR_AGE_ALT_FREQ_no_AG1(1,T_lgth_YR_AGE_ALT_FREQ_no_AG1,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE_ALT_FREQ_no_AG1);
+   init_bounded_matrix ln_T_CNST_AGE_no_AG1(1,T_lgth_AGE_no_AG1,1,T_lgth-1,lb_T,ub_T,phase_T_CNST_AGE_no_AG1);
+   init_bounded_matrix ln_T_YR_AGE_no_AG1(1,T_lgth_YR_AGE_no_AG1,1,T_lgth-1,lb_T,ub_T,phase_T_YR_AGE_no_AG1); 
    matrix G(1,T_lgth,1,T_lgth);
    vector G_temp(1,T_lgth);
    vector T_tag_res(1,nyr_rel);
@@ -901,7 +921,7 @@ PARAMETER_SECTION
   
   !! cout << "parameters set" << endl;
 
-//INITIALIZATION_SECTION  //set initial values
+INITIALIZATION_SECTION  //set initial values
 //   steep .814;
 //   ln_q 8;
 //   ln_R_ave 10;
@@ -913,7 +933,12 @@ PARAMETER_SECTION
 //   ln_rec_devs_RN 0;
 //   ln_rec_prop_CNST -1.1;
 //   ln_abund_devs 0;
-
+ ln_T_YR T_start;
+ ln_T_YR_ALT_FREQ T_start;
+ ln_T_YR_AGE_ALT_FREQ T_start;
+ ln_T_CNST_AGE T_start;
+ ln_T_YR_AGE T_start;  
+ ln_T_CNST T_start;
 PROCEDURE_SECTION
  
    get_movement(); 
@@ -1343,8 +1368,212 @@ FUNCTION get_movement
         }
        }
       }
+
+
+    if(phase_T_YR_AGE_ALT_FREQ_no_AG1>0) //EST T by for every T_est_freq years and T_est_age_freq ages, with all ages <age_juv getting the first age movement parameter
+    {
+      for(int y=1;y<=floor(((nyrs-1)/T_est_freq)+1);y++)
+       {
+      for(int a=1;a<=floor(((nages-2)/T_est_age_freq)+1);a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE_ALT_FREQ_no_AG1(j+sum(nregions)*(a-1)+sum(nregions)*floor(((nages-2)/T_est_age_freq)+1)*(y-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE_ALT_FREQ_no_AG1(j+sum(nregions)*(a-1)+sum(nregions)*floor(((nages-2)/T_est_age_freq)+1)*(y-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);
+     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             for(int x=1;x<=T_est_freq;x++)
+             {
+              for(int z=1;z<=T_est_age_freq;z++)
+               {
+                 T(j,r,x+(y-1)*T_est_freq,z+(a)*T_est_age_freq,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+  for (int j=1;j<=npops;j++) //adjust T matrix so that all juvenile ages have the same T
+   {
+    for (int r=1;r<=nregions(j);r++)
+     {
+     for(int y=1;y<=nyrs;y++)
+       {
+        for (int a=1;a<=nages;a++)
+         {
+          for (int k=1;k<=npops;k++)
+           {
+            for (int n=1;n<=nregions(k);n++)
+             {
+                if(a<=juv_age && a!=1)
+                 {
+                  T(j,r,y,a,k,n)=T(j,r,y,2,k,n); //fill all juvenile ages with movement for age-2
+                 }
+                if(a>juv_age && a<=T_est_age_freq)
+                 {
+                  T(j,r,y,a,k,n)=T(j,r,y,T_est_age_freq+1,k,n); //fill all ages>juv_age but <freq of est ages (i.e., would otherwise get same T as juv age) with the movement of the next age class
+                 }
+                if(a==1)
+                 {
+                  if(j==k && r==n)
+                   {
+                    T(j,r,y,a,k,n)=1.0;
+                   }
+                   if(j!=k || r!=n)
+                   {
+                    T(j,r,y,a,k,n)=0.0;
+                   }
+                 }
+        }
+       } 
+      }
      }
+    }
+   }
+   }
+
+
+    if(phase_T_YR_AGE_no_AG1>0) //EST T by year and age
+    {
+      for(int y=1;y<=nyrs;y++)
+       {
+      for(int a=1;a<=nages-1;a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE(j+sum(nregions)*(a-1)+sum(nregions)*(nages-1)*(y-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_YR_AGE(j+sum(nregions)*(a-1)+sum(nregions)*(nages-1)*(y-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             T(j,r,y,a+1,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+             
+                if(a==1)
+                 {
+                  if(j==k && r==n)
+                   {
+                    T(j,r,y,a,k,n)=1.0;
+                   }
+                   if(j!=k || r!=n)
+                   {
+                    T(j,r,y,a,k,n)=0.0;
+                   }
+                 }            
+            }
+           } 
+          }
+         }
+        }
+       }
+      }
+     
+
+    if(phase_T_CNST_AGE_no_AG1>0) //est T by age ONLY
+    {
+      for(int a=1;a<=nages-1;a++)
+       {
+      G=0;
+      G_temp=0;
+      for (int j=1;j<=sum(nregions);j++)
+       {
+        for (int i=1;i<=sum(nregions);i++) 
+         {
+            if(j==i)
+            {
+            G(j,i)=1;
+            }
+            if(i>j)
+            {
+            G(j,i)=mfexp(ln_T_CNST_AGE(j+sum(nregions)*(a-1),i-1));
+            }
+            if(j!=i && i<j)
+            {
+            G(j,i)=mfexp(ln_T_CNST_AGE(j+sum(nregions)*(a-1),i));
+            }
+        }
+       }    
+        G_temp=rowsum(G);     
+   for (int j=1;j<=npops;j++)
+    {
+     for (int r=1;r<=nregions(j);r++)
+      {
+       for(int y=1;y<=nyrs;y++)
+        {
+         for (int k=1;k<=npops;k++)
+          {
+           for (int n=1;n<=nregions(k);n++)
+            {
+             T(j,r,y,a+1,k,n)=G(r+nreg_temp(j),n+nreg_temp(k))/G_temp(r+nreg_temp(j));
+
+                if(a==1)
+                 {
+                  if(j==k && r==n)
+                   {
+                    T(j,r,y,a,k,n)=1.0;
+                   }
+                   if(j!=k || r!=n)
+                   {
+                    T(j,r,y,a,k,n)=0.0;
+                   }
+                 }           
+            }
+           } 
+          }
+         }
+        }
+       }
+      }
+    }
     
+
   for (int j=1;j<=npops;j++) //output true T for report file
    {
     for (int r=1;r<=nregions(j);r++)
@@ -3920,10 +4149,8 @@ FUNCTION get_tag_recaptures
                }
               }
 
-              if(y>1) // must account for the maximum age so use min function to ensure that not exceeding the max age
+           if((est_tag_mixing_switch==1 || est_tag_mixing_switch==3) && y==2) //assume incomplete mixing of tagged and untagged fish
               {
-                if((est_tag_mixing_switch==1 || est_tag_mixing_switch==3) && y==2) //assume incomplete mixing of tagged and untagged fish
-                 {
                tags_avail_temp=0;
                for(int p=1;p<=npops;p++)
                {
@@ -3947,7 +4174,7 @@ FUNCTION get_tag_recaptures
                  recaps(i,n,x,a,y,j,r)=report_rate(j,x,r)*tags_avail(i,n,x,a,y,j,r)*F(j,r,(xx+y-1),min((a+y),nages))*(1.-mfexp(-(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))))))/(F(j,r,(xx+y-1),min((a+y),nages))+(M(j,r,(xx+y-1),min((a+y),nages))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
                }
 
-         if(y>2 || est_tag_mixing_switch==0)
+         if(y>1 && (y>2 || est_tag_mixing_switch==0))
             {
                tags_avail_temp=0;
                for(int p=1;p<=npops;p++)
@@ -3992,7 +4219,7 @@ FUNCTION get_tag_recaptures
          }
         }
        }
-      }
+      
  for (int i=1;i<=npops;i++)
   {
    for (int n=1;n<=nregions(i);n++)
@@ -4427,50 +4654,159 @@ FUNCTION evaluate_the_objective_function
 //VARIOUS PENALTY FUNCTIONS
   //
 
-//need to expand for age based and time/age based movement
- if(move_pen_switch==1) //penalizes large and small values of estimated T parameter, because can get lost in log space esp at very large or small values of true T
- {
- if(active(ln_T_YR))
+ if(move_pen_switch>0) //penalizes large and small values of estimated T parameter, because can get lost in log space esp at very large or small values of true T
   {
-  for (int y=1;y<=nyrs;y++) 
+  if(move_pen_switch==1) //penalizes large and small values of estimated T parameter, because can get lost in log space esp at very large or small values of true T
    {
-     for (int j=1;j<=npops;j++)
+   if (phase_T_YR>0)
+    {
+     Tpen_like+= (norm2(ln_T_YR+Tpen));
+    }
+    if (phase_T_YR_ALT_FREQ>0)
+     {
+      Tpen_like+= (norm2(ln_T_YR_ALT_FREQ+Tpen));
+     }
+    if (phase_T_YR_AGE_ALT_FREQ>0)
+     {
+      Tpen_like+= (norm2(ln_T_YR_AGE_ALT_FREQ+Tpen));
+     }
+    if (phase_T_CNST_AGE>0)
+    {
+     Tpen_like+= (norm2(ln_T_CNST_AGE+Tpen));
+    }
+    if (phase_T_YR_AGE>0)
+    {
+     Tpen_like+= (norm2(ln_T_YR_AGE+Tpen));
+    }
+    if (phase_T_CNST>0)
+    {
+     Tpen_like+= (norm2(ln_T_CNST+Tpen));
+    }
+    if (phase_T_YR_AGE_ALT_FREQ_no_AG1>0)
+     {
+      Tpen_like+= (norm2(ln_T_YR_AGE_ALT_FREQ_no_AG1+Tpen));
+     }
+    if (phase_T_CNST_AGE_no_AG1>0)
+    {
+     Tpen_like+= (norm2(ln_T_CNST_AGE_no_AG1+Tpen));
+    }
+    if (phase_T_YR_AGE_no_AG1>0)
+    {
+     Tpen_like+= (norm2(ln_T_YR_AGE_no_AG1+Tpen));
+    }
+   }
+
+  if(move_pen_switch==2) //penalizes large and small values of estimated T parameter, because can get lost in log space esp at very large or small values of true T
+   {
+
+  T_lgth2=sum(nregions);
+  T_lgth_YR2=sum(nregions)*nyrs;
+  T_lgth_YR_ALT_FREQ2=sum(nregions)*floor(((nyrs-1)/T_est_freq)+1);
+  T_lgth_YR_AGE_ALT_FREQ2=sum(nregions)*floor(((nyrs-1)/T_est_freq)+1)*floor(((nages-1)/T_est_age_freq)+1);
+  T_lgth_AGE2=sum(nregions)*nages;
+  T_lgth_YR_AGE2=sum(nregions)*nages*nyrs;
+  T_lgth_YR_AGE_ALT_FREQ2_no_AG1=sum(nregions)*floor(((nyrs-1)/T_est_freq)+1)*floor(((nages-2)/T_est_age_freq)+1);
+  T_lgth_AGE2_no_AG1=sum(nregions)*(nages-1);
+  T_lgth_YR_AGE2_no_AG1=sum(nregions)*(nages-1)*nyrs;
+  
+   if (phase_T_YR>0)
+    {
+     for (int i=1;i<=T_lgth_YR2;i++)
       {
-      for (int i=1;i<=npops-1;i++) 
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_YR(i,n),Tpen,sigma_Tpen_EM);
+        }
+       }
+      }
+    if (phase_T_YR_ALT_FREQ>0)
+     {
+      for (int i=1;i<=T_lgth_YR_ALT_FREQ2;i++)
        {
-          if(ln_T_YR(j+sum(nregions)*(y-1),i)<Tpen)
-           {
-           Tpen_like+=(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen-ln_T_YR(j+sum(nregions)*(y-1),i));
-          }
-          if(ln_T_YR(j+sum(nregions)*(y-1),i)>Tpen2)
-           {
-           Tpen_like+=(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i))*(Tpen2-ln_T_YR(j+sum(nregions)*(y-1),i));
-          }
+        for (int n=1;n<=T_lgth2-1;n++)
+         {   
+          Tpen_like+=dnorm(ln_T_YR_ALT_FREQ(i,n),Tpen,sigma_Tpen_EM);
          }
+        }
+       }
+    if (phase_T_YR_AGE_ALT_FREQ>0)
+     {
+      for (int i=1;i<=T_lgth_YR_AGE_ALT_FREQ2;i++)
+       {
+        for (int n=1;n<=T_lgth2-1;n++)
+         {        
+           Tpen_like+=dnorm(ln_T_YR_AGE_ALT_FREQ(i,n),Tpen,sigma_Tpen_EM);
+         }
+       }
+     }
+    if (phase_T_CNST_AGE>0)
+    {
+     for (int i=1;i<=T_lgth_AGE2;i++)
+      {
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_CNST_AGE(i,n),Tpen,sigma_Tpen_EM);
+        }
+       }
+      }
+    if (phase_T_YR_AGE>0)
+    {
+     for (int i=1;i<=T_lgth_YR_AGE2;i++)
+      {
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_YR_AGE(i,n),Tpen,sigma_Tpen_EM);
+        }
+       }
+      }
+    if (phase_T_CNST>0)
+    {
+     for (int i=1;i<=T_lgth2;i++)
+      {
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_CNST(i,n),Tpen,sigma_Tpen_EM);
+        }
+       }
+      }
+    if (phase_T_YR_AGE_ALT_FREQ_no_AG1>0)
+     {
+      for (int i=1;i<=T_lgth_YR_AGE_ALT_FREQ2_no_AG1;i++)
+       {
+        for (int n=1;n<=T_lgth2-1;n++)
+         {        
+           Tpen_like+=dnorm(ln_T_YR_AGE_ALT_FREQ_no_AG1(i,n),Tpen,sigma_Tpen_EM);
+         }
+       }
+     }
+    if (phase_T_CNST_AGE_no_AG1>0)
+    {
+     for (int i=1;i<=T_lgth_AGE2_no_AG1;i++)
+      {
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_CNST_AGE_no_AG1(i,n),Tpen,sigma_Tpen_EM);
+        }
+       }
+      }
+    if (phase_T_YR_AGE_no_AG1>0)
+    {
+     for (int i=1;i<=T_lgth_YR_AGE2_no_AG1;i++)
+      {
+       for (int n=1;n<=T_lgth2-1;n++)
+        {   
+         Tpen_like+=dnorm(ln_T_YR_AGE_no_AG1(i,n),Tpen,sigma_Tpen_EM);
         }
        }
       }
 
- if(active(ln_T_CNST))
-  {
-     for (int j=1;j<=sum(nregions);j++)
-      {
-      for (int i=1;i<=sum(nregions)-1;i++) 
-       {
-          if(ln_T_CNST(j,i)<Tpen)
-           {
-           Tpen_like+=(Tpen-ln_T_CNST(j,i))*(Tpen-ln_T_CNST(j,i));
-          }
-          if(ln_T_CNST(j,i)>Tpen2)
-           {
-           Tpen_like+=(Tpen2-ln_T_CNST(j,i))*(Tpen2-ln_T_CNST(j,i));
-          }
-         }
-        }
-
-     }
- }
-
+   }
+  }
+ //if(active(ln_rec_devs_RN))
+// {
+// for(int j=1;j<=npops;j++) {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
+// rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
+// }}
  if(active(ln_rec_devs))
    {
      for(int j=1;j<=npops;j++)
@@ -4478,11 +4814,6 @@ FUNCTION evaluate_the_objective_function
        rec_like+=dnorm(ln_rec_devs(j),0,sigma_recruit(j));
       }
     }
- //if(active(ln_rec_devs_RN))
-// {
-// for(int j=1;j<=npops;j++) {  //is this correct?  we aren't penalizing against devs from Rave or SR function?  also we do want to do calcs across all years right (since not including year index in rec_devs here)?
-// rec_like += (norm2(ln_rec_devs_RN(j)+sigma_recruit(j)*sigma_recruit(j)/2.)/(2.*square(sigma_recruit(j))) + (size_count(ln_rec_devs_RN(j)))*log(sigma_recruit(j))); 
-// }}
 
   
  if(abund_pen_switch==1)
@@ -4915,6 +5246,9 @@ REPORT_SECTION
         report<<est_tag_mixing_switch<<endl;
         report<<"$sim_tag_mixing_switch"<<endl;
         report<<sim_tag_mixing_switch<<endl;
+        report<<"$fit_tag_age_switch"<<endl;
+        report<<fit_tag_age_switch<<endl;
+
 
   report<<"$dummy_run"<<endl;
   report<<ph_dummy<<endl;
