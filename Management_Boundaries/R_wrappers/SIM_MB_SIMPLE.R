@@ -84,7 +84,7 @@ run.sims<-1
 # ==1 Run simulation experiement
 
 #4) Set number of simulations to perform
-nsim <-16
+nsim <-200
 
 Rec.error<-1
 # ==0 No process error across sims - Recruit devs are identical for each 
@@ -117,7 +117,7 @@ lower<-0.10
 
 
 #7) Do you want to plot non-converged runs? This will be needed/useful for MISMATCH
-keep.all<-1
+keep.all<-0
 # ==0 DO NOT plot non converged runs
 # ==1 DO plot non-converged runs
 
@@ -133,7 +133,7 @@ keep.all<-1
 
 
 #8) set master directory holding the files with each run.
-direct_master<-"C:\\Users\\kaifk\\Desktop\\My files\\MB_test\\Management_Boundaries"
+direct_master<-"C:\\Users\\jonathan.deroba\\Documents\\GitHub\\SPASAM-master\\Management_Boundaries\\ModelRuns_10"
 
 # Create a list of files in the directory
 files<-list.files(direct_master) # these folders in the master will be the individual scenarios 
@@ -149,7 +149,7 @@ files<-list.files(direct_master) # these folders in the master will be the indiv
 ######### IF RUNNING A LOOP ACROSS MANY FOLDERS UNCOMMENT THE FOR STATEMENT (LINE 145) ############### 
 #if running the several folders use the loop
 #
-for(i in 1:2){
+for(i in 2:2){  #(length(files)-1)){
 
 #########################################################################################
 
@@ -265,7 +265,7 @@ SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=12009+j
 } else {SIM.DAT[(grep("myseed_rec_devs",SIM.DAT)+1)]=12009}
 
 if(F.error==1){
-SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=14009+j} else {
+SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=14009+j} else {  
   SIM.DAT[(grep("myseed_F",SIM.DAT)+1)]=14009}
 
 writeLines(SIM.DAT,paste0(OM_name,".dat"))
@@ -1362,11 +1362,12 @@ if((npops_OM==npops&&nreg_OM==nreg)||(npops_OM>npops&&nreg>1)){
       mutate(med = median(value),med.true=median(val.true))
     
     #incase there are crazy outlier values
-    fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
-    
+    #fmax.est<-subset(fmax.est, bias>(quantile(fmax.est$bias, .01) && bias<(quantile(fmax.est$bias, .99))))
+    #JJD subset above wasn't working right; replace with line below.
+    fmax.est<-fmax.est[fmax.est$bias>(quantile(fmax.est$bias, .01)) & fmax.est$bias<(quantile(fmax.est$bias, .99)),]
     #generate fmax Plot
     fmax.plot.gg<-ggplot(fmax.est, aes(x=as.factor(Years), y=value)) +
-      geom_violin(fill=vio.col,trim=F,bw="SJ", alpha=0.6)+
+      geom_violin(fill=vio.col,trim=F, bw="SJ",alpha=0.6)+
       geom_point(data = fmax.est.med, aes(x=Years,y=med.est), fill=median.col, shape=21,size=2.0) + 
       geom_point(data = fmax.est.med, aes(x=Years,y=med.sim), fill="black", shape=16,size=1.0) + 
       geom_line(data = fmax.est.med, aes(x=Years,y=med.sim),lty=1) + 
