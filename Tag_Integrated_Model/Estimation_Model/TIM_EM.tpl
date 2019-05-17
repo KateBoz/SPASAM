@@ -634,7 +634,7 @@ PARAMETER_SECTION
   init_bounded_matrix ln_M_pop_age(1,nps,1,nag,lb_M,ub_M,ph_M_pop_age) //M vary by age and pop 
 
 //init_abund parameters
-  init_bounded_matrix ln_init_abund(1,nps,1,nag-1,lb_init_abund,ub_init_abund,ph_init_abund) //for initial abundance
+  init_bounded_matrix ln_init_abund(1,nps,1,nag,lb_init_abund,ub_init_abund,ph_init_abund) //for initial abundance
   init_bounded_matrix ln_nat(1,nps,1,T_lgth-1,lb_init_dist,ub_init_dist,ph_non_natal_init) //est init_abund dist for natal homing
   
   //*****FOLLOWING WILL ONLY WORK PROPERLY IF ONLY 1 POP OR  NUMBER OF REGIONS IS CONSTANT ACROSS POPULATIONS****************
@@ -650,7 +650,7 @@ PARAMETER_SECTION
  //###############################################################################################################################
  //###################################################################################################################################
   matrix init_abund_age(1,nps,1,nages)
-  matrix abund_devs(1,nps,1,nages-1)
+  matrix abund_devs(1,nps,1,nages)
   matrix rec_devs(1,nps,1,nyr-1) //derived quantity as exp(rec_devs_RN)
   vector R_ave(1,parpops) // switch to log scale
   vector SSB_zero(1,nps) //derived quantity
@@ -1827,21 +1827,20 @@ FUNCTION get_vitals
 
       for (int j=1;j<=npops;j++)
        {
-        for (int a=1;a<=nages;a++)
-         {   
+       for (int a=1;a<=nages;a++)
+         {
+          abund_devs(j,a)=mfexp(ln_init_abund(j,a));
           if(a==1)
           {
-           init_abund_age(j,a)=R_ave(j); //use R_ave as age-1 abund in year 1 to avoid overparametrization
+           init_abund_age(j,a)=R_ave(j)*abund_devs(j,a); //use R_ave as age-1 abund in year 1 to avoid overparametrization
           }
           if(a>1)
           {
-          abund_devs(j,a-1)=mfexp(ln_init_abund(j,a-1));
-          init_abund_age(j,a)=abund_devs(j,a-1); //age based abund devs by population
-       
+          init_abund_age(j,a)=abund_devs(j,a); //age based abund devs by population      
           }
          }
-       }
-
+        }
+       
 
  if(est_dist_init_abund==(-2)) //use input_dist_init_abund specified for EM (can differ from true)
   {
@@ -2095,10 +2094,10 @@ FUNCTION get_abundance
                    if(ph_init_abund>0)
                    {
                     if(a==1){
-                     init_abund(p,j,r,a)=R_ave(p)*frac_natal(p,j,r);
+                     init_abund(p,j,r,a)=(R_ave(p)*abund_devs(p,a))*frac_natal(p,j,r);
                      }
                      if(a>1){
-                     init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a-1)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
+                     init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      }
                      //init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                    }
@@ -4270,17 +4269,18 @@ FUNCTION evaluate_the_objective_function
          {
           OBS_tag_prop_N(i,n,x,a)==0; //make tag likelihood==0 if there are no releases in a given cohort (i.e., mainly if no releases at young ages due to selectivity==0)
          }
-         for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) 
-           {
+     //    for(int s=1;s<=(max_life_tags*sum(nregions)+1);s++) 
+      //     {
            if(diagnostics_switch==1) //use true values for diagnostic runs
            {
-            OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
+            //OBS_tag_prop_final(i,n,x,a,s)=tag_prop_final_TRUE(i,n,x,a,s);
+            OBS_tag_prop_final(i,n,x,a)=tag_prop_final_TRUE(i,n,x,a);
             }
-            if(max_life_tags<=(nyrs-xx+1)) //complete cohorts so don't need to adjust to avoid recap entries with no possible recaptures
+       //     if(max_life_tags<=(nyrs-xx+1)) //complete cohorts so don't need to adjust to avoid recap entries with no possible recaptures
              {
               tag_like -= OBS_tag_prop_N(i,n,x,a) * ((OBS_tag_prop_final(i,n,x,a)+0.001)*log(tag_prop_final(i,n,x,a)+0.001)-(OBS_tag_prop_final(i,n,x,a)+0.001)*log(OBS_tag_prop_final(i,n,x,a)+0.001)); //doing row multiplication because dropping final 's' subscript
              }
-           if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
+      /*     if(max_life_tags>(nyrs-xx+1)) //need special calcs for incomplete cohorts (ie model ends before end max_life_tags reached)
              {
               if(s<((nyrs-xx+1)*sum(nregions)+1)) //years with recaps get added to likelihood, index<first yr where yr_release+age_tag>nyrs
                 {
@@ -4289,10 +4289,12 @@ FUNCTION evaluate_the_objective_function
               if(s==((nyrs-xx+1)*sum(nregions)+1)) //skip to not recaptured state once you get to first year where age_tag+yr_release>nyrs (i.e. skip years where no possible recaps), 
                {
                  tag_like_temp += (OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)-(OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001)*log(OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001);
+               //  tag_like_temp += dmultinom((OBS_tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001),(tag_prop_final(i,n,x,a,(max_life_tags*sum(nregions)+1))+0.001));
                 }
+
                tag_like -= OBS_tag_prop_N(i,n,x,a)*tag_like_temp; //only multiply eff_N by total likelihood for a cohort to avoid over emphasizing data
-             }
-            }
+             } */
+        //    }
            }
           }
          }
