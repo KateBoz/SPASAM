@@ -1977,6 +1977,7 @@ FUNCTION get_vitals
     }
     }
 
+
     for (int j=1;j<=npops;j++)
      {              
         for (int y=1;y<=nyrs-1;y++)
@@ -2074,20 +2075,14 @@ FUNCTION get_abundance
                    {
                    init_abund(p,j,r,a)=init_abund_age(p,a)*frac_natal(p,j,r);
                    }
-                   if(ph_init_abund<0) //FIX at TRUE Value
-                   {
-                    init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
-                    }
-                  }
+                   }
+             
 
                if(init_abund_switch==1) //assume an exponential decay from R_ave for init abundance
-                  {
-                   if(ph_init_abund<0)
                    {
                      //init_abund(p,j,r,a)=R_ave(p)*abund_devs(p,a)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                      init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                    }
-                  }
 
                if(init_abund_switch==2) //assume an exponential decay from R_ave for init abundance
                   {
@@ -2102,6 +2097,11 @@ FUNCTION get_abundance
                      //init_abund(p,j,r,a)=R_ave(p)*pow(mfexp(-(M(p,r,y,a))),a-1)*frac_natal(p,j,r);
                    }
                   }
+
+              if(ph_init_abund<0) //FIX at TRUE Value
+                   {
+                    init_abund(p,j,r,a)=input_init_abund(p,j,r,a);
+                    }
 
                     abundance_at_age_BM_overlap_region(p,j,y,a,r)=init_abund(p,j,r,a);
                     abundance_at_age_BM_overlap_population(p,j,y,a)=sum(abundance_at_age_BM_overlap_region(p,j,y,a));
